@@ -692,12 +692,12 @@
                     const res = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}/latest`, {
                         headers: { 'X-Master-Key': CONFIG.apiKey }
                     });
-                    if (!res.ok) throw new Error('Load failed');
+                    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
                     const json = await res.json();
                     return json.record;
                 } catch (e) {
                     console.error(e);
-                    alert('Konnte Daten nicht laden (Offline?). Lade lokale Kopie.');
+                    alert(`Fehler beim Laden (JSONBin): ${e.message}\nLade lokale Kopie.`);
                     return JSON.parse(localStorage.getItem('urlaubsplaner_2026')) || {};
                 }
             }
