@@ -774,8 +774,12 @@
                 });
 
                 document.addEventListener('mouseup', () => {
-                    this.isDragging = false;
-                    this.dragStartVal = null;
+                    if (this.isDragging) {
+                        this.isDragging = false;
+                        this.dragStartVal = null;
+                        this.saveState();
+                        this.updateSummary();
+                    }
                 });
             }
 
@@ -952,15 +956,18 @@
                 // If clicking on existing, toggle off. If empty, toggle on with current Mode
                 this.dragStartVal = current ? null : { type: this.currentMode, text: this.currentText };
 
-                this.setVacation(empId, dateStr, this.dragStartVal);
+                // Skip Save & Summary -> Deferred to mouseup
+                this.setVacation(empId, dateStr, this.dragStartVal, true, true);
             }
 
             handleMouseOver(empId, dateStr) {
-                if (!this.isDragging) return;
-                this.setVacation(empId, dateStr, this.dragStartVal);
+                if (this.isDragging) {
+                    // Skip Save & Summary -> Deferred to mouseup
+                    this.setVacation(empId, dateStr, this.dragStartVal, true, true);
+                }
             }
 
-            setVacation(empId, dateStr, value) {
+            setVacation(empId, dateStr, value, skipSave = false, skipSummary = false) {
                 // ACCESS CONTROL
                 if (this.currentUser !== 'admin' && this.currentUser !== empId) {
                     alert(`Du bist als "${this.getEmpName(this.currentUser)}" angemeldet und darfst nur deine eigenen Einträge bearbeiten.`);
@@ -975,7 +982,7 @@
                     delete this.state[empId][dateStr];
                 }
 
-                this.saveState();
+                if (!skipSave) this.saveState();
 
                 // Optimized UI Update
                 const cell = document.getElementById(`cell-${empId}-${dateStr}`);
@@ -996,6 +1003,8 @@
                 }
 
                 this.updateValidationUI(dateStr);
+
+                if (!skipSummary) this.updateSummary();
             }
 
             showTooltip(e, empId, dateStr) {
@@ -1038,10 +1047,13 @@
                 while (curr <= end) {
                     const dStr = this.formatDate(curr);
                     if (dStr.startsWith(CONFIG.year.toString())) {
-                        this.setVacation(empId, dStr, val);
+                        this.setVacation(empId, dStr, val, true, true);
                     }
                     curr.setDate(curr.getDate() + 1);
                 }
+
+                this.saveState();
+                this.updateSummary();
 
                 document.getElementById('addModal').style.display = 'none';
             }
