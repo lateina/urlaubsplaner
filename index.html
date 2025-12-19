@@ -878,6 +878,28 @@
                 this.currentUser = empId;
                 document.getElementById('loginModal').style.display = 'none';
 
+                // UI RESTRICTION for non-admins
+                const modalSelect = document.getElementById('modalEmp');
+                const importSelect = document.getElementById('importEmp');
+
+                if (this.currentUser !== 'admin') {
+                    // Filter Modal Select
+                    Array.from(modalSelect.options).forEach(opt => {
+                        if (opt.value !== this.currentUser) opt.style.display = 'none';
+                    });
+                    modalSelect.value = this.currentUser;
+
+                    // Filter Import Select
+                    Array.from(importSelect.options).forEach(opt => {
+                        if (opt.value !== this.currentUser) opt.style.display = 'none';
+                    });
+                    importSelect.value = this.currentUser;
+                } else {
+                    // Show all for Admin
+                    Array.from(modalSelect.options).forEach(opt => opt.style.display = 'block');
+                    Array.from(importSelect.options).forEach(opt => opt.style.display = 'block');
+                }
+
                 // Load Data from Server
                 document.body.style.cursor = 'wait';
                 try {
