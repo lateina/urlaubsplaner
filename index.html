@@ -541,6 +541,16 @@
                 <select id="importEmp"></select>
             </div>
             <div class="form-group" style="flex: 2;">
+                <div class="header-top">
+                    <h1>Urlaubsplaner 2026</h1>
+                    <div class="controls">
+                        <button id="btnReset" onclick="app.resetData()">Reset</button>
+                        <button id="btnExport" onclick="app.exportData()">Export JSON</button>
+                        <button id="btnImport" class="primary"
+                            onclick="document.getElementById('fileInput').click()">Import JSON</button>
+                        <input type="file" id="fileInput" style="display:none" onchange="app.importData(this)">
+                    </div>
+                </div>
                 <label>Format: TT.MM.YY bis TT.MM.YY Art (z.B. 01.01.26 bis 05.01.26 Urlaub)</label>
                 <textarea id="importText" class="bulk-input" style="height: 60px"
                     placeholder="Paste hier..."></textarea>
@@ -552,7 +562,7 @@
     </header>
 
     <div class="calendar-toolbar">
-        <div class="legend">
+        <div class="legend" style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
             <div class="legend-item">
                 <div class="color-box" style="background:var(--status-vacation)"></div> Urlaub
             </div>
@@ -576,6 +586,11 @@
             </div>
             <div class="legend-item"><span style="font-size: 1.2rem; color: var(--danger-color)">⚠</span>
                 Unterbesetzung</div>
+
+            <!-- Moved Button -->
+            <button onclick="app.openModal()"
+                style="margin-left: 10px; padding: 4px 12px; font-size: 0.85rem; background: var(--primary-color); color: white; border: none;">+
+                Abwesenheit eintragen</button>
         </div>
 
         <div style="display: flex; align-items: center; gap: 15px;">
