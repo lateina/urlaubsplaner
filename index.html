@@ -525,6 +525,8 @@
         <div class="header-top">
             <h1>Urlaubsplaner 2026</h1>
             <div class="controls">
+                <button id="btnFinish" onclick="app.markFinished()"
+                    style="background-color: var(--danger-color); color: white; display: none;">Eingabe fertig</button>
                 <button id="btnReset" onclick="app.resetData()">Reset</button>
                 <button id="btnExport" onclick="app.exportData()">Export JSON</button>
                 <button id="btnImport" class="primary" onclick="document.getElementById('fileInput').click()">Import
