@@ -68,9 +68,7 @@
             border-radius: var(--radius-lg);
             box-shadow: var(--shadow-sm);
             margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            /* Flex removed, handling children specifically */
         }
 
         h1 {
@@ -447,36 +445,49 @@
             text-align: center;
         }
 
-        /* Bulk Import Panel */
-        .bulk-import-panel {
-            background: #fff;
-            padding: 15px;
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 20px;
+        }
+
+        header {
+            background: var(--surface-color);
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .calendar-toolbar {
+            background: var(--surface-color);
+            padding: 15px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        /* Bulk Import Panel inside Header */
+        .bulk-import-panel {
+            background: #f8fafc;
+            /* Match bg inside header */
+            padding: 15px;
             border-radius: var(--radius-md);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border-color);
             display: flex;
             gap: 20px;
             align-items: flex-start;
         }
 
-        .bulk-import-panel .form-group {
-            margin-bottom: 0;
-            flex: 1;
-        }
-
-        .bulk-import-panel textarea {
-            height: 80px;
-            /* Compact but usable */
-        }
-
-        .bulk-import-panel .actions {
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            height: 100%;
-            padding-top: 25px;
-            /* Align with input fields */
-        }
+        /* ... existing styles ... */
 
         /* Summary Section */
         .summary-section {
@@ -511,67 +522,70 @@
 <body>
 
     <header>
-        <div>
+        <div class="header-top">
             <h1>Urlaubsplaner 2026</h1>
-            <div class="legend">
-                <div class="legend-item">
-                    <div class="color-box" style="background:var(--status-vacation)"></div> Urlaub
-                </div>
-                <div class="legend-item">
-                    <div class="color-box" style="background:var(--status-trip)"></div> Dienstreise
-                </div>
-                <div class="legend-item">
-                    <div class="color-box" style="background:var(--status-training)"></div> Fortbildung
-                </div>
-                <div class="legend-item">
-                    <div class="color-box" style="background:var(--status-custom)"></div> Sonstiges
-                </div>
-
-                <div class="legend-item" style="margin-left: 10px; border-left: 1px solid #ddd; padding-left: 10px;">
-                    <div class="color-box" style="background:#fee2e2"></div> Feiertag
-                </div>
-                <div class="legend-item">
-                    <div class="color-box"
-                        style="background-image: repeating-linear-gradient(45deg, #ccc, #ccc 2px, transparent 2px, transparent 6px); border: 1px solid #ddd;">
-                    </div> Schulferien
-                </div>
-                <div class="legend-item"><span style="font-size: 1.2rem; color: var(--danger-color)">⚠</span>
-                    Unterbesetzung</div>
-            </div>
-
-            <div
-                style="margin-top: 15px; display: flex; align-items: center; gap: 15px; background: #f1f5f9; padding: 10px; border-radius: var(--radius-md);">
-                <strong style="font-size: 0.9rem">Eingabe-Modus:</strong>
-                <label><input type="radio" name="mode" value="U" checked onchange="app.setMode('U')"> Urlaub</label>
-                <label><input type="radio" name="mode" value="D" onchange="app.setMode('D')"> Dienstreise</label>
-                <label><input type="radio" name="mode" value="F" onchange="app.setMode('F')"> Fortbildung</label>
-                <label><input type="radio" name="mode" value="T" onchange="app.setMode('T')"> Sonstiges</label>
-                <input type="text" id="customText" placeholder="Text..."
-                    style="padding: 4px; border: 1px solid #ccc; border-radius: 4px; display: none;"
-                    oninput="app.setCustomText(this.value)">
+            <div class="controls">
+                <button onclick="app.openModal()">+ Abwesenheit eintragen</button>
+                <button id="btnReset" onclick="app.resetData()">Reset</button>
+                <button id="btnExport" onclick="app.exportData()">Export JSON</button>
+                <button id="btnImport" class="primary" onclick="document.getElementById('fileInput').click()">Import
+                    JSON</button>
+                <input type="file" id="fileInput" style="display:none" onchange="app.importData(this)">
             </div>
         </div>
-        <div class="controls">
-            <button onclick="app.openModal()">+ Abwesenheit eintragen</button>
-            <button id="btnReset" onclick="app.resetData()">Reset</button>
-            <button id="btnExport" onclick="app.exportData()">Export JSON</button>
-            <button id="btnImport" class="primary" onclick="document.getElementById('fileInput').click()">Import
-                JSON</button>
-            <input type="file" id="fileInput" style="display:none" onchange="app.importData(this)">
+
+        <div class="bulk-import-panel">
+            <div class="form-group" style="max-width: 200px;">
+                <label>Import für:</label>
+                <select id="importEmp"></select>
+            </div>
+            <div class="form-group" style="flex: 2;">
+                <label>Format: TT.MM.YY bis TT.MM.YY Art (z.B. 01.01.26 bis 05.01.26 Urlaub)</label>
+                <textarea id="importText" class="bulk-input" style="height: 60px"
+                    placeholder="Paste hier..."></textarea>
+            </div>
+            <div class="actions">
+                <button class="primary" onclick="app.processBulkImport()">Importieren</button>
+            </div>
         </div>
     </header>
 
-    <div class="bulk-import-panel">
-        <div class="form-group" style="max-width: 200px;">
-            <label>Import für:</label>
-            <select id="importEmp"></select>
+    <div class="calendar-toolbar">
+        <div class="legend">
+            <div class="legend-item">
+                <div class="color-box" style="background:var(--status-vacation)"></div> Urlaub
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background:var(--status-trip)"></div> Dienstreise
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background:var(--status-training)"></div> Fortbildung
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background:var(--status-custom)"></div> Sonstiges
+            </div>
+
+            <div class="legend-item" style="margin-left: 10px; border-left: 1px solid #ddd; padding-left: 10px;">
+                <div class="color-box" style="background:#fee2e2"></div> Feiertag
+            </div>
+            <div class="legend-item">
+                <div class="color-box"
+                    style="background-image: repeating-linear-gradient(45deg, #ccc, #ccc 2px, transparent 2px, transparent 6px); border: 1px solid #ddd;">
+                </div> Schulferien
+            </div>
+            <div class="legend-item"><span style="font-size: 1.2rem; color: var(--danger-color)">⚠</span>
+                Unterbesetzung</div>
         </div>
-        <div class="form-group" style="flex: 2;">
-            <label>Format: TT.MM.YY bis TT.MM.YY Art (z.B. 01.01.26 bis 05.01.26 Urlaub)</label>
-            <textarea id="importText" class="bulk-input" style="height: 60px" placeholder="Paste hier..."></textarea>
-        </div>
-        <div class="actions">
-            <button class="primary" onclick="app.processBulkImport()">Importieren</button>
+
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <strong style="font-size: 0.9rem">Eingabe-Modus:</strong>
+            <label><input type="radio" name="mode" value="U" checked onchange="app.setMode('U')"> Urlaub</label>
+            <label><input type="radio" name="mode" value="D" onchange="app.setMode('D')"> Dienstreise</label>
+            <label><input type="radio" name="mode" value="F" onchange="app.setMode('F')"> Fortbildung</label>
+            <label><input type="radio" name="mode" value="T" onchange="app.setMode('T')"> Sonstiges</label>
+            <input type="text" id="customText" placeholder="Text..."
+                style="padding: 4px; border: 1px solid #ccc; border-radius: 4px; display: none;"
+                oninput="app.setCustomText(this.value)">
         </div>
     </div>
 
