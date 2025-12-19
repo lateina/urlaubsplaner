@@ -527,6 +527,8 @@
             <div class="controls">
                 <button id="btnReset" onclick="app.resetData()">Reset</button>
                 <button id="btnExport" onclick="app.exportData()">Export JSON</button>
+                <button id="btnImport" class="primary" onclick="document.getElementById('fileInput').click()">Import
+                    JSON</button>
                 <input type="file" id="fileInput" style="display:none" onchange="app.importData(this)">
             </div>
         </div>
