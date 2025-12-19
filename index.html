@@ -613,11 +613,11 @@
             <p style="margin-bottom:15px; color:#666;">Bitte wähle deinen Namen, um dich anzumelden.</p>
             <div class="form-group">
                 <label>Ich bin:</label>
-                <select id="loginSelect" onchange="app.toggleAdminPwd()"></select>
+                <select id="loginSelect"></select>
             </div>
-            <div id="adminPwdGroup" class="form-group" style="display:none; margin-top:10px;">
-                <label style="font-size:0.8rem; color:#888;">Admin Passwort:</label>
-                <input type="password" id="adminPwdInput" placeholder="Passwort...">
+            <div id="loginPwdGroup" class="form-group" style="margin-top:10px;">
+                <label style="font-size:0.8rem; color:#888;">Passwort / PIN:</label>
+                <input type="password" id="loginPwdInput" placeholder="PIN eingeben...">
             </div>
             <div class="form-group" style="margin-top:20px; border-top:1px solid #eee; padding-top:10px;">
                 <label style="font-size:0.8rem; color:#888;">API Key (nur einmalig nötig):</label>
@@ -673,13 +673,13 @@
             binId: '694548d1d0ea881f403427e3', // Central Database
             apiKey: localStorage.getItem('jsonbin_key') || '', // Stored locally
             employees: [
-                { id: 'maier', name: 'Maier', role: 'Chef', skills: ['privat'] },
-                { id: 'wagner', name: 'Wagner', role: '', skills: ['tavi', 'privat'] },
-                { id: 'debl', name: 'Debl', role: '', skills: ['privat', 'teer'] },
-                { id: 'neef', name: 'Neef', role: '', skills: ['tavi'] },
-                { id: 'meindl', name: 'Meindl', role: '', skills: ['teer'] },
-                { id: 'sag', name: 'Sag', role: '', skills: ['teer'] },
-                { id: 'stadler', name: 'Stadler', role: '', skills: ['tavi'] }
+                { id: 'maier', name: 'Maier', role: 'Chef', skills: ['privat'], pin: '0101' },
+                { id: 'wagner', name: 'Wagner', role: '', skills: ['tavi', 'privat'], pin: '0202' },
+                { id: 'debl', name: 'Debl', role: '', skills: ['privat', 'teer'], pin: '0303' },
+                { id: 'neef', name: 'Neef', role: '', skills: ['tavi'], pin: '0404' },
+                { id: 'meindl', name: 'Meindl', role: '', skills: ['teer'], pin: '0505' },
+                { id: 'sag', name: 'Sag', role: '', skills: ['teer'], pin: '0606' },
+                { id: 'stadler', name: 'Stadler', role: '', skills: ['tavi'], pin: '0707' }
             ],
             // ... (rest of config)
             holidays: {
@@ -866,12 +866,6 @@
                 };
             }
 
-            toggleAdminPwd() {
-                const empId = document.getElementById('loginSelect').value;
-                const pwdGroup = document.getElementById('adminPwdGroup');
-                pwdGroup.style.display = (empId === 'admin') ? 'block' : 'none';
-            }
-
             showLoginModal() {
                 const select = document.getElementById('loginSelect');
                 select.innerHTML = '';
@@ -890,24 +884,30 @@
                     select.appendChild(opt);
                 });
 
+                // Clear Password Field
+                document.getElementById('loginPwdInput').value = '';
+
                 // Pre-fill Key if known
                 if (CONFIG.apiKey) {
                     document.getElementById('apiKeyInput').value = CONFIG.apiKey;
                 }
-
-                // Trigger toggle once
-                this.toggleAdminPwd();
             }
 
             async processLogin() {
                 const empId = document.getElementById('loginSelect').value;
-                const keyInput = document.getElementById('apiKeyInput').value.trim(); // Added trim()
+                const pwdInput = document.getElementById('loginPwdInput').value;
+                const keyInput = document.getElementById('apiKeyInput').value.trim();
 
+                // Validate Password/PIN
                 if (empId === 'admin') {
-                    // Check password from Input
-                    const pwd = document.getElementById('adminPwdInput').value;
-                    if (pwd !== 'CaMK2delta') {
-                        alert('Falsches Passwort!');
+                    if (pwdInput !== 'CaMK2delta') {
+                        alert('Falsches Admin-Passwort!');
+                        return;
+                    }
+                } else {
+                    const emp = CONFIG.employees.find(e => e.id === empId);
+                    if (emp && emp.pin && pwdInput !== emp.pin) {
+                        alert('Falsche PIN!');
                         return;
                     }
                 }
