@@ -145,6 +145,8 @@
             min-width: 100%;
         }
 
+
+
         .calendar-container {
             display: grid;
             overflow-x: auto;
@@ -585,6 +587,25 @@
 
     <div id="custom-tooltip"></div>
 
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal-overlay" style="display:flex;">
+        <div class="modal">
+            <h2>Willkommen!</h2>
+            <p style="margin-bottom:15px; color:#666;">Bitte wähle deinen Namen, um dich anzumelden.</p>
+            <div class="form-group">
+                <label>Ich bin:</label>
+                <select id="loginSelect"></select>
+            </div>
+            <div class="form-group" style="margin-top:20px; border-top:1px solid #eee; padding-top:10px;">
+                <label style="font-size:0.8rem; color:#888;">API Key (nur einmalig nötig):</label>
+                <input type="password" id="apiKeyInput" placeholder="Master Key (optional wenn gespeichert)">
+            </div>
+            <div class="modal-actions">
+                <button class="primary" onclick="app.processLogin()">Anmelden</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal -->
     <div id="addModal" class="modal-overlay">
         <div class="modal">
@@ -626,7 +647,8 @@
     <script>
         const CONFIG = {
             year: 2026,
-            // Server Sync removed - LocalStorage only
+            binId: '694548d1d0ea881f403427e3', // Central Database
+            apiKey: localStorage.getItem('jsonbin_key') || '', // Stored locally
             employees: [
                 { id: 'maier', name: 'Maier', role: 'Chef', skills: ['privat'] },
                 { id: 'wagner', name: 'Wagner', role: '', skills: ['tavi', 'privat'] },
@@ -635,6 +657,7 @@
                 { id: 'meindl', name: 'Meindl', role: '', skills: ['teer'] },
                 { id: 'sag', name: 'Sag', role: '', skills: ['teer'] }
             ],
+            // ... (rest of config)
             holidays: {
                 '2026-01-01': 'Neujahr',
                 '2026-01-06': 'Hl. 3 Könige',
@@ -661,21 +684,62 @@
             ]
         };
 
+        /* Data Service for JSONbin */
+        class DataService {
+            static async load() {
+                if (!CONFIG.binId || !CONFIG.apiKey) return JSON.parse(localStorage.getItem('urlaubsplaner_2026')) || {};
+                try {
+                    const res = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}/latest`, {
+                        headers: { 'X-Access-Key': CONFIG.apiKey }
+                    });
+                    if (!res.ok) throw new Error('Load failed');
+                    const json = await res.json();
+                    return json.record;
+                } catch (e) {
+                    console.error(e);
+                    alert('Konnte Daten nicht laden (Offline?). Lade lokale Kopie.');
+                    return JSON.parse(localStorage.getItem('urlaubsplaner_2026')) || {};
+                }
+            }
+
+            static async save(state) {
+                // Always save local
+                localStorage.setItem('urlaubsplaner_2026', JSON.stringify(state));
+
+                if (!CONFIG.binId || !CONFIG.apiKey) return;
+
+                try {
+                    // Update Bin
+                    await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Access-Key': CONFIG.apiKey
+                        },
+                        body: JSON.stringify(state)
+                    });
+                } catch (e) {
+                    console.error('Sync error', e);
+                }
+            }
+        }
+
         class App {
             constructor() {
-                this.state = this.loadState() || {};
+                this.currentUser = null;
+                this.state = {}; // Will be loaded
                 this.dates = this.generateDates();
                 this.isDragging = false;
                 this.dragStartVal = null;
 
-                // Current input mode
-                this.currentMode = 'U'; // U, D, F, T
+                this.currentMode = 'U';
                 this.currentText = '';
-
-                this.currentMonthIndex = 0; // Track current verified month
+                this.currentMonthIndex = 0;
 
                 this.initUI();
-                this.render();
+
+                // Start with Login
+                this.showLoginModal();
 
                 // Keyboard Navigation
                 document.addEventListener('keydown', (e) => {
@@ -774,6 +838,51 @@
                 };
             }
 
+            showLoginModal() {
+                const select = document.getElementById('loginSelect');
+                select.innerHTML = '';
+                CONFIG.employees.forEach(emp => {
+                    const opt = document.createElement('option');
+                    opt.value = emp.id;
+                    opt.innerText = emp.name;
+                    select.appendChild(opt);
+                });
+
+                // Pre-fill Key if known
+                if (CONFIG.apiKey) {
+                    document.getElementById('apiKeyInput').value = CONFIG.apiKey;
+                }
+            }
+
+            async processLogin() {
+                const empId = document.getElementById('loginSelect').value;
+                const keyInput = document.getElementById('apiKeyInput').value;
+
+                if (!keyInput) {
+                    alert('Bitte Master Key eingeben');
+                    return;
+                }
+
+                // Save Key locally
+                localStorage.setItem('jsonbin_key', keyInput);
+                CONFIG.apiKey = keyInput;
+
+                this.currentUser = empId;
+                document.getElementById('loginModal').style.display = 'none';
+
+                // Load Data from Server
+                document.body.style.cursor = 'wait';
+                try {
+                    const remoteData = await DataService.load();
+                    if (remoteData) {
+                        this.state = remoteData;
+                        this.render();
+                    }
+                } finally {
+                    document.body.style.cursor = 'default';
+                }
+            }
+
             openModal() {
                 // Sync with current mode
                 document.getElementById('modalType').value = this.currentMode;
@@ -822,6 +931,12 @@
             }
 
             setVacation(empId, dateStr, value) {
+                // ACCESS CONTROL
+                if (this.currentUser !== empId) {
+                    alert(`Du bist als "${CONFIG.employees.find(e => e.id === this.currentUser).name}" angemeldet und darfst nur deine eigenen Einträge bearbeiten.`);
+                    return;
+                }
+
                 if (!this.state[empId]) this.state[empId] = {};
 
                 if (value) {
@@ -880,6 +995,11 @@
                     return;
                 }
 
+                if (empId !== this.currentUser) {
+                    alert('Du darfst nur für dich selbst Einträge hinzufügen.');
+                    return;
+                }
+
                 let curr = new Date(startStr);
                 const end = new Date(endStr);
 
@@ -899,6 +1019,11 @@
             processBulkImport() {
                 const empId = document.getElementById('importEmp').value;
                 const text = document.getElementById('importText').value;
+
+                if (empId !== this.currentUser) {
+                    alert('Bulk-Import ist nur für den eigenen Nutzer möglich.');
+                    return;
+                }
 
                 if (!text) return;
 
@@ -995,12 +1120,10 @@
             }
 
             saveState() {
-                localStorage.setItem('urlaubsplaner_2026', JSON.stringify(this.state));
+                DataService.save(this.state);
             }
 
-            loadState() {
-                return JSON.parse(localStorage.getItem('urlaubsplaner_2026'));
-            }
+            // loadState removed - served by DataService
 
             validateCoverage(dateObj) {
                 const dateStr = dateObj.dateStr;
