@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Urlaubsplaner 2026</title>
+    <style>
+        :root {
+            /* Color Palette */
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f8fafc;
+            --surface-color: #ffffff;
+            --text-main: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --success-color: #10b981;
+
+            /* Status Colors */
+            --status-vacation: #3b82f6;
+            /* Blue for Vacation */
+            --status-trip: #8b5cf6;
+            /* Purple for Business Trip */
+            --status-training: #f97316;
+            /* Orange for Training */
+            --status-custom: #64748b;
+            /* Gray for Custom/Free Text */
+
+            --status-absent: #ef4444;
+            /* Red for Absent (Legacy/Error) */
+            --status-holiday: #f5f5f5;
+            /* Light Gray for Holidays */
+            --status-weekend: #f1f5f9;
+            /* Slightly darker for Weekends */
+
+            /* Spacing & Radius */
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px;
+            /* padding around the page */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: auto;
+            /* Allow horizontal scroll */
+        }
+
+        header {
+            background: var(--surface-color);
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 8px 16px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            background: var(--surface-color);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: var(--bg-color);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        button.primary {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+        }
+
+        button.primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .color-box {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        /* Main Calendar Area */
+        main {
+            /* flex: 1; Removed to let content dictate height */
+            background: var(--surface-color);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            /* overflow: hidden; Removed */
+            position: relative;
+            display: block;
+            /* Normal block flow */
+            width: fit-content;
+            /* Ensure container expands for sticky */
+            min-width: 100%;
+        }
+
+        .calendar-container {
+            display: grid;
+            overflow-x: auto;
+            /* Restore horizontal scroll */
+            position: relative;
+            width: 100%;
+            height: auto;
+            /* Full height */
+            /* First col for names, rest for days. 365 days + 1 label col */
+            grid-template-columns: 200px repeat(365, 40px);
+            grid-template-rows: 30px 20px 140px repeat(6, 60px) auto;
+        }
+
+        /* Sticky Columns/Rows */
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            background: #ffffff;
+            /* Explicit opaque white */
+            z-index: 50;
+            /* Increased */
+            border-right: 1px solid var(--border-color);
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+            min-width: 200px;
+            /* Enforce width */
+            will-change: transform;
+            /* Hint for compositing */
+        }
+
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            background: var(--surface-color);
+            z-index: 40;
+            /* Increased */
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        /* High Z-Index for top-left intersection */
+        .sticky-corner {
+            z-index: 100;
+            /* Increased */
+        }
+
+        /* Grid Cells */
+        .cell {
+            padding: 5px;
+            border-bottom: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+        }
+
+        .header-cell {
+            font-weight: 600;
+            color: var(--text-secondary);
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .month-header {
+            grid-row: 1;
+            background: #f1f5f9;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        .day-header {
+            grid-row: 2;
+            height: 140px;
+            /* Increased to fit vertical text */
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 5px;
+            padding-bottom: 5px;
+        }
+
+        .header-holiday-text {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            font-size: 0.65rem;
+            color: #555;
+            margin-top: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-height: 100px;
+        }
+
+        .employee-row-header {
+            justify-content: flex-start;
+            padding-left: 15px;
+            font-weight: 600;
+            background: var(--surface-color);
+        }
+
+        .employee-sub {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+            margin-left: 5px;
+        }
+
+        /* Interactive Cells */
+        .day-cell {
+            cursor: pointer;
+            transition: background 0.1s;
+            position: relative;
+        }
+
+        .day-cell:hover {
+            background-color: #f8fafc;
+        }
+
+        /* Cell Content (Text) */
+        .cell-text {
+            font-size: 0.6rem;
+            color: white;
+            pointer-events: none;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            padding: 0 2px;
+        }
+
+        /* Status Styles */
+        .weekend {
+            background-color: var(--status-weekend);
+        }
+
+        .holiday {
+            background-color: #fee2e2;
+            /* Light Red tint */
+            color: white;
+        }
+
+        .school-holiday {
+            background-image: repeating-linear-gradient(45deg,
+                    transparent,
+                    transparent 5px,
+                    rgba(0, 0, 0, 0.2) 5px,
+                    rgba(0, 0, 0, 0.2) 10px);
+        }
+
+        .status-vacation {
+            background-color: var(--status-vacation);
+            color: white;
+        }
+
+        .status-trip {
+            background-color: var(--status-trip);
+            color: white;
+        }
+
+        .status-training {
+            background-color: var(--status-training);
+            color: white;
+        }
+
+        .status-custom {
+            background-color: var(--status-custom);
+            color: white;
+        }
+
+
+        /* 2. Navigation Bar */
+        .month-nav {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .month-nav button {
+            padding: 4px 10px;
+            font-size: 0.8rem;
+        }
+
+        .month-nav button {
+            padding: 4px 10px;
+            font-size: 0.8rem;
+        }
+
+        /* Custom Tooltip */
+        #custom-tooltip {
+            position: fixed;
+            background: #333;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            z-index: 1000;
+            pointer-events: none;
+            display: none;
+            max-width: 200px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 3. Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: var(--surface-color);
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            width: 400px;
+            max-width: 90vw;
+            box-shadow: var(--shadow-md);
+        }
+
+        .modal h2 {
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        textarea.bulk-input {
+            width: 100%;
+            height: 150px;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-family: monospace;
+            font-size: 0.9rem;
+            resize: vertical;
+        }
+
+        .status-vacation {
+            background-color: var(--status-vacation);
+            color: white;
+        }
+
+        .status-absent {
+            background-color: var(--status-absent);
+            color: white;
+        }
+
+        /* Warning Footer */
+        .validation-row {
+            background: #fff1f2;
+            color: var(--danger-color);
+            font-weight: bold;
+            justify-content: flex-start;
+            padding-left: 10px;
+            border-top: 2px solid var(--danger-color);
+        }
+
+        .validation-cell {
+            border-top: 2px solid var(--danger-color);
+        }
+
+        .warning-text {
+            color: var(--danger-color);
+            font-size: 0.7rem;
+            font-weight: bold;
+            line-height: 1.1;
+            display: block;
+            text-align: center;
+        }
+
+        /* Bulk Import Panel */
+        .bulk-import-panel {
+            background: #fff;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: var(--radius-md);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .bulk-import-panel .form-group {
+            margin-bottom: 0;
+            flex: 1;
+        }
+
+        .bulk-import-panel textarea {
+            height: 80px;
+            /* Compact but usable */
+        }
+
+        .bulk-import-panel .actions {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            height: 100%;
+            padding-top: 25px;
+            /* Align with input fields */
+        }
+
+        /* Summary Section */
+        .summary-section {
+            margin-top: 20px;
+            background: var(--surface-color);
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+        }
+
+        .summary-section h2 {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: var(--text-main);
+        }
+
+        #exportSummary {
+            width: 100%;
+            height: 120px;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-family: inherit;
+            font-size: 0.85rem;
+            resize: vertical;
+            background: #f8fafc;
+            color: var(--text-main);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div>
+            <h1>Urlaubsplaner 2026</h1>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="color-box" style="background:var(--status-vacation)"></div> Urlaub
+                </div>
+                <div class="legend-item">
+                    <div class="color-box" style="background:var(--status-trip)"></div> Dienstreise
+                </div>
+                <div class="legend-item">
+                    <div class="color-box" style="background:var(--status-training)"></div> Fortbildung
+                </div>
+                <div class="legend-item">
+                    <div class="color-box" style="background:var(--status-custom)"></div> Sonstiges
+                </div>
+
+                <div class="legend-item" style="margin-left: 10px; border-left: 1px solid #ddd; padding-left: 10px;">
+                    <div class="color-box" style="background:#fee2e2"></div> Feiertag
+                </div>
+                <div class="legend-item">
+                    <div class="color-box"
+                        style="background-image: repeating-linear-gradient(45deg, #ccc, #ccc 2px, transparent 2px, transparent 6px); border: 1px solid #ddd;">
+                    </div> Schulferien
+                </div>
+                <div class="legend-item"><span style="font-size: 1.2rem; color: var(--danger-color)">⚠</span>
+                    Unterbesetzung</div>
+            </div>
+
+            <div
+                style="margin-top: 15px; display: flex; align-items: center; gap: 15px; background: #f1f5f9; padding: 10px; border-radius: var(--radius-md);">
+                <strong style="font-size: 0.9rem">Eingabe-Modus:</strong>
+                <label><input type="radio" name="mode" value="U" checked onchange="app.setMode('U')"> Urlaub</label>
+                <label><input type="radio" name="mode" value="D" onchange="app.setMode('D')"> Dienstreise</label>
+                <label><input type="radio" name="mode" value="F" onchange="app.setMode('F')"> Fortbildung</label>
+                <label><input type="radio" name="mode" value="T" onchange="app.setMode('T')"> Sonstiges</label>
+                <input type="text" id="customText" placeholder="Text..."
+                    style="padding: 4px; border: 1px solid #ccc; border-radius: 4px; display: none;"
+                    oninput="app.setCustomText(this.value)">
+            </div>
+        </div>
+        <div class="controls">
+            <button onclick="app.openModal()">+ Abwesenheit eintragen</button>
+            <button onclick="app.resetData()">Reset</button>
+            <button onclick="app.exportData()">Export JSON</button>
+            <button class="primary" onclick="document.getElementById('fileInput').click()">Import JSON</button>
+            <input type="file" id="fileInput" style="display:none" onchange="app.importData(this)">
+        </div>
+    </header>
+
+    <div class="bulk-import-panel">
+        <div class="form-group" style="max-width: 200px;">
+            <label>Import für:</label>
+            <select id="importEmp"></select>
+        </div>
+        <div class="form-group" style="flex: 2;">
+            <label>Format: TT.MM.YY bis TT.MM.YY Art (z.B. 01.01.26 bis 05.01.26 Urlaub)</label>
+            <textarea id="importText" class="bulk-input" style="height: 60px" placeholder="Paste hier..."></textarea>
+        </div>
+        <div class="actions">
+            <button class="primary" onclick="app.processBulkImport()">Importieren</button>
+        </div>
+    </div>
+
+    <div class="month-nav" id="monthNav">
+        <!-- Generated by JS -->
+    </div>
+
+    <div id="calendar" class="calendar-container"></div>
+
+    <div class="summary-section">
+        <h2>Zusammenfassung (Abwesenheiten)</h2>
+        <textarea id="exportSummary" readonly placeholder="Automatische Zusammenfassung..."></textarea>
+    </div>
+
+    <div id="custom-tooltip"></div>
+
+    <!-- Modal -->
+    <div id="addModal" class="modal-overlay">
+        <div class="modal">
+            <h2>Abwesenheit eintragen</h2>
+            <div class="form-group">
+                <label>Mitarbeiter</label>
+                <select id="modalEmp">
+                    <!-- Options via JS -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Art</label>
+                <select id="modalType">
+                    <option value="U">Urlaub</option>
+                    <option value="D">Dienstreise</option>
+                    <option value="F">Fortbildung</option>
+                    <option value="T">Sonstiges</option>
+                </select>
+            </div>
+            <div class="form-group" id="modalTextGroup">
+                <label>Beschreibung (Optional)</label>
+                <input type="text" id="modalText">
+            </div>
+            <div class="form-group">
+                <label>Von</label>
+                <input type="date" id="modalStart" value="2026-01-01">
+            </div>
+            <div class="form-group">
+                <label>Bis (einschließlich)</label>
+                <input type="date" id="modalEnd" value="2026-01-05">
+            </div>
+            <div class="modal-actions">
+                <button onclick="document.getElementById('addModal').style.display = 'none'">Abbrechen</button>
+                <button class="primary" onclick="app.addRange()">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CONFIG = {
+            year: 2026,
+            // Server Sync removed - LocalStorage only
+            employees: [
+                { id: 'maier', name: 'Maier', role: 'Chef', skills: ['privat'] },
+                { id: 'wagner', name: 'Wagner', role: '', skills: ['tavi', 'privat'] },
+                { id: 'debl', name: 'Debl', role: '', skills: ['privat', 'teer'] },
+                { id: 'neef', name: 'Neef', role: '', skills: ['tavi'] },
+                { id: 'meindl', name: 'Meindl', role: '', skills: ['teer'] },
+                { id: 'sag', name: 'Sag', role: '', skills: ['teer'] }
+            ],
+            holidays: {
+                '2026-01-01': 'Neujahr',
+                '2026-01-06': 'Hl. 3 Könige',
+                '2026-04-03': 'Karfreitag',
+                '2026-04-06': 'Ostermontag',
+                '2026-05-01': 'Tag der Arbeit',
+                '2026-05-14': 'Christi Himmelfahrt',
+                '2026-05-25': 'Pfingstmontag',
+                '2026-06-04': 'Fronleichnam',
+                '2026-08-15': 'Mariä Himmelfahrt',
+                '2026-10-03': 'Tag d. dt. Einheit',
+                '2026-11-01': 'Allerheiligen',
+                '2026-12-25': '1. Weihnachtstag',
+                '2026-12-26': '2. Weihnachtstag'
+            },
+            schoolHolidays: [
+                { start: '2026-01-01', end: '2026-01-05', name: 'Weihnachtsferien' },
+                { start: '2026-02-16', end: '2026-02-20', name: 'Winterferien' },
+                { start: '2026-03-30', end: '2026-04-10', name: 'Osterferien' },
+                { start: '2026-05-26', end: '2026-06-05', name: 'Pfingstferien' },
+                { start: '2026-08-03', end: '2026-09-14', name: 'Sommerferien' },
+                { start: '2026-11-02', end: '2026-11-06', name: 'Herbstferien' },
+                { start: '2026-12-24', end: '2026-12-31', name: 'Weihnachtsferien' }
+            ]
+        };
+
+        class App {
+            constructor() {
+                this.state = this.loadState() || {};
+                this.dates = this.generateDates();
+                this.isDragging = false;
+                this.dragStartVal = null;
+
+                // Current input mode
+                this.currentMode = 'U'; // U, D, F, T
+                this.currentText = '';
+
+                this.currentMonthIndex = 0; // Track current verified month
+
+                this.initUI();
+                this.render();
+
+                // Keyboard Navigation
+                document.addEventListener('keydown', (e) => {
+                    // Ignore if typing in input
+                    const activeTag = document.activeElement ? document.activeElement.tagName : '';
+                    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(activeTag)) return;
+
+                    const container = document.getElementById('calendar');
+                    if (!container) return;
+
+                    // Determine current month based on scroll position
+                    let limit = container.scrollLeft + 250; // Offset for sticky col
+                    let currentIndex = 0;
+
+                    for (let i = 0; i < 12; i++) {
+                        const el = document.getElementById(`month-header-${i}`);
+                        if (el && el.offsetLeft <= limit) {
+                            currentIndex = i;
+                        } else {
+                            break;
+                        }
+                    }
+
+                    if (e.key === 'ArrowRight') {
+                        this.scrollToMonth(currentIndex + 1);
+                    } else if (e.key === 'ArrowLeft') {
+                        this.scrollToMonth(currentIndex - 1);
+                    }
+                });
+
+                document.addEventListener('mouseup', () => {
+                    this.isDragging = false;
+                    this.dragStartVal = null;
+                });
+            }
+
+            generateDates() {
+                const dates = [];
+                const date = new Date(CONFIG.year, 0, 1);
+                while (date.getFullYear() === CONFIG.year) {
+                    const dateStr = this.formatDate(date);
+                    const dayOfWeek = date.getDay(); // 0 = Sun, 6 = Sat
+
+                    // Find school holiday name
+                    let shName = null;
+                    const sh = CONFIG.schoolHolidays.find(h => dateStr >= h.start && dateStr <= h.end);
+                    if (sh) shName = sh.name;
+
+                    dates.push({
+                        dateStr,
+                        day: date.getDate(),
+                        month: date.getMonth(), // 0-11
+                        weekday: dayOfWeek,
+                        isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
+                        holiday: CONFIG.holidays[dateStr],
+                        schoolHoliday: shName,
+                        isSchoolHoliday: !!shName
+                    });
+                    date.setDate(date.getDate() + 1);
+                }
+                return dates;
+            }
+
+            initUI() {
+                // Populate Month Nav
+                const nav = document.getElementById('monthNav');
+                const months = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+                months.forEach((m, i) => {
+                    const btn = document.createElement('button');
+                    btn.innerText = m;
+                    btn.onclick = () => this.scrollToMonth(i);
+                    nav.appendChild(btn);
+                });
+
+                // Populate Modal Select
+                const select = document.getElementById('modalEmp');
+                const importSelect = document.getElementById('importEmp');
+                CONFIG.employees.forEach(emp => {
+                    const opt = document.createElement('option');
+                    opt.value = emp.id;
+                    opt.innerText = emp.name;
+                    select.appendChild(opt);
+
+                    const opt2 = document.createElement('option');
+                    opt2.value = emp.id;
+                    opt2.innerText = emp.name;
+                    importSelect.appendChild(opt2);
+                });
+
+                // Modal Type Change Listener
+                document.getElementById('modalType').onchange = (e) => {
+                    // Always show text field now
+                };
+            }
+
+            openModal() {
+                // Sync with current mode
+                document.getElementById('modalType').value = this.currentMode;
+                document.getElementById('modalTextGroup').style.display = 'block';
+                document.getElementById('modalText').value = ''; // Reset text
+                document.getElementById('addModal').style.display = 'flex';
+            }
+
+            scrollToMonth(index) {
+                if (index < 0 || index > 11) return;
+                this.currentMonthIndex = index;
+
+                const container = document.getElementById('calendar'); // Updated scroll target
+                const el = document.getElementById(`month-header-${index}`);
+
+                if (el && container) {
+                    container.scrollTo({
+                        left: el.offsetLeft - 200,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+
+            setMode(mode) {
+                this.currentMode = mode;
+                document.getElementById('customText').style.display = mode === 'T' ? 'inline-block' : 'none';
+            }
+
+            setCustomText(txt) {
+                this.currentText = txt;
+            }
+
+            handleMouseDown(empId, dateStr) {
+                this.isDragging = true;
+                const current = this.state[empId]?.[dateStr];
+
+                // If clicking on existing, toggle off. If empty, toggle on with current Mode
+                this.dragStartVal = current ? null : { type: this.currentMode, text: this.currentText };
+
+                this.setVacation(empId, dateStr, this.dragStartVal);
+            }
+
+            handleMouseOver(empId, dateStr) {
+                if (!this.isDragging) return;
+                this.setVacation(empId, dateStr, this.dragStartVal);
+            }
+
+            setVacation(empId, dateStr, value) {
+                if (!this.state[empId]) this.state[empId] = {};
+
+                if (value) {
+                    this.state[empId][dateStr] = value;
+                } else {
+                    delete this.state[empId][dateStr];
+                }
+
+                this.saveState();
+
+                // Optimized UI Update
+                const cell = document.getElementById(`cell-${empId}-${dateStr}`);
+                if (cell) {
+                    // Remove all status classes
+                    cell.classList.remove('status-vacation', 'status-trip', 'status-training', 'status-custom');
+                    cell.innerHTML = ''; // Clear text
+
+                    if (value) {
+                        if (value.type === 'U' || value === 'V') cell.classList.add('status-vacation');
+                        else if (value.type === 'D') cell.classList.add('status-trip');
+                        else if (value.type === 'F') cell.classList.add('status-training');
+                        else if (value.type === 'T') cell.classList.add('status-custom');
+
+                        // Text for all
+                        if (value.text) cell.innerHTML = `<span class="cell-text">${value.text}</span>`;
+                    }
+                }
+
+                this.updateValidationUI(dateStr);
+            }
+
+            showTooltip(e, empId, dateStr) {
+                const status = this.state[empId]?.[dateStr];
+                if (status && status.text) { // Show for all types if text exists
+                    const tip = document.getElementById('custom-tooltip');
+                    tip.innerText = status.text;
+                    tip.style.display = 'block';
+                    tip.style.left = (e.clientX + 10) + 'px';
+                    tip.style.top = (e.clientY + 10) + 'px';
+                }
+            }
+
+            hideTooltip() {
+                document.getElementById('custom-tooltip').style.display = 'none';
+            }
+
+            addRange() {
+                const empId = document.getElementById('modalEmp').value;
+                const type = document.getElementById('modalType').value;
+                const text = document.getElementById('modalText').value;
+                const startStr = document.getElementById('modalStart').value;
+                const endStr = document.getElementById('modalEnd').value;
+
+                if (!empId || !startStr || !endStr || startStr > endStr) {
+                    alert('Ungültige Eingabe');
+                    return;
+                }
+
+                let curr = new Date(startStr);
+                const end = new Date(endStr);
+
+                const val = { type, text };
+
+                while (curr <= end) {
+                    const dStr = this.formatDate(curr);
+                    if (dStr.startsWith(CONFIG.year.toString())) {
+                        this.setVacation(empId, dStr, val);
+                    }
+                    curr.setDate(curr.getDate() + 1);
+                }
+
+                document.getElementById('addModal').style.display = 'none';
+            }
+
+            processBulkImport() {
+                const empId = document.getElementById('importEmp').value;
+                const text = document.getElementById('importText').value;
+
+                if (!text) return;
+
+                const lines = text.split('\n');
+                let count = 0;
+
+                lines.forEach(line => {
+                    line = line.trim();
+                    if (!line) return;
+
+                    // 1. Try Range Regex
+                    // Regex: DD.MM.[YYYY] (bis|-) DD.MM.[YYYY] [Text]
+                    let match = line.match(/(\d{1,2})\.(\d{1,2})\.(?:(\d{2,4})?)\s*(?:bis|-)\s*(\d{1,2})\.(\d{1,2})\.(?:(\d{2,4})?)\s*(.*)/i);
+                    let start, end, descRaw;
+
+                    if (match) {
+                        const [, d1, m1, y1, d2, m2, y2, desc] = match;
+                        start = this.parseDate(d1, m1, y1);
+                        end = this.parseDate(d2, m2, y2);
+                        descRaw = desc;
+                    } else {
+                        // 2. Try Single Day Regex
+                        // Regex: DD.MM.[YYYY] [Text]
+                        match = line.match(/(\d{1,2})\.(\d{1,2})\.(?:(\d{2,4})?)\s*(.*)/i);
+                        if (match) {
+                            const [, d1, m1, y1, desc] = match;
+                            start = this.parseDate(d1, m1, y1);
+                            end = new Date(start); // Same day
+                            descRaw = desc;
+                        }
+                    }
+
+                    if (start && end && start <= end) {
+                        // Detect Type
+                        let type = 'T'; // Default Custom
+                        let desc = descRaw ? descRaw.trim() : '';
+                        const lowerDesc = desc.toLowerCase();
+
+                        if (lowerDesc.includes('urlaub')) type = 'U';
+                        else if (lowerDesc.includes('dienstreise')) type = 'D';
+                        else if (lowerDesc.includes('fortbildung')) type = 'F';
+
+                        // Apply
+                        let curr = new Date(start);
+                        const val = { type, text: desc };
+
+                        while (curr <= end) {
+                            const dStr = this.formatDate(curr);
+                            if (dStr.startsWith(CONFIG.year.toString())) {
+                                this.setVacation(empId, dStr, val);
+                            }
+                            curr.setDate(curr.getDate() + 1);
+                        }
+                        count++;
+                    }
+                });
+
+                alert(`${count} Einträge verarbeitet.`);
+                document.getElementById('importText').value = '';
+            }
+
+            parseDate(d, m, y) {
+                let year = y ? parseInt(y) : CONFIG.year;
+                if (isNaN(year)) year = CONFIG.year;
+
+                if (year < 100) year += 2000; // Assume 20xx
+                // JS Month is 0-indexed
+                return new Date(year, parseInt(m) - 1, parseInt(d));
+            }
+
+            formatDate(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            updateValidationUI(dateStr) {
+                const issues = this.validateCoverage(this.dates.find(d => d.dateStr === dateStr));
+                const valCell = document.getElementById(`val-${dateStr}`);
+
+                if (valCell) {
+                    if (issues) {
+                        valCell.innerHTML = `<span class="warning-text">${issues.join('<br>')}</span>`;
+                        valCell.title = 'Fehlend: ' + issues.join(', ');
+                        valCell.style.background = '#fee2e2';
+                    } else {
+                        const dateObj = this.dates.find(d => d.dateStr === dateStr);
+                        valCell.innerHTML = '';
+                        valCell.title = '';
+                        valCell.style.background = (dateObj.isWeekend || dateObj.holiday) ? 'var(--status-weekend)' : '';
+                    }
+                }
+            }
+
+            saveState() {
+                localStorage.setItem('urlaubsplaner_2026', JSON.stringify(this.state));
+            }
+
+            loadState() {
+                return JSON.parse(localStorage.getItem('urlaubsplaner_2026'));
+            }
+
+            validateCoverage(dateObj) {
+                const dateStr = dateObj.dateStr;
+                if (dateObj.isWeekend || dateObj.holiday) return null; // No validation needed
+
+                const presentEmployees = CONFIG.employees.filter(emp => {
+                    const status = this.state[emp.id]?.[dateStr];
+                    return !status; // Present if no status set (Vacation/Absent)
+                });
+
+                const issues = [];
+                // Check TAVI
+                if (!presentEmployees.some(e => e.skills.includes('tavi'))) issues.push('TAVI');
+                // Check Privat
+                if (!presentEmployees.some(e => e.skills.includes('privat'))) issues.push('Privat');
+                // Check TEER
+                if (!presentEmployees.some(e => e.skills.includes('teer'))) issues.push('TEER');
+
+                return issues.length > 0 ? issues : null;
+            }
+
+            resetData() {
+                if (confirm('Wirklich alles löschen?')) {
+                    this.state = {};
+                    this.saveState();
+                    this.render();
+                }
+            }
+
+            exportData() {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.state));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("download", "urlaubsplaner_2026.json");
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+            }
+
+            importData(input) {
+                const file = input.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        this.state = JSON.parse(e.target.result);
+                        this.saveState();
+                        this.render();
+                    } catch (err) {
+                        alert('Fehler beim Laden der Datei');
+                    }
+                };
+                reader.readAsText(file);
+            }
+
+            render() {
+                const container = document.getElementById('calendar');
+                container.innerHTML = '';
+
+                // 1. Month Headers
+                let currentMonth = -1;
+                let colStart = 2; // 1 is name col
+
+                this.dates.forEach((d, index) => {
+                    if (d.month !== currentMonth) {
+                        const monthName = new Date(CONFIG.year, d.month, 1).toLocaleString('de-DE', { month: 'long' });
+                        const monthEl = document.createElement('div');
+                        monthEl.className = 'cell header-cell sticky-header month-header';
+                        monthEl.id = `month-header-${d.month}`;
+                        monthEl.innerText = monthName;
+                        monthEl.style.gridColumnStart = colStart + index;
+
+                        let span = 1;
+                        let i = index + 1;
+                        while (i < this.dates.length && this.dates[i].month === d.month) {
+                            span++;
+                            i++;
+                        }
+                        monthEl.style.gridColumnEnd = `span ${span}`;
+                        container.appendChild(monthEl);
+
+                        currentMonth = d.month;
+                    }
+                });
+
+                // 2. School Holiday Row
+                // New logic: Iterate school holidays and place them
+                CONFIG.schoolHolidays.forEach(sh => {
+                    // Find start and end index
+                    const startIdx = this.dates.findIndex(d => d.dateStr >= sh.start && d.dateStr <= sh.end);
+
+                    // Simple check if holiday is within range (might be partial if year cut)
+                    if (startIdx !== -1) {
+                        let endIdx = this.dates.findIndex(d => d.dateStr > sh.end);
+                        if (endIdx === -1) endIdx = this.dates.length;
+
+                        const span = endIdx - startIdx;
+                        if (span > 0) {
+                            const shEl = document.createElement('div');
+                            shEl.className = 'cell header-cell sticky-header school-holiday-row';
+                            shEl.style.gridRow = 2;
+                            shEl.style.gridColumnStart = startIdx + 2;
+                            shEl.style.gridColumnEnd = `span ${span}`;
+                            shEl.innerText = sh.name;
+                            shEl.title = sh.name;
+                            shEl.style.backgroundColor = '#cbd5e1'; // Darker background
+                            shEl.style.fontSize = '0.7rem';
+                            shEl.style.overflow = 'hidden';
+                            shEl.style.textOverflow = 'ellipsis';
+                            shEl.style.whiteSpace = 'nowrap';
+                            shEl.style.textAlign = 'center';
+                            shEl.style.lineHeight = '20px'; // Adjust height
+                            // shEl.style.borderLeft = '1px solid #ccc';
+                            container.appendChild(shEl);
+                        }
+                    }
+                });
+
+                // 3. Day Headers (Shifted to Row 3)
+                const corner = document.createElement('div');
+                corner.className = 'cell header-cell sticky-col sticky-corner sticky-header';
+                corner.style.gridRow = '1 / span 3'; // Spans Month, School Hol, Day
+                corner.innerText = 'Mitarbeiter';
+                container.appendChild(corner);
+
+                this.dates.forEach((d, i) => {
+                    const dayEl = document.createElement('div');
+                    dayEl.className = `cell header-cell sticky-header day-header ${d.isWeekend ? 'weekend' : ''} ${d.holiday ? 'holiday' : ''} ${d.isSchoolHoliday ? 'school-holiday' : ''}`;
+
+                    let text = '';
+                    if (d.holiday) text = d.holiday;
+                    // Removed school holiday text from day header as it's now above
+
+                    dayEl.innerHTML = `<span>${d.day}</span>${text ? `<span class="header-holiday-text">${text}</span>` : ''}`;
+                    dayEl.style.gridRow = 3; // Shifted
+                    dayEl.style.gridColumn = i + 2;
+                    dayEl.title = text || '';
+                    container.appendChild(dayEl);
+                });
+
+                // 4. Employee Rows (Shifted starting Row 4)
+                CONFIG.employees.forEach((emp, empIndex) => {
+                    // Name Cell
+                    const nameEl = document.createElement('div');
+                    nameEl.className = 'cell employee-row-header sticky-col';
+                    nameEl.style.gridRow = empIndex + 4; // Shifted
+                    nameEl.innerHTML = `${emp.name} <span class="employee-sub">${emp.skills.join(', ')}</span>`;
+                    container.appendChild(nameEl);
+
+                    // Day Cells
+                    this.dates.forEach((d, dateIndex) => {
+                        const cell = document.createElement('div');
+                        let classes = ['cell', 'day-cell'];
+                        if (d.isWeekend) classes.push('weekend');
+                        if (d.isSchoolHoliday) classes.push('school-holiday');
+                        if (d.holiday) classes.push('holiday');
+
+                        const status = this.state[emp.id]?.[d.dateStr];
+                        if (status) {
+                            if (status === 'V' || status.type === 'U') classes.push('status-vacation');
+                            else if (status.type === 'D') classes.push('status-trip');
+                            else if (status.type === 'F') classes.push('status-training');
+                            else if (status.type === 'T') {
+                                classes.push('status-custom');
+                            }
+                        }
+
+                        cell.className = classes.join(' ');
+                        cell.style.gridRow = empIndex + 4; // Shifted
+                        cell.style.gridColumn = dateIndex + 2;
+                        cell.id = `cell-${emp.id}-${d.dateStr}`;
+
+                        if (status && status.text) {
+                            cell.innerHTML = `<span class="cell-text">${status.text}</span>`;
+                        }
+
+                        // Interaction Events
+                        cell.onmousedown = (e) => { e.preventDefault(); this.handleMouseDown(emp.id, d.dateStr); };
+                        cell.onmouseover = () => this.handleMouseOver(emp.id, d.dateStr);
+                        cell.onmouseenter = (e) => this.showTooltip(e, emp.id, d.dateStr);
+                        cell.onmouseleave = () => this.hideTooltip();
+
+                        container.appendChild(cell);
+                    });
+                });
+
+                // 5. Validation Row (Shifted)
+                const valHeader = document.createElement('div');
+                valHeader.className = 'cell sticky-col validation-row';
+                valHeader.style.gridRow = CONFIG.employees.length + 4; // Shifted
+                valHeader.innerHTML = '⚠ Fehlende Abdeckung';
+                container.appendChild(valHeader);
+
+                this.dates.forEach((d, dateIndex) => {
+                    const issues = this.validateCoverage(d);
+                    const cell = document.createElement('div');
+                    cell.className = 'cell validation-cell';
+                    cell.id = `val-${d.dateStr}`;
+
+                    if (d.isWeekend || d.holiday) cell.style.background = 'var(--status-weekend)';
+
+                    cell.style.gridRow = CONFIG.employees.length + 4; // Shifted
+                    cell.style.gridColumn = dateIndex + 2;
+
+                    if (issues) {
+                        cell.innerHTML = `<span class="warning-text">${issues.join('<br>')}</span>`;
+                        cell.title = 'Fehlend: ' + issues.join(', ');
+                        cell.style.background = '#fee2e2';
+                    }
+
+                    container.appendChild(cell);
+                });
+
+                this.updateSummary();
+            }
+
+            updateSummary() {
+                const list = [];
+                CONFIG.employees.forEach(emp => {
+                    if (!this.state[emp.id]) return;
+
+                    const entries = Object.keys(this.state[emp.id]).sort().map(d => ({
+                        date: d,
+                        val: this.state[emp.id][d]
+                    }));
+
+                    if (entries.length === 0) return;
+
+                    const ranges = [];
+                    let rStart = entries[0];
+                    let rEnd = entries[0];
+
+                    for (let i = 1; i < entries.length; i++) {
+                        const curr = entries[i];
+
+                        // Check if consecutive day
+                        const d1 = new Date(rEnd.date);
+                        d1.setDate(d1.getDate() + 1);
+                        const isNext = this.formatDate(d1) === curr.date;
+
+                        // Check if same type/text
+                        const isSame = (rEnd.val.type === curr.val.type) && (rEnd.val.text === curr.val.text);
+
+                        if (isNext && isSame) {
+                            rEnd = curr;
+                        } else {
+                            ranges.push(this.formatRange(rStart, rEnd));
+                            rStart = curr;
+                            rEnd = curr;
+                        }
+                    }
+                    ranges.push(this.formatRange(rStart, rEnd));
+
+                    list.push(`${emp.name}: ${ranges.join(', ')}`);
+                });
+
+                document.getElementById('exportSummary').value = list.join('\n');
+            }
+
+            formatRange(start, end) {
+                const fmt = d => {
+                    const [y, m, day] = d.split('-');
+                    return `${day}.${m}.`;
+                };
+
+                const datePart = (start.date === end.date) ? fmt(start.date) : `${fmt(start.date)} - ${fmt(end.date)}`;
+
+                const typeMap = { 'U': 'Urlaub', 'D': 'Dienstreise', 'F': 'Fortbildung', 'T': 'Sonstiges' };
+                const t = typeMap[start.val.type] || 'Abwesend';
+                const txt = start.val.text ? `: ${start.val.text}` : '';
+
+                return `${datePart} (${t}${txt})`;
+            }
+        }
+
+        const app = new App();
+    </script>
+
+</body>
+
+</html>
