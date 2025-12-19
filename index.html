@@ -613,7 +613,11 @@
             <p style="margin-bottom:15px; color:#666;">Bitte wähle deinen Namen, um dich anzumelden.</p>
             <div class="form-group">
                 <label>Ich bin:</label>
-                <select id="loginSelect"></select>
+                <select id="loginSelect" onchange="app.toggleAdminPwd()"></select>
+            </div>
+            <div id="adminPwdGroup" class="form-group" style="display:none; margin-top:10px;">
+                <label style="font-size:0.8rem; color:#888;">Admin Passwort:</label>
+                <input type="password" id="adminPwdInput" placeholder="Passwort...">
             </div>
             <div class="form-group" style="margin-top:20px; border-top:1px solid #eee; padding-top:10px;">
                 <label style="font-size:0.8rem; color:#888;">API Key (nur einmalig nötig):</label>
@@ -862,6 +866,12 @@
                 };
             }
 
+            toggleAdminPwd() {
+                const empId = document.getElementById('loginSelect').value;
+                const pwdGroup = document.getElementById('adminPwdGroup');
+                pwdGroup.style.display = (empId === 'admin') ? 'block' : 'none';
+            }
+
             showLoginModal() {
                 const select = document.getElementById('loginSelect');
                 select.innerHTML = '';
@@ -884,6 +894,9 @@
                 if (CONFIG.apiKey) {
                     document.getElementById('apiKeyInput').value = CONFIG.apiKey;
                 }
+
+                // Trigger toggle once
+                this.toggleAdminPwd();
             }
 
             async processLogin() {
@@ -891,7 +904,8 @@
                 const keyInput = document.getElementById('apiKeyInput').value.trim(); // Added trim()
 
                 if (empId === 'admin') {
-                    const pwd = prompt('Bitte Administrator-Passwort eingeben:');
+                    // Check password from Input
+                    const pwd = document.getElementById('adminPwdInput').value;
                     if (pwd !== 'CaMK2delta') {
                         alert('Falsches Passwort!');
                         return;
