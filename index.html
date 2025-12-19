@@ -155,7 +155,7 @@
             /* Full height */
             /* First col for names, rest for days. 365 days + 1 label col */
             grid-template-columns: 200px repeat(365, 40px);
-            grid-template-rows: 30px 20px 40px repeat(7, 60px) 120px;
+            grid-template-rows: 30px 20px 140px repeat(7, 60px) 120px;
         }
 
         /* Sticky Columns/Rows */
@@ -217,9 +217,8 @@
         }
 
         .day-header {
-            grid-row: 2;
-            height: 140px;
-            /* Increased to fit vertical text */
+            grid-row: 3;
+            /* height removed for grid compatibility */
             align-items: center;
             justify-content: flex-start;
             padding-top: 5px;
@@ -528,8 +527,6 @@
             <div class="controls">
                 <button id="btnReset" onclick="app.resetData()">Reset</button>
                 <button id="btnExport" onclick="app.exportData()">Export JSON</button>
-                <button id="btnImport" class="primary" onclick="document.getElementById('fileInput').click()">Import
-                    JSON</button>
                 <input type="file" id="fileInput" style="display:none" onchange="app.importData(this)">
             </div>
         </div>
@@ -915,22 +912,38 @@
                 const modalSelect = document.getElementById('modalEmp');
                 const importSelect = document.getElementById('importEmp');
 
-                if (this.currentUser !== 'admin') {
-                    // Filter Modal Select
-                    Array.from(modalSelect.options).forEach(opt => {
-                        if (opt.value !== this.currentUser) opt.style.display = 'none';
-                    });
-                    modalSelect.value = this.currentUser;
+                // Clear current options
+                modalSelect.innerHTML = '';
+                importSelect.innerHTML = '';
 
-                    // Filter Import Select
-                    Array.from(importSelect.options).forEach(opt => {
-                        if (opt.value !== this.currentUser) opt.style.display = 'none';
-                    });
-                    importSelect.value = this.currentUser;
+                // Determine allowed employees
+                let allowed = [];
+                if (this.currentUser === 'admin') {
+                    allowed = CONFIG.employees;
                 } else {
-                    // Show all for Admin
-                    Array.from(modalSelect.options).forEach(opt => opt.style.display = 'block');
-                    Array.from(importSelect.options).forEach(opt => opt.style.display = 'block');
+                    allowed = CONFIG.employees.filter(e => e.id === this.currentUser);
+                }
+
+                // Populate Modal Select
+                allowed.forEach(emp => {
+                    const opt = document.createElement('option');
+                    opt.value = emp.id;
+                    opt.innerText = emp.name;
+                    modalSelect.appendChild(opt);
+                });
+
+                // Populate Import Select
+                allowed.forEach(emp => {
+                    const opt = document.createElement('option');
+                    opt.value = emp.id;
+                    opt.innerText = emp.name;
+                    importSelect.appendChild(opt);
+                });
+
+                // Set initial value
+                if (allowed.length > 0) {
+                    modalSelect.value = allowed[0].id;
+                    importSelect.value = allowed[0].id;
                 }
 
                 // UI RESTRICTION for Reset/Import/Export
