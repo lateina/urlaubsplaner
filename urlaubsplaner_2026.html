@@ -525,8 +525,6 @@
         <div class="header-top">
             <h1>Urlaubsplaner 2026</h1>
             <div class="controls">
-                <button id="btnFinish" onclick="app.markFinished()"
-                    style="background-color: var(--danger-color); color: white; display: none;">Eingabe fertig</button>
                 <button id="btnReset" onclick="app.resetData()">Reset</button>
                 <button id="btnExport" onclick="app.exportData()">Export JSON</button>
                 <button id="btnImport" class="primary" onclick="document.getElementById('fileInput').click()">Import
@@ -581,6 +579,11 @@
             <button onclick="app.openModal()"
                 style="margin-left: 10px; padding: 4px 12px; font-size: 0.85rem; background: var(--primary-color); color: white; border: none;">+
                 Abwesenheit eintragen</button>
+
+            <button id="btnFinish" onclick="app.markFinished()"
+                style="margin-left: 10px; padding: 4px 12px; font-size: 0.85rem; background-color: var(--danger-color); color: white; border: none; display: none;">
+                Eingabe fertig
+            </button>
         </div>
 
         <div style="display: flex; align-items: center; gap: 15px;">
