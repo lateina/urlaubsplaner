@@ -841,6 +841,14 @@
             showLoginModal() {
                 const select = document.getElementById('loginSelect');
                 select.innerHTML = '';
+
+                // Admin Option
+                const adminOpt = document.createElement('option');
+                adminOpt.value = 'admin';
+                adminOpt.innerText = 'Administrator (Alles bearbeiten)';
+                adminOpt.style.fontWeight = 'bold';
+                select.appendChild(adminOpt);
+
                 CONFIG.employees.forEach(emp => {
                     const opt = document.createElement('option');
                     opt.value = emp.id;
@@ -932,8 +940,8 @@
 
             setVacation(empId, dateStr, value) {
                 // ACCESS CONTROL
-                if (this.currentUser !== empId) {
-                    alert(`Du bist als "${CONFIG.employees.find(e => e.id === this.currentUser).name}" angemeldet und darfst nur deine eigenen Einträge bearbeiten.`);
+                if (this.currentUser !== 'admin' && this.currentUser !== empId) {
+                    alert(`Du bist als "${this.getEmpName(this.currentUser)}" angemeldet und darfst nur deine eigenen Einträge bearbeiten.`);
                     return;
                 }
 
@@ -995,7 +1003,7 @@
                     return;
                 }
 
-                if (empId !== this.currentUser) {
+                if (this.currentUser !== 'admin' && empId !== this.currentUser) {
                     alert('Du darfst nur für dich selbst Einträge hinzufügen.');
                     return;
                 }
@@ -1020,7 +1028,7 @@
                 const empId = document.getElementById('importEmp').value;
                 const text = document.getElementById('importText').value;
 
-                if (empId !== this.currentUser) {
+                if (this.currentUser !== 'admin' && empId !== this.currentUser) {
                     alert('Bulk-Import ist nur für den eigenen Nutzer möglich.');
                     return;
                 }
