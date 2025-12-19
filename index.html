@@ -968,10 +968,15 @@
                 }
 
                 // UI RESTRICTION for Reset/Import/Export
+                // UI RESTRICTION for Reset/Import/Export
                 const displayStyle = (this.currentUser === 'admin') ? 'inline-block' : 'none';
                 document.getElementById('btnReset').style.display = displayStyle;
                 document.getElementById('btnExport').style.display = displayStyle;
                 document.getElementById('btnImport').style.display = displayStyle;
+
+                // Show Finish Button for Employees (Non-Admin)
+                const finishStyle = (this.currentUser !== 'admin') ? 'inline-block' : 'none';
+                document.getElementById('btnFinish').style.display = finishStyle;
 
                 // Load Data from Server
                 document.body.style.cursor = 'wait';
@@ -1451,6 +1456,17 @@
                 this.updateSummary();
             }
 
+            markFinished() {
+                if (!this.currentUser || this.currentUser === 'admin') return;
+
+                if (!this.state.__STATUS__) this.state.__STATUS__ = {};
+                this.state.__STATUS__[this.currentUser] = true;
+                this.saveState();
+
+                alert('Status "Fertig" gespeichert!');
+                this.updateSummary();
+            }
+
             updateSummary() {
                 const list = [];
                 CONFIG.employees.forEach(emp => {
@@ -1492,6 +1508,18 @@
                 });
 
                 document.getElementById('exportSummary').value = list.join('\n');
+
+                // Update Status Summary
+                const statusList = [];
+                if (this.state.__STATUS__) {
+                    CONFIG.employees.forEach(emp => {
+                        if (this.state.__STATUS__[emp.id]) {
+                            statusList.push(`Mitarbeiter ${emp.name} fertig`);
+                        }
+                    });
+                }
+                const statusEl = document.getElementById('statusSummary');
+                if (statusEl) statusEl.value = statusList.join('\n');
             }
 
             formatRange(start, end) {
