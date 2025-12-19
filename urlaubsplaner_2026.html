@@ -871,6 +871,14 @@
                 const empId = document.getElementById('loginSelect').value;
                 const keyInput = document.getElementById('apiKeyInput').value;
 
+                if (empId === 'admin') {
+                    const pwd = prompt('Bitte Administrator-Passwort eingeben:');
+                    if (pwd !== 'CaMK2delta') {
+                        alert('Falsches Passwort!');
+                        return;
+                    }
+                }
+
                 if (!keyInput) {
                     alert('Bitte Master Key eingeben');
                     return;
