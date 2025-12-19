@@ -889,7 +889,7 @@
 
             async processLogin() {
                 const empId = document.getElementById('loginSelect').value;
-                const keyInput = document.getElementById('apiKeyInput').value;
+                const keyInput = document.getElementById('apiKeyInput').value.trim(); // Added trim()
 
                 if (empId === 'admin') {
                     const pwd = prompt('Bitte Administrator-Passwort eingeben:');
