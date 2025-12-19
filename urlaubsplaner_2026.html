@@ -526,7 +526,6 @@
         <div class="header-top">
             <h1>Urlaubsplaner 2026</h1>
             <div class="controls">
-                <button onclick="app.openModal()">+ Abwesenheit eintragen</button>
                 <button id="btnReset" onclick="app.resetData()">Reset</button>
                 <button id="btnExport" onclick="app.exportData()">Export JSON</button>
                 <button id="btnImport" class="primary" onclick="document.getElementById('fileInput').click()">Import
@@ -541,16 +540,6 @@
                 <select id="importEmp"></select>
             </div>
             <div class="form-group" style="flex: 2;">
-                <div class="header-top">
-                    <h1>Urlaubsplaner 2026</h1>
-                    <div class="controls">
-                        <button id="btnReset" onclick="app.resetData()">Reset</button>
-                        <button id="btnExport" onclick="app.exportData()">Export JSON</button>
-                        <button id="btnImport" class="primary"
-                            onclick="document.getElementById('fileInput').click()">Import JSON</button>
-                        <input type="file" id="fileInput" style="display:none" onchange="app.importData(this)">
-                    </div>
-                </div>
                 <label>Format: TT.MM.YY bis TT.MM.YY Art (z.B. 01.01.26 bis 05.01.26 Urlaub)</label>
                 <textarea id="importText" class="bulk-input" style="height: 60px"
                     placeholder="Paste hier..."></textarea>
