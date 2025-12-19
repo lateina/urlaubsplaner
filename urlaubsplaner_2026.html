@@ -680,8 +680,11 @@
                 // Keyboard Navigation
                 document.addEventListener('keydown', (e) => {
                     // Ignore if typing in input
-                    const activeTag = document.activeElement ? document.activeElement.tagName : '';
-                    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(activeTag)) return;
+                    // Ignore if typing in text-like input
+                    const activeEl = document.activeElement;
+                    const activeTag = activeEl ? activeEl.tagName : '';
+                    if (activeTag === 'TEXTAREA' || activeTag === 'SELECT') return;
+                    if (activeTag === 'INPUT' && !['radio', 'checkbox', 'button', 'submit', 'reset'].includes(activeEl.type)) return;
 
                     const container = document.getElementById('calendar');
                     if (!container) return;
