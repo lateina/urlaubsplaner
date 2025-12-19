@@ -553,9 +553,10 @@
         </div>
         <div class="controls">
             <button onclick="app.openModal()">+ Abwesenheit eintragen</button>
-            <button onclick="app.resetData()">Reset</button>
-            <button onclick="app.exportData()">Export JSON</button>
-            <button class="primary" onclick="document.getElementById('fileInput').click()">Import JSON</button>
+            <button id="btnReset" onclick="app.resetData()">Reset</button>
+            <button id="btnExport" onclick="app.exportData()">Export JSON</button>
+            <button id="btnImport" class="primary" onclick="document.getElementById('fileInput').click()">Import
+                JSON</button>
             <input type="file" id="fileInput" style="display:none" onchange="app.importData(this)">
         </div>
     </header>
@@ -903,6 +904,12 @@
                     Array.from(modalSelect.options).forEach(opt => opt.style.display = 'block');
                     Array.from(importSelect.options).forEach(opt => opt.style.display = 'block');
                 }
+
+                // UI RESTRICTION for Reset/Import/Export
+                const displayStyle = (this.currentUser === 'admin') ? 'inline-block' : 'none';
+                document.getElementById('btnReset').style.display = displayStyle;
+                document.getElementById('btnExport').style.display = displayStyle;
+                document.getElementById('btnImport').style.display = displayStyle;
 
                 // Load Data from Server
                 document.body.style.cursor = 'wait';
