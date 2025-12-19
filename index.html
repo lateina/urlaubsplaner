@@ -690,7 +690,7 @@
                 if (!CONFIG.binId || !CONFIG.apiKey) return JSON.parse(localStorage.getItem('urlaubsplaner_2026')) || {};
                 try {
                     const res = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}/latest`, {
-                        headers: { 'X-Access-Key': CONFIG.apiKey }
+                        headers: { 'X-Master-Key': CONFIG.apiKey }
                     });
                     if (!res.ok) throw new Error('Load failed');
                     const json = await res.json();
@@ -714,7 +714,7 @@
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-Access-Key': CONFIG.apiKey
+                            'X-Master-Key': CONFIG.apiKey
                         },
                         body: JSON.stringify(state)
                     });
