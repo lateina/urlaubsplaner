@@ -885,6 +885,13 @@
                 adminOpt.style.fontWeight = 'bold';
                 select.appendChild(adminOpt);
 
+                // Sekretariat Option
+                const sekOpt = document.createElement('option');
+                sekOpt.value = 'sekretariat';
+                sekOpt.innerText = 'Sekretariat (Nur Ansicht)';
+                sekOpt.style.fontStyle = 'italic';
+                select.appendChild(sekOpt);
+
                 CONFIG.employees.forEach(emp => {
                     const opt = document.createElement('option');
                     opt.value = emp.id;
@@ -912,7 +919,7 @@
                         alert('Falsches Admin-Passwort!');
                         return;
                     }
-                } else {
+                } else if (empId !== 'sekretariat') {
                     const emp = CONFIG.employees.find(e => e.id === empId);
                     if (emp && emp.pin && pwdInput !== emp.pin) {
                         alert('Falsche PIN!');
@@ -978,7 +985,8 @@
                 document.getElementById('btnImport').style.display = displayStyle;
 
                 // Show Finish Button for Employees (Non-Admin)
-                const finishStyle = (this.currentUser !== 'admin') ? 'inline-block' : 'none';
+                // Hide for Sekretariat as well
+                const finishStyle = (this.currentUser !== 'admin' && this.currentUser !== 'sekretariat') ? 'inline-block' : 'none';
                 document.getElementById('btnFinish').style.display = finishStyle;
 
                 // Load Data from Server
@@ -1042,6 +1050,13 @@
                     // Skip Save & Summary -> Deferred to mouseup
                     this.setVacation(empId, dateStr, this.dragStartVal, true, true);
                 }
+            }
+
+            getEmpName(id) {
+                if (id === 'admin') return 'Administrator';
+                if (id === 'sekretariat') return 'Sekretariat';
+                const emp = CONFIG.employees.find(e => e.id === id);
+                return emp ? emp.name : id;
             }
 
             setVacation(empId, dateStr, value, skipSave = false, skipSummary = false) {
