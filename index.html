@@ -1061,6 +1061,10 @@
 
             setVacation(empId, dateStr, value, skipSave = false, skipSummary = false) {
                 // ACCESS CONTROL
+                if (this.currentUser === 'sekretariat') {
+                    alert('Du bist als Sekretariat angemeldet und kannst keine Bearbeitungen machen');
+                    return;
+                }
                 if (this.currentUser !== 'admin' && this.currentUser !== empId) {
                     alert(`Du bist als "${this.getEmpName(this.currentUser)}" angemeldet und darfst nur deine eigenen Einträge bearbeiten.`);
                     return;
