@@ -593,7 +593,7 @@
             <label><input type="radio" name="mode" value="F" onchange="app.setMode('F')"> Fortbildung</label>
             <label><input type="radio" name="mode" value="T" onchange="app.setMode('T')"> Sonstiges</label>
             <input type="text" id="customText" placeholder="Text..."
-                style="padding: 4px; border: 1px solid #ccc; border-radius: 4px; display: none;"
+                style="padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
                 oninput="app.setCustomText(this.value)">
         </div>
     </div>
@@ -1019,7 +1019,6 @@
 
             setMode(mode) {
                 this.currentMode = mode;
-                document.getElementById('customText').style.display = mode === 'T' ? 'inline-block' : 'none';
             }
 
             setCustomText(txt) {
