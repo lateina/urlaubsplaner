@@ -1425,6 +1425,66 @@
                 return emp ? emp.name : id;
             }
 
+            isSameAbsence(s1, s2) {
+                if (!s1 || !s2) return false;
+                // Treat 'V' (old style) as type 'U'
+                const t1 = s1 === 'V' ? 'U' : s1.type;
+                const t2 = s2 === 'V' ? 'U' : s2.type;
+                const txt1 = s1.text || '';
+                const txt2 = s2.text || '';
+                return t1 === t2 && txt1 === txt2;
+            }
+
+            editAbsence(empId, dateStr) {
+                const status = this.state[empId]?.[dateStr];
+                if (!status) return;
+
+                // ACCESS CONTROL
+                if (this.currentUser === 'sekretariat') {
+                    alert('Du bist als Sekretariat angemeldet und kannst keine Bearbeitungen machen');
+                    return;
+                }
+                if (this.currentUser !== 'admin' && this.currentUser !== empId) {
+                    alert(`Du bist als "${this.getEmpName(this.currentUser)}" angemeldet und darfst nur deine eigenen Einträge bearbeiten.`);
+                    return;
+                }
+
+                // Smart Range Detection
+                let start = new Date(dateStr);
+                while (true) {
+                    let prev = new Date(start);
+                    prev.setDate(prev.getDate() - 1);
+                    let prevStr = this.formatDate(prev);
+                    if (this.isSameAbsence(status, this.state[empId]?.[prevStr])) {
+                        start = prev;
+                    } else {
+                        break;
+                    }
+                }
+
+                let end = new Date(dateStr);
+                while (true) {
+                    let next = new Date(end);
+                    next.setDate(next.getDate() + 1);
+                    let nextStr = this.formatDate(next);
+                    if (this.isSameAbsence(status, this.state[empId]?.[nextStr])) {
+                        end = next;
+                    } else {
+                        break;
+                    }
+                }
+
+                // Fill Modal
+                document.getElementById('modalEmp').value = empId;
+                document.getElementById('modalType').value = (status === 'V' ? 'U' : status.type);
+                document.getElementById('modalText').value = status.text || '';
+                document.getElementById('modalVertreter').value = status.vertreter || '';
+                document.getElementById('modalStart').value = this.formatDate(start);
+                document.getElementById('modalEnd').value = this.formatDate(end);
+
+                document.getElementById('addModal').style.display = 'flex';
+            }
+
             setVacation(empId, dateStr, value, skipSave = false, skipSummary = false) {
                 // ACCESS CONTROL
                 if (this.currentUser === 'sekretariat') {
@@ -1836,10 +1896,20 @@
                         }
 
                         // Interaction Events
-                        cell.onmousedown = (e) => { e.preventDefault(); this.handleMouseDown(emp.id, d.dateStr); };
+                        cell.onmousedown = (e) => {
+                            if (e.button === 0) { // Left click only for dragging
+                                e.preventDefault();
+                                this.handleMouseDown(emp.id, d.dateStr);
+                            }
+                        };
                         cell.onmouseover = () => this.handleMouseOver(emp.id, d.dateStr);
                         cell.onmouseenter = (e) => this.showTooltip(e, emp.id, d.dateStr);
                         cell.onmouseleave = () => this.hideTooltip();
+                        cell.oncontextmenu = (e) => {
+                            e.preventDefault();
+                            this.editAbsence(emp.id, d.dateStr);
+                        };
+                        cell.ondblclick = () => this.editAbsence(emp.id, d.dateStr);
 
                         container.appendChild(cell);
                     });
