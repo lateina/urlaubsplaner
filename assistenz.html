@@ -1169,7 +1169,8 @@
 
                 // Validate Password/PIN
                 if (empId === 'admin') {
-                    if (pwdInput !== 'CaMK2delta') {
+                    const adminEmp = CONFIG.employees.find(e => e.id === 'admin');
+                    if (adminEmp && adminEmp.pin && pwdInput !== adminEmp.pin) {
                         alert('Falsches Admin-Passwort!');
                         return;
                     }
