@@ -507,7 +507,6 @@
 
         /* ... existing styles ... */
 
-        /* Summary Section */
         .summary-section {
             margin-top: 20px;
             background: var(--surface-color);
@@ -518,13 +517,13 @@
 
         .summary-section h2 {
             font-size: 1.1rem;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             color: var(--text-main);
         }
 
-        #exportSummary {
+        #exportSummary,
+        #statusSummary {
             width: 100%;
-            height: 120px;
             padding: 10px;
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
@@ -533,6 +532,26 @@
             resize: vertical;
             background: #f8fafc;
             color: var(--text-main);
+        }
+
+        /* Admin Table Input Styling */
+        #adminEmployeeTable input[type="text"] {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+
+        #adminEmployeeTable input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background: #fff;
+        }
+
+        #adminEmployeeTable tr:hover {
+            background: #f8fafc;
         }
 
         body.pre-login header,
@@ -576,33 +595,6 @@
         .tab-button.active {
             color: var(--primary-color);
             border-bottom-color: var(--primary-color);
-        }
-
-        .summary-section {
-            margin-top: 20px;
-            background: var(--surface-color);
-            padding: 20px;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-md);
-        }
-
-        .summary-section h2 {
-            font-size: 1.1rem;
-            margin-bottom: 15px;
-            color: var(--text-main);
-        }
-
-        #exportSummary,
-        #statusSummary {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            font-family: inherit;
-            font-size: 0.85rem;
-            resize: vertical;
-            background: #f8fafc;
-            color: var(--text-main);
         }
     </style>
 </head>
@@ -2051,52 +2043,90 @@
 
                 CONFIG.employees.forEach(emp => {
                     if (emp.id === 'sekretariat') return;
-                    tbody.appendChild(this.createEmployeeRow(emp));
+                    this.createEmployeeRow(tbody, emp);
                 });
             }
 
-            createEmployeeRow(emp) {
+            createEmployeeRow(tbody, emp) {
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #eee';
 
                 const isReadOnly = (emp.id === 'admin');
 
                 tr.innerHTML = `
-            <td style="padding: 8px;"><input type="text" value="${emp.id}" ${isReadOnly ? 'readonly style="background:#f1f5f9; border:none;"' : ''} onchange="app.updateEmployeeField('${emp.id}', 'id', this.value)" style="width:100px;"></td>
-            <td style="padding: 8px;"><input type="text" value="${emp.name || ''}" onchange="app.updateEmployeeField('${emp.id}', 'name', this.value)"></td>
-            <td style="padding: 8px;"><input type="text" value="${emp.email || ''}" onchange="app.updateEmployeeField('${emp.id}', 'email', this.value)"></td>
-            <td style="padding: 8px;"><input type="text" value="${emp.pin || ''}" onchange="app.updateEmployeeField('${emp.id}', 'pin', this.value)" style="width:80px;"></td>
-            <td style="padding: 8px; text-align: center;"><input type="checkbox" ${emp.active !== false ? 'checked' : ''} onchange="app.updateEmployeeField('${emp.id}', 'active', this.checked)"></td>
-            <td style="padding: 8px; text-align: center;">
-                ${!isReadOnly ? `<button onclick="app.deleteEmployee('${emp.id}')" style="background:none; border:none; color:var(--danger-color); cursor:pointer;">Löschen</button>` : ''}
-            </td>
-        `;
-                return tr;
-            }
+                <td style="padding: 10px;"><input type="text" value="${emp.id}" ${isReadOnly ? 'readonly style="background:#f1f5f9; border:none;"' : ''} data-field="id" data-id="${emp.id}"></td>
+                <td style="padding: 10px;"><input type="text" value="${emp.name || ''}" data-field="name" data-id="${emp.id}"></td>
+                <td style="padding: 10px;"><input type="text" value="${emp.email || ''}" data-field="email" data-id="${emp.id}"></td>
+                <td style="padding: 10px;"><input type="text" value="${emp.pin || ''}" data-field="pin" data-id="${emp.id}" style="width:80px;"></td>
+                <td style="padding: 10px; text-align: center;"><input type="checkbox" ${emp.active !== false ? 'checked' : ''} data-field="active" data-id="${emp.id}"></td>
+                <td style="padding: 10px; text-align: center;">
+                    ${!isReadOnly ? `<button class="primary" onclick="app.deleteEmployee('${emp.id}')" style="background:var(--danger-color); padding: 5px 10px; font-size: 0.8rem;">Löschen</button>` : ''}
+                </td>
+            `;
 
-            updateEmployeeField(empId, field, value) {
-                const emp = CONFIG.employees.find(e => e.id === empId);
-                if (emp) {
-                    emp[field] = value;
-                }
+                // Hook up changes immediately to CONFIG.employees (in memory)
+                const inputs = tr.querySelectorAll('input');
+                inputs.forEach(input => {
+                    input.onchange = (e) => {
+                        const field = e.target.getAttribute('data-field');
+                        const oldId = e.target.getAttribute('data-id');
+                        const targetEmp = CONFIG.employees.find(x => x.id === oldId);
+                        if (targetEmp) {
+                            if (field === 'active') {
+                                targetEmp[field] = e.target.checked;
+                            } else {
+                                targetEmp[field] = e.target.value;
+                                // If ID changed, we also need to update the data-id attributes for this row
+                                if (field === 'id') {
+                                    inputs.forEach(inp => inp.setAttribute('data-id', e.target.value));
+                                    // Also update the delete button's onclick if it's not admin
+                                    if (targetEmp.id !== 'admin') {
+                                        const delBtn = tr.querySelector('button');
+                                        if (delBtn) delBtn.setAttribute('onclick', `app.deleteEmployee('${e.target.value}')`);
+                                    }
+                                }
+                            }
+                        }
+                    };
+                });
+
+                tbody.appendChild(tr);
             }
 
             openAddEmployeeModal() {
                 document.getElementById('addEmpId').value = '';
                 document.getElementById('addEmpName').value = '';
                 document.getElementById('addEmpEmail').value = '';
-                document.getElementById('addEmpPin').value = '';
+                // Generate a random 4-digit PIN default
+                document.getElementById('addEmpPin').value = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
                 document.getElementById('addEmployeeModal').style.display = 'flex';
             }
 
             confirmAddEmployee() {
-                const id = document.getElementById('addEmpId').value.trim() || 'emp_' + Math.floor(Math.random() * 100000).toString().padStart(5, '0');
+                let id = document.getElementById('addEmpId').value.trim();
                 const name = document.getElementById('addEmpName').value.trim();
                 const email = document.getElementById('addEmpEmail').value.trim();
                 const pin = document.getElementById('addEmpPin').value.trim();
 
                 if (!name) {
                     alert('Bitte Name eingeben');
+                    return;
+                }
+
+                if (!id) {
+                    let maxId = 0;
+                    CONFIG.employees.forEach(e => {
+                        if (e.id.startsWith('emp_')) {
+                            const num = parseInt(e.id.replace('emp_', ''), 10);
+                            if (!isNaN(num) && num > maxId) maxId = num;
+                        }
+                    });
+                    id = 'emp_' + String(maxId + 1).padStart(5, '0');
+                }
+
+                // Check for duplicate ID
+                if (CONFIG.employees.some(e => e.id === id)) {
+                    alert('Ein Mitarbeiter mit dieser ID existiert bereits!');
                     return;
                 }
 
@@ -2114,6 +2144,16 @@
 
             saveEmployees() {
                 if (!confirm('Änderungen an der Mitarbeiterliste speichern?')) return;
+
+                // Sort employees by last name before saving
+                const admins = CONFIG.employees.filter(e => e.id === 'admin' || e.id === 'sekretariat');
+                const others = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat');
+                others.sort((a, b) => {
+                    const lastA = (a.name.split(' ').pop() || '').toLowerCase();
+                    const lastB = (b.name.split(' ').pop() || '').toLowerCase();
+                    return lastA.localeCompare(lastB);
+                });
+                CONFIG.employees = [...admins, ...others];
 
                 // Call the save logic, then re-render
                 document.body.style.cursor = 'wait';
@@ -2145,7 +2185,6 @@
                     this.render(); // Redraw main calendar
                 });
             }
-
             formatRange(start, end) {
                 const fmt = d => {
                     const [y, m, day] = d.split('-');
