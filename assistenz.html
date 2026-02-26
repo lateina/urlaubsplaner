@@ -596,6 +596,10 @@
         <div class="tab-container">
             <button id="tab-calendar" class="tab-button active"
                 onclick="app.switchTab('calendar')">Kalenderansicht</button>
+            <button id="tab-summary" class="tab-button" onclick="app.switchTab('summary')"
+                style="display:none;">Zusammenfassung</button>
+            <button id="tab-status" class="tab-button" onclick="app.switchTab('status')"
+                style="display:none;">Eingabestatus</button>
             <button id="tab-admin" class="tab-button" onclick="app.switchTab('admin')"
                 style="display:none;">Mitarbeiterverwaltung</button>
         </div>
@@ -714,15 +718,24 @@
         </div>
 
         <div id="calendar" class="calendar-container"></div>
+    </div>
 
-        <div id="summarySection" class="summary-section">
+    <div id="summaryView" style="display:none; padding: 20px;">
+        <div class="summary-section" style="margin-top: 0;">
             <h2>Zusammenfassung (Abwesenheiten)</h2>
-            <textarea id="exportSummary" readonly placeholder="Automatische Zusammenfassung..."></textarea>
-            <h2 style="margin-top: 20px;">Eingabestatus</h2>
-            <textarea id="statusSummary" readonly placeholder="Noch niemand fertig..."
-                style="height: 100px; color: var(--success-color); font-weight: bold;"></textarea>
+            <textarea id="exportSummary" readonly placeholder="Automatische Zusammenfassung..."
+                style="height: 400px;"></textarea>
         </div>
-    </div> <!-- End calendarView -->
+    </div>
+
+    <div id="statusView" style="display:none; padding: 20px;">
+        <div class="summary-section" style="margin-top: 0;">
+            <h2>Eingabestatus</h2>
+            <textarea id="statusSummary" readonly placeholder="Noch niemand fertig..."
+                style="height: 400px; color: var(--success-color); font-weight: bold;"></textarea>
+        </div>
+    </div>
+    </div>
 
     <div id="custom-tooltip"></div>
 
@@ -1241,13 +1254,15 @@
                 document.getElementById('btnExport').style.display = displayStyle;
                 document.getElementById('btnImport').style.display = displayStyle;
 
-                // Hide Admin UI for non-admins
-                const adminFlexStyle = (this.currentUser === 'admin') ? 'flex' : 'none';
+                // UI RESTRICTION for non-admins
+                const isAdmin = (this.currentUser === 'admin' || this.currentUser === 'sekretariat');
+                const adminFlexStyle = isAdmin ? 'flex' : 'none';
+                const adminInlineStyle = isAdmin ? 'inline-block' : 'none';
+
                 document.getElementById('bulkImportPanel').style.display = adminFlexStyle;
                 document.getElementById('tab-admin').style.display = (this.currentUser === 'admin') ? 'inline-block' : 'none';
-
-                const adminBlockStyle = (this.currentUser === 'admin') ? 'block' : 'none';
-                document.getElementById('summarySection').style.display = adminBlockStyle;
+                document.getElementById('tab-summary').style.display = adminInlineStyle;
+                document.getElementById('tab-status').style.display = adminInlineStyle;
 
                 // Ensure calendar tab is visible
                 this.switchTab('calendar');
@@ -1908,21 +1923,29 @@
 
             switchTab(tabId) {
                 // Update buttons
-                document.getElementById('tab-calendar').classList.remove('active');
-                document.getElementById('tab-admin').classList.remove('active');
+                const tabs = ['calendar', 'summary', 'status', 'admin'];
+                tabs.forEach(t => {
+                    const btn = document.getElementById('tab-' + t);
+                    if (btn) btn.classList.remove('active');
+                });
                 document.getElementById('tab-' + tabId).classList.add('active');
 
                 const bulkPanel = document.getElementById('bulkImportPanel');
 
                 // Update views
-                if (tabId === 'calendar') {
-                    document.getElementById('calendarView').style.display = 'block';
-                    document.getElementById('adminView').style.display = 'none';
-                    if (this.currentUser === 'admin') bulkPanel.style.display = 'flex';
-                } else if (tabId === 'admin') {
-                    document.getElementById('calendarView').style.display = 'none';
-                    document.getElementById('adminView').style.display = 'block';
+                document.getElementById('calendarView').style.display = (tabId === 'calendar') ? 'block' : 'none';
+                document.getElementById('summaryView').style.display = (tabId === 'summary') ? 'block' : 'none';
+                document.getElementById('statusView').style.display = (tabId === 'status') ? 'block' : 'none';
+                document.getElementById('adminView').style.display = (tabId === 'admin') ? 'block' : 'none';
+
+                // Special handling for Bulk Panel
+                if (tabId === 'calendar' && (this.currentUser === 'admin' || this.currentUser === 'sekretariat')) {
+                    bulkPanel.style.display = 'flex';
+                } else {
                     bulkPanel.style.display = 'none';
+                }
+
+                if (tabId === 'admin') {
                     this.renderAdminTable();
                 }
             }
