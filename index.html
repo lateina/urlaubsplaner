@@ -538,10 +538,71 @@
         body.pre-login header,
         body.pre-login .calendar-toolbar,
         body.pre-login .month-nav,
-        body.pre-login #calendar,
-        body.pre-login .summary-section,
+        body.pre-login #calendarView,
+        body.pre-login #adminView,
+        body.pre-login .tab-container,
         body.pre-login #custom-tooltip {
             display: none !important;
+        }
+
+        .tab-container {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 15px;
+            padding: 0 15px;
+            background: white;
+            padding-top: 10px;
+        }
+
+        .tab-button {
+            padding: 10px 20px;
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-size: 1rem;
+            font-weight: bold;
+            color: #64748b;
+            margin-right: 10px;
+            border-radius: 4px 4px 0 0;
+            transition: all 0.2s;
+        }
+
+        .tab-button:hover {
+            color: var(--primary-color);
+            background: #f1f5f9;
+        }
+
+        .tab-button.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .summary-section {
+            margin-top: 20px;
+            background: var(--surface-color);
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+        }
+
+        .summary-section h2 {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: var(--text-main);
+        }
+
+        #exportSummary,
+        #statusSummary {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-family: inherit;
+            font-size: 0.85rem;
+            resize: vertical;
+            background: #f8fafc;
+            color: var(--text-main);
         }
     </style>
 </head>
@@ -551,12 +612,22 @@
         <div class="header-top">
             <h1>Urlaubsplaner Oberärzte 2026/2027</h1>
             <div class="controls">
-                <button id="btnReset" onclick="app.resetData()">Reset</button>
                 <button id="btnExport" onclick="app.exportData()">Export JSON</button>
                 <button id="btnImport" class="primary" onclick="document.getElementById('fileInput').click()">Import
                     JSON</button>
                 <input type="file" id="fileInput" style="display:none" onchange="app.importData(this)">
             </div>
+        </div>
+
+        <div class="tab-container">
+            <button id="tab-calendar" class="tab-button active"
+                onclick="app.switchTab('calendar')">Kalenderansicht</button>
+            <button id="tab-summary" class="tab-button" onclick="app.switchTab('summary')"
+                style="display:none;">Zusammenfassung</button>
+            <button id="tab-status" class="tab-button" onclick="app.switchTab('status')"
+                style="display:none;">Eingabestatus</button>
+            <button id="tab-admin" class="tab-button" onclick="app.switchTab('admin')"
+                style="display:none;">Mitarbeiterverwaltung</button>
         </div>
 
         <div id="bulkImportPanel" class="bulk-import-panel">
@@ -575,71 +646,118 @@
         </div>
     </header>
 
-    <div class="calendar-toolbar">
-        <div class="legend" style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-            <div class="legend-item">
-                <div class="color-box" style="background:var(--status-vacation)"></div> Urlaub
+    <div id="adminView" style="display:none; padding: 20px;">
+        <div class="summary-section" style="margin-top: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="margin: 0;">Mitarbeiterverwaltung</h2>
+                <div>
+                    <button class="primary" onclick="app.openAddEmployeeModal()">+ Neuer Mitarbeiter</button>
+                    <button class="primary" onclick="app.saveEmployees()"
+                        style="background: var(--success-color);">Änderungen speichern</button>
+                </div>
             </div>
-            <div class="legend-item">
-                <div class="color-box" style="background:var(--status-trip)"></div> Dienstreise
+            <div
+                style="overflow-x: auto; max-height: 600px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #ccc; background: #f8fafc;">
+                            <th style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                ID (emp_xxx)</th>
+                            <th style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                Name</th>
+                            <th style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                E-Mail</th>
+                            <th style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                PIN</th>
+                            <th
+                                style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10; text-align: center;">
+                                Aktiv</th>
+                            <th
+                                style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10; text-align: center;">
+                                Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminEmployeeTable"></tbody>
+                </table>
             </div>
-            <div class="legend-item">
-                <div class="color-box" style="background:var(--status-training)"></div> Fortbildung
-            </div>
-            <div class="legend-item">
-                <div class="color-box" style="background:var(--status-custom)"></div> Sonstiges
-            </div>
-
-            <div class="legend-item" style="margin-left: 10px; border-left: 1px solid #ddd; padding-left: 10px;">
-                <div class="color-box" style="background:#fee2e2"></div> Feiertag
-            </div>
-            <div class="legend-item">
-                <div class="color-box"
-                    style="background-image: repeating-linear-gradient(45deg, #ccc, #ccc 2px, transparent 2px, transparent 6px); border: 1px solid #ddd;">
-                </div> Schulferien
-            </div>
-            <div class="legend-item"><span style="font-size: 1.2rem; color: var(--danger-color)">⚠</span>
-                Unterbesetzung</div>
-
-            <!-- Moved Button -->
-            <button onclick="app.openModal()"
-                style="margin-left: 10px; padding: 4px 12px; font-size: 0.85rem; background: var(--primary-color); color: white; border: none;">+
-                Abwesenheit eintragen</button>
-
-            <button id="btnFinish" onclick="app.markFinished()"
-                style="margin-left: 10px; padding: 4px 12px; font-size: 0.85rem; background-color: var(--danger-color); color: white; border: none; display: none;">
-                Eingabe fertig
-            </button>
-        </div>
-
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <strong style="font-size: 0.9rem">Eingabe-Modus:</strong>
-            <label><input type="radio" name="mode" value="U" checked onchange="app.setMode('U')"> Urlaub</label>
-            <label><input type="radio" name="mode" value="D" onchange="app.setMode('D')"> Dienstreise</label>
-            <label><input type="radio" name="mode" value="F" onchange="app.setMode('F')"> Fortbildung</label>
-            <label><input type="radio" name="mode" value="T" onchange="app.setMode('T')"> Sonstiges</label>
-            <input type="text" id="customText" placeholder="Art der Abwesenheit"
-                style="padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
-                oninput="app.setCustomText(this.value)">
-            <input type="text" id="vertreterText" placeholder="Vertreter..."
-                style="padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
-                oninput="app.setVertreterText(this.value)">
         </div>
     </div>
 
-    <div class="month-nav" id="yearNav" style="margin-bottom: 5px;"></div>
-    <div class="month-nav" id="monthNav">
-        <!-- Generated by JS -->
+    <div id="calendarView">
+        <div class="calendar-toolbar">
+            <div class="legend" style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                <div class="legend-item">
+                    <div class="color-box" style="background:var(--status-vacation)"></div> Urlaub
+                </div>
+                <div class="legend-item">
+                    <div class="color-box" style="background:var(--status-trip)"></div> Dienstreise
+                </div>
+                <div class="legend-item">
+                    <div class="color-box" style="background:var(--status-training)"></div> Fortbildung
+                </div>
+                <div class="legend-item">
+                    <div class="color-box" style="background:var(--status-custom)"></div> Sonstiges
+                </div>
+
+                <div class="legend-item" style="margin-left: 10px; border-left: 1px solid #ddd; padding-left: 10px;">
+                    <div class="color-box" style="background:#fee2e2"></div> Feiertag
+                </div>
+                <div class="legend-item">
+                    <div class="color-box"
+                        style="background-image: repeating-linear-gradient(45deg, #ccc, #ccc 2px, transparent 2px, transparent 6px); border: 1px solid #ddd;">
+                    </div> Schulferien
+                </div>
+                <div class="legend-item"><span style="font-size: 1.2rem; color: var(--danger-color)">⚠</span>
+                    Unterbesetzung</div>
+
+                <!-- Moved Button -->
+                <button onclick="app.openModal()"
+                    style="margin-left: 10px; padding: 4px 12px; font-size: 0.85rem; background: var(--primary-color); color: white; border: none;">+
+                    Abwesenheit eintragen</button>
+
+                <button id="btnFinish" onclick="app.markFinished()"
+                    style="margin-left: 10px; padding: 4px 12px; font-size: 0.85rem; background-color: var(--danger-color); color: white; border: none; display: none;">
+                    Eingabe fertig
+                </button>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <strong style="font-size: 0.9rem">Eingabe-Modus:</strong>
+                <label><input type="radio" name="mode" value="U" checked onchange="app.setMode('U')"> Urlaub</label>
+                <label><input type="radio" name="mode" value="D" onchange="app.setMode('D')"> Dienstreise</label>
+                <label><input type="radio" name="mode" value="F" onchange="app.setMode('F')"> Fortbildung</label>
+                <label><input type="radio" name="mode" value="T" onchange="app.setMode('T')"> Sonstiges</label>
+                <input type="text" id="customText" placeholder="Art der Abwesenheit"
+                    style="padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+                    oninput="app.setCustomText(this.value)">
+                <input type="text" id="vertreterText" placeholder="Vertreter..."
+                    style="padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+                    oninput="app.setVertreterText(this.value)">
+            </div>
+        </div>
+
+        <div class="month-nav" id="yearNav" style="margin-bottom: 5px;"></div>
+        <div class="month-nav" id="monthNav">
+            <!-- Generated by JS -->
+        </div>
+
+        <div id="calendar" class="calendar-container"></div>
     </div>
 
-    <div id="calendar" class="calendar-container"></div>
+    <div id="summaryView" style="display:none; padding: 20px;">
+        <div class="summary-section" style="margin-top: 0;">
+            <h2>Zusammenfassung (Abwesenheiten)</h2>
+            <textarea id="exportSummary" readonly placeholder="Automatische Zusammenfassung..."
+                style="height: 400px;"></textarea>
+        </div>
+    </div>
 
-    <div id="summarySection" class="summary-section">
-        <h2>Zusammenfassung (Abwesenheiten)</h2>
-        <textarea id="exportSummary" readonly placeholder="Automatische Zusammenfassung..."></textarea>
-        <h2 style="margin-top: 20px;">Eingabestatus</h2>
-        <textarea id="statusSummary" readonly placeholder="Noch niemand fertig..."
-            style="height: 100px; color: var(--success-color); font-weight: bold;"></textarea>
+    <div id="statusView" style="display:none; padding: 20px;">
+        <div class="summary-section" style="margin-top: 0;">
+            <h2>Eingabestatus</h2>
+            <textarea id="statusSummary" readonly placeholder="Noch niemand fertig..."
+                style="height: 400px; color: var(--success-color); font-weight: bold;"></textarea>
+        </div>
     </div>
 
     <div id="custom-tooltip"></div>
@@ -663,6 +781,33 @@
             </div>
             <div class="modal-actions">
                 <button class="primary" onclick="app.processLogin()">Anmelden</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Employee Modal -->
+    <div id="addEmployeeModal" class="modal-overlay">
+        <div class="modal">
+            <h2>Neuer Mitarbeiter</h2>
+            <div class="form-group">
+                <label>Employee ID (z.B. emp_00099)</label>
+                <input type="text" id="addEmpId" placeholder="Wird autogeneriert falls leer">
+            </div>
+            <div class="form-group">
+                <label>Vollständiger Name</label>
+                <input type="text" id="addEmpName" placeholder="Vorname Nachname">
+            </div>
+            <div class="form-group">
+                <label>E-Mail Adresse</label>
+                <input type="email" id="addEmpEmail" placeholder="email@klinik.uni-regensburg.de">
+            </div>
+            <div class="form-group">
+                <label>PIN (für Login)</label>
+                <input type="text" id="addEmpPin" placeholder="4-stellige Nummer">
+            </div>
+            <div class="modal-actions">
+                <button onclick="document.getElementById('addEmployeeModal').style.display='none'">Abbrechen</button>
+                <button class="primary" onclick="app.confirmAddEmployee()">Hinzufügen</button>
             </div>
         </div>
     </div>
@@ -1083,7 +1228,8 @@
 
                 // Validate Password/PIN
                 if (empId === 'admin') {
-                    if (pwdInput !== 'CaMK2delta') {
+                    const adminEmp = CONFIG.employees.find(e => e.id === 'admin');
+                    if (adminEmp && adminEmp.pin && pwdInput !== adminEmp.pin) {
                         alert('Falsches Admin-Passwort!');
                         return;
                     }
@@ -1119,7 +1265,8 @@
                 // Determine allowed employees
                 let allowed = [];
                 if (this.currentUser === 'admin') {
-                    allowed = CONFIG.employees;
+                    // Admins see all ACTIVE employees except admin/sekretariat for planning
+                    allowed = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false);
                 } else {
                     allowed = CONFIG.employees.filter(e => e.id === this.currentUser);
                 }
@@ -1146,24 +1293,23 @@
                     importSelect.value = allowed[0].id;
                 }
 
-                // UI RESTRICTION for Reset/Import/Export
-                // UI RESTRICTION for Reset/Import/Export
-                const displayStyle = (this.currentUser === 'admin') ? 'inline-block' : 'none';
-                document.getElementById('btnReset').style.display = displayStyle;
-                document.getElementById('btnExport').style.display = displayStyle;
-                document.getElementById('btnImport').style.display = displayStyle;
+                // UI RESTRICTION for non-admins
+                const isAdmin = (this.currentUser === 'admin' || this.currentUser === 'sekretariat');
+                const adminFlexStyle = isAdmin ? 'flex' : 'none';
+                const adminInlineStyle = isAdmin ? 'inline-block' : 'none';
 
-                // Hide Bulk Import and Summary for non-admins
-                const adminFlexStyle = (this.currentUser === 'admin') ? 'flex' : 'none';
                 document.getElementById('bulkImportPanel').style.display = adminFlexStyle;
+                document.getElementById('tab-admin').style.display = (this.currentUser === 'admin') ? 'inline-block' : 'none';
+                document.getElementById('tab-summary').style.display = adminInlineStyle;
+                document.getElementById('tab-status').style.display = adminInlineStyle;
 
-                const adminBlockStyle = (this.currentUser === 'admin') ? 'block' : 'none';
-                document.getElementById('summarySection').style.display = adminBlockStyle;
+                // Ensure calendar tab is visible
+                this.switchTab('calendar');
 
                 // Hide Finish Button for Employees (Non-Admin) unless allowed
-                // Hide for Sekretariat as well
                 const finishStyle = (this.currentUser !== 'admin' && this.currentUser !== 'sekretariat') ? 'inline-block' : 'none';
-                document.getElementById('btnFinish').style.display = finishStyle;
+                const finishBtn = document.getElementById('btnFinish');
+                if (finishBtn) finishBtn.style.display = finishStyle;
 
                 // Data is already loaded in initApp, just render
                 this.render();
@@ -1812,6 +1958,8 @@
             updateSummary() {
                 const list = [];
                 CONFIG.employees.forEach(emp => {
+                    if (emp.id === 'admin' || emp.id === 'sekretariat') return;
+                    if (emp.active === false) return;
                     if (!this.state[emp.id]) return;
 
                     const entries = Object.keys(this.state[emp.id]).sort().map(d => ({
@@ -1855,6 +2003,8 @@
                 const statusList = [];
                 if (this.state.__STATUS__) {
                     CONFIG.employees.forEach(emp => {
+                        if (emp.id === 'admin' || emp.id === 'sekretariat') return;
+                        if (emp.active === false) return;
                         if (this.state.__STATUS__[emp.id]) {
                             statusList.push(`Mitarbeiter ${emp.name} fertig`);
                         }
@@ -1862,6 +2012,138 @@
                 }
                 const statusEl = document.getElementById('statusSummary');
                 if (statusEl) statusEl.value = statusList.join('\n');
+            }
+
+            switchTab(tabId) {
+                // Update buttons
+                const tabs = ['calendar', 'summary', 'status', 'admin'];
+                tabs.forEach(t => {
+                    const btn = document.getElementById('tab-' + t);
+                    if (btn) btn.classList.remove('active');
+                });
+                const activeBtn = document.getElementById('tab-' + tabId);
+                if (activeBtn) activeBtn.classList.add('active');
+
+                const bulkPanel = document.getElementById('bulkImportPanel');
+
+                // Update views
+                document.getElementById('calendarView').style.display = (tabId === 'calendar') ? 'block' : 'none';
+                document.getElementById('summaryView').style.display = (tabId === 'summary') ? 'block' : 'none';
+                document.getElementById('statusView').style.display = (tabId === 'status') ? 'block' : 'none';
+                document.getElementById('adminView').style.display = (tabId === 'admin') ? 'block' : 'none';
+
+                // Special handling for Bulk Panel
+                if (tabId === 'calendar' && (this.currentUser === 'admin' || this.currentUser === 'sekretariat')) {
+                    bulkPanel.style.display = 'flex';
+                } else {
+                    bulkPanel.style.display = 'none';
+                }
+
+                if (tabId === 'admin') {
+                    this.renderAdminTable();
+                }
+            }
+
+            // ADMIN MANAGEMENT logic
+            renderAdminTable() {
+                const tbody = document.getElementById('adminEmployeeTable');
+                tbody.innerHTML = '';
+
+                CONFIG.employees.forEach(emp => {
+                    if (emp.id === 'sekretariat') return;
+                    tbody.appendChild(this.createEmployeeRow(emp));
+                });
+            }
+
+            createEmployeeRow(emp) {
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid #eee';
+
+                const isReadOnly = (emp.id === 'admin');
+
+                tr.innerHTML = `
+            <td style="padding: 8px;"><input type="text" value="${emp.id}" ${isReadOnly ? 'readonly style="background:#f1f5f9; border:none;"' : ''} onchange="app.updateEmployeeField('${emp.id}', 'id', this.value)" style="width:100px;"></td>
+            <td style="padding: 8px;"><input type="text" value="${emp.name || ''}" onchange="app.updateEmployeeField('${emp.id}', 'name', this.value)"></td>
+            <td style="padding: 8px;"><input type="text" value="${emp.email || ''}" onchange="app.updateEmployeeField('${emp.id}', 'email', this.value)"></td>
+            <td style="padding: 8px;"><input type="text" value="${emp.pin || ''}" onchange="app.updateEmployeeField('${emp.id}', 'pin', this.value)" style="width:80px;"></td>
+            <td style="padding: 8px; text-align: center;"><input type="checkbox" ${emp.active !== false ? 'checked' : ''} onchange="app.updateEmployeeField('${emp.id}', 'active', this.checked)"></td>
+            <td style="padding: 8px; text-align: center;">
+                ${!isReadOnly ? `<button onclick="app.deleteEmployee('${emp.id}')" style="background:none; border:none; color:var(--danger-color); cursor:pointer;">Löschen</button>` : ''}
+            </td>
+        `;
+                return tr;
+            }
+
+            updateEmployeeField(empId, field, value) {
+                const emp = CONFIG.employees.find(e => e.id === empId);
+                if (emp) {
+                    emp[field] = value;
+                }
+            }
+
+            openAddEmployeeModal() {
+                document.getElementById('addEmpId').value = '';
+                document.getElementById('addEmpName').value = '';
+                document.getElementById('addEmpEmail').value = '';
+                document.getElementById('addEmpPin').value = '';
+                document.getElementById('addEmployeeModal').style.display = 'flex';
+            }
+
+            confirmAddEmployee() {
+                const id = document.getElementById('addEmpId').value.trim() || 'emp_' + Math.floor(Math.random() * 100000).toString().padStart(5, '0');
+                const name = document.getElementById('addEmpName').value.trim();
+                const email = document.getElementById('addEmpEmail').value.trim();
+                const pin = document.getElementById('addEmpPin').value.trim();
+
+                if (!name) {
+                    alert('Bitte Name eingeben');
+                    return;
+                }
+
+                CONFIG.employees.push({ id, name, email, pin, active: true, skills: [], role: 'User' });
+                document.getElementById('addEmployeeModal').style.display = 'none';
+                this.renderAdminTable();
+            }
+
+            deleteEmployee(empId) {
+                if (confirm('Mitarbeiter wirklich löschen? Alle Daten werden entfernt.')) {
+                    CONFIG.employees = CONFIG.employees.filter(e => e.id !== empId);
+                    this.renderAdminTable();
+                }
+            }
+
+            saveEmployees() {
+                if (!confirm('Änderungen an der Mitarbeiterliste speichern?')) return;
+
+                // Call the save logic, then re-render
+                document.body.style.cursor = 'wait';
+                DataService.save(this.state).then(() => {
+                    document.body.style.cursor = 'default';
+
+                    // Rebuild Modal Dropdowns
+                    const select = document.getElementById('modalEmp');
+                    const importSelect = document.getElementById('importEmp');
+                    select.innerHTML = '';
+                    importSelect.innerHTML = '';
+
+                    CONFIG.employees.forEach(emp => {
+                        if (emp.id === 'admin' || emp.id === 'sekretariat') return;
+                        if (emp.active === false) return;
+                        const opt = document.createElement('option');
+                        opt.value = emp.id;
+                        opt.innerText = emp.name;
+                        select.appendChild(opt);
+
+                        const opt2 = document.createElement('option');
+                        opt2.value = emp.id;
+                        opt2.innerText = emp.name;
+                        importSelect.appendChild(opt2);
+                    });
+
+                    alert('Mitarbeiterliste gespeichert!');
+                    this.renderAdminTable();
+                    this.render(); // Redraw main calendar
+                });
             }
 
             formatRange(start, end) {
