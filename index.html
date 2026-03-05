@@ -605,6 +605,8 @@
             <h1>Urlaubsplaner Oberärzte 2026/2027</h1>
             <div class="controls">
                 <button id="btnExport" onclick="app.exportData()">Export JSON</button>
+                <button id="btnExportICal" onclick="app.exportICal()"
+                    style="display:none; background-color: #10b981; color: white; border: none;">Export iCal</button>
                 <button id="btnImport" class="primary" onclick="document.getElementById('fileInput').click()">Import
                     JSON</button>
                 <input type="file" id="fileInput" style="display:none" onchange="app.importData(this)">
@@ -661,6 +663,8 @@
                                 E-Mail</th>
                             <th style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
                                 PIN</th>
+                            <th style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                Gruppe</th>
                             <th
                                 style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10; text-align: center;">
                                 Aktiv</th>
@@ -703,7 +707,7 @@
                     Unterbesetzung</div>
 
                 <!-- Moved Button -->
-                <button onclick="app.openModal()"
+                <button id="btnAddAbsence" onclick="app.openModal()"
                     style="margin-left: 10px; padding: 4px 12px; font-size: 0.85rem; background: var(--primary-color); color: white; border: none;">+
                     Abwesenheit eintragen</button>
 
@@ -713,7 +717,7 @@
                 </button>
             </div>
 
-            <div style="display: flex; align-items: center; gap: 15px;">
+            <div id="absenceInputModePanel" style="display: flex; align-items: center; gap: 15px;">
                 <strong style="font-size: 0.9rem">Eingabe-Modus:</strong>
                 <label><input type="radio" name="mode" value="U" checked onchange="app.setMode('U')"> Urlaub</label>
                 <label><input type="radio" name="mode" value="D" onchange="app.setMode('D')"> Dienstreise</label>
@@ -797,9 +801,60 @@
                 <label>PIN (für Login)</label>
                 <input type="text" id="addEmpPin" placeholder="4-stellige Nummer">
             </div>
+            <div class="form-group">
+                <label>Mitarbeitergruppen</label>
+                <div id="addEmpGroups"
+                    style="display: flex; flex-wrap: wrap; gap: 10px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
+                            type="checkbox" value="Chef"> Chef</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
+                            type="checkbox" value="Privat"> Privat</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
+                            type="checkbox" value="TAVI"> TAVI</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
+                            type="checkbox" value="TEER"> TEER</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
+                            type="checkbox" value="Herzkatheter"> Herzkatheter</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
+                            type="checkbox" value="Echo"> Echo</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
+                            type="checkbox" value="EPU"> EPU</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
+                            type="checkbox" value="Intensiv"> Intensiv</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
+                            type="checkbox" value="Pneumo"> Pneumo</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
+                            type="checkbox" value="Ambulanz"> Ambulanz</label>
+                </div>
+            </div>
             <div class="modal-actions">
                 <button onclick="document.getElementById('addEmployeeModal').style.display='none'">Abbrechen</button>
                 <button class="primary" onclick="app.confirmAddEmployee()">Hinzufügen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- iCal Export Modal -->
+    <div id="iCalExportModal" class="modal-overlay">
+        <div class="modal">
+            <h2>iCal Exportieren</h2>
+            <div class="form-group">
+                <label>Zeitraum (Von - Bis)</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="date" id="icalStart" value="2026-01-01" style="flex: 1;">
+                    <input type="date" id="icalEnd" value="2026-12-31" style="flex: 1;">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Mitarbeiter auswählen</label>
+                <div id="icalEmpCheckboxes"
+                    style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); padding: 5px; border-radius: var(--radius-md);">
+                    <!-- Checkboxes generated by JS -->
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button onclick="document.getElementById('iCalExportModal').style.display='none'">Abbrechen</button>
+                <button class="primary" onclick="app.executeICalExport()">Exportieren</button>
             </div>
         </div>
     </div>
@@ -990,6 +1045,19 @@
                 this.currentVertreterText = '';
                 this.currentMonthIndex = 0;
 
+                this.GROUP_COLORS = {
+                    'Chef': '#475569',
+                    'Privat': '#0891b2',
+                    'TAVI': '#2563eb',
+                    'TEER': '#7c3aed',
+                    'Herzkatheter': '#dc2626',
+                    'Echo': '#059669',
+                    'EPU': '#d97706',
+                    'Intensiv': '#9333ea',
+                    'Pneumo': '#db2777',
+                    'Ambulanz': '#ca8a04'
+                };
+
                 // Make init async to fetch data before UI
                 this.initApp();
 
@@ -1111,6 +1179,7 @@
                     if (data && data.employees) {
                         CONFIG.employees = data.employees;
                         this.state = data.state || {};
+                        this.sortEmployees();
                     } else if (data && !data.employees) {
                         // Legacy mode: DB only had state, no employees
                         this.state = data;
@@ -1290,10 +1359,30 @@
                 const adminFlexStyle = isAdmin ? 'flex' : 'none';
                 const adminInlineStyle = isAdmin ? 'inline-block' : 'none';
 
-                document.getElementById('bulkImportPanel').style.display = adminFlexStyle;
+                // Specific Sekretariat restrictions (Hide specific elements)
+                const hideFromSekretariat = this.currentUser === 'sekretariat';
+
+                const btnExport = document.getElementById('btnExport');
+                if (btnExport) btnExport.style.display = hideFromSekretariat ? 'none' : 'inline-block';
+
+                const btnImport = document.getElementById('btnImport');
+                if (btnImport) btnImport.style.display = hideFromSekretariat ? 'none' : 'inline-block';
+
+                // Keep the bulk panel hidden for sekretariat entirely
+                document.getElementById('bulkImportPanel').style.display = (this.currentUser === 'admin') ? 'flex' : 'none';
+
+                const btnAddAbsence = document.getElementById('btnAddAbsence');
+                if (btnAddAbsence) btnAddAbsence.style.display = hideFromSekretariat ? 'none' : 'inline-block';
+
+                const absenceInputModePanel = document.getElementById('absenceInputModePanel');
+                if (absenceInputModePanel) absenceInputModePanel.style.display = hideFromSekretariat ? 'none' : 'flex';
+
                 document.getElementById('tab-admin').style.display = (this.currentUser === 'admin') ? 'inline-block' : 'none';
                 document.getElementById('tab-summary').style.display = adminInlineStyle;
                 document.getElementById('tab-status').style.display = adminInlineStyle;
+
+                const btnExportICal = document.getElementById('btnExportICal');
+                if (btnExportICal) btnExportICal.style.display = isAdmin ? 'inline-block' : 'none';
 
                 // Ensure calendar tab is visible
                 this.switchTab('calendar');
@@ -1758,24 +1847,29 @@
 
                 const presentEmployees = CONFIG.employees.filter(emp => {
                     const status = this.state[emp.id]?.[dateStr];
-                    return !status; // Present if no status set (Vacation/Absent)
+                    return !status; // Present if no status set (Vacation/Absent/Free text)
                 });
 
                 const issues = [];
-                // Check TAVI
-                if (!presentEmployees.some(e => e.skills.includes('tavi'))) issues.push('TAVI');
-                // Check Privat
-                if (!presentEmployees.some(e => e.skills.includes('privat'))) issues.push('Privat');
-                // Check TEER
-                if (!presentEmployees.some(e => e.skills.includes('teer'))) issues.push('TEER');
-                // Check Echo (Wester, Meindl)
-                if (!presentEmployees.some(e => e.skills.includes('echo'))) issues.push('Echo');
-                // Check EPU (Ücer, Jungbauer, Tarnowski, Fredersdorf-Hahn - at least 2 present)
-                if (presentEmployees.filter(e => e.skills.includes('epu')).length < 2) issues.push('EPU');
-                // Check Intensiv (Dietl, Schneckenpointner - at least 1 present)
-                if (presentEmployees.filter(e => e.skills.includes('intensiv')).length < 1) issues.push('Intensiv');
-                // Check Pneumo (Wiest, Schulz - at least 1 present)
-                if (presentEmployees.filter(e => e.skills.includes('pneumo')).length < 1) issues.push('Pneumo');
+                // Helper to check if employee has a group (handling new array and old string property)
+                const hasGrp = (e, g) => (Array.isArray(e.groups) && e.groups.includes(g)) || (e.group === g);
+
+                // Check TAVI (min 1)
+                if (!presentEmployees.some(e => hasGrp(e, 'TAVI'))) issues.push('TAVI');
+                // Check Privat (min 1)
+                if (!presentEmployees.some(e => hasGrp(e, 'Privat'))) issues.push('Privat');
+                // Check TEER (min 1)
+                if (!presentEmployees.some(e => hasGrp(e, 'TEER'))) issues.push('TEER');
+                // Check Herzkatheter (min 3)
+                if (presentEmployees.filter(e => hasGrp(e, 'Herzkatheter')).length < 3) issues.push('Herzkatheter');
+                // Check Echo (min 1)
+                if (!presentEmployees.some(e => hasGrp(e, 'Echo'))) issues.push('Echo');
+                // Check EPU (at least 2 present)
+                if (presentEmployees.filter(e => hasGrp(e, 'EPU')).length < 2) issues.push('EPU');
+                // Check Intensiv (at least 1 present)
+                if (presentEmployees.filter(e => hasGrp(e, 'Intensiv')).length < 1) issues.push('Intensiv');
+                // Check Pneumo (at least 1 present)
+                if (presentEmployees.filter(e => hasGrp(e, 'Pneumo')).length < 1) issues.push('Pneumo');
 
                 return issues.length > 0 ? issues : null;
             }
@@ -1796,6 +1890,177 @@
                 document.body.appendChild(downloadAnchorNode);
                 downloadAnchorNode.click();
                 downloadAnchorNode.remove();
+            }
+
+            exportICal() {
+                if (this.currentUser !== 'admin' && this.currentUser !== 'sekretariat') {
+                    alert('Nur Admin und Sekretariat können iCal exportieren.');
+                    return;
+                }
+
+                // Populate checkboxes
+                const container = document.getElementById('icalEmpCheckboxes');
+                container.innerHTML = '';
+
+                // Add "Select All" Option
+                const selectAllDiv = document.createElement('div');
+                selectAllDiv.style.marginBottom = '5px';
+                selectAllDiv.style.borderBottom = '1px solid #eee';
+                selectAllDiv.style.paddingBottom = '5px';
+                selectAllDiv.innerHTML = `
+                    <label style="display: flex; align-items: center; gap: 8px; font-weight: bold; cursor: pointer;">
+                        <input type="checkbox" id="icalSelectAll" style="width: auto;" onchange="
+                            const checkboxes = document.querySelectorAll('.ical-emp-checkbox');
+                            checkboxes.forEach(cb => cb.checked = this.checked);
+                        "> <span>Alle auswählen</span>
+                    </label>
+                `;
+                container.appendChild(selectAllDiv);
+
+                CONFIG.employees.forEach(emp => {
+                    if (emp.id === 'admin' || emp.id === 'sekretariat' || emp.active === false) return;
+
+                    const empName = emp.name || this.getEmpName(emp.id) || emp.id;
+
+                    const div = document.createElement('div');
+                    div.style.padding = '3px 0';
+                    div.innerHTML = `
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: normal; color: #333;">
+                            <input type="checkbox" class="ical-emp-checkbox" value="${emp.id}" style="width: auto;">
+                            <span>${empName}</span>
+                        </label>
+                    `;
+                    container.appendChild(div);
+                });
+
+                // Add event listeners to individual checkboxes to update Select All state
+                const checkboxes = document.querySelectorAll('.ical-emp-checkbox');
+                checkboxes.forEach(cb => {
+                    cb.addEventListener('change', () => {
+                        const allChecked = Array.from(checkboxes).every(c => c.checked);
+                        document.getElementById('icalSelectAll').checked = allChecked;
+                    });
+                });
+
+                document.getElementById('iCalExportModal').style.display = 'flex';
+            }
+
+            executeICalExport() {
+                const startDateStr = document.getElementById('icalStart').value;
+                const endDateStr = document.getElementById('icalEnd').value;
+
+                if (!startDateStr || !endDateStr || startDateStr > endDateStr) {
+                    alert('Bitte einen gültigen Zeitraum auswählen.');
+                    return;
+                }
+
+                const startDate = new Date(startDateStr);
+                const endDate = new Date(endDateStr);
+                endDate.setHours(23, 59, 59, 999); // Include the whole end day
+
+                // Get selected employees
+                const selectedEmps = Array.from(document.querySelectorAll('.ical-emp-checkbox:checked')).map(cb => cb.value);
+
+                if (selectedEmps.length === 0) {
+                    alert('Bitte mindestens einen Mitarbeiter auswählen.');
+                    return;
+                }
+
+                let icsContent = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Urlaubsplaner//DE\r\nCALSCALE:GREGORIAN\r\n";
+
+                const events = [];
+
+                for (const empId of selectedEmps) {
+                    if (!this.state[empId]) continue;
+
+                    const empName = this.getEmpName(empId);
+                    const dates = Object.keys(this.state[empId]).sort();
+
+                    if (dates.length === 0) continue;
+
+                    let currentEvent = null;
+
+                    for (const dateStr of dates) {
+                        const eventDate = new Date(dateStr);
+
+                        // Filter by selected date range
+                        if (eventDate < startDate || eventDate > endDate) continue;
+
+                        const val = this.state[empId][dateStr];
+
+                        if (!currentEvent) {
+                            currentEvent = { empName, type: val.type, text: val.text, vertreter: val.vertreter, start: new Date(dateStr), end: new Date(dateStr) };
+                        } else {
+                            const expectedNextDay = new Date(currentEvent.end);
+                            expectedNextDay.setDate(expectedNextDay.getDate() + 1);
+
+                            if (this.formatDate(expectedNextDay) === dateStr &&
+                                currentEvent.type === val.type &&
+                                currentEvent.text === val.text &&
+                                currentEvent.vertreter === val.vertreter) {
+                                currentEvent.end = new Date(dateStr);
+                            } else {
+                                events.push(currentEvent);
+                                currentEvent = { empName, type: val.type, text: val.text, vertreter: val.vertreter, start: new Date(dateStr), end: new Date(dateStr) };
+                            }
+                        }
+                    }
+                    if (currentEvent) {
+                        events.push(currentEvent);
+                    }
+                }
+
+                if (events.length === 0) {
+                    alert('Es wurden keine Abwesenheiten im gewählten Zeitraum für die ausgewählten Mitarbeiter gefunden.');
+                    return;
+                }
+
+                const formatDateICal = (date) => {
+                    const y = date.getFullYear();
+                    const m = String(date.getMonth() + 1).padStart(2, '0');
+                    const d = String(date.getDate()).padStart(2, '0');
+                    return `${y}${m}${d}`;
+                };
+
+                const timestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                const typeLabels = { 'U': 'Urlaub', 'D': 'Dienstreise', 'F': 'Fortbildung', 'T': 'Sonstiges' };
+
+                events.forEach(ev => {
+                    icsContent += "BEGIN:VEVENT\r\n";
+                    const uid = `${ev.empName.replace(/\s+/g, '')}-${formatDateICal(ev.start)}@urlaubsplaner`;
+                    icsContent += `UID:${uid}\r\n`;
+                    icsContent += `DTSTAMP:${timestamp}\r\n`;
+
+                    icsContent += `DTSTART;VALUE=DATE:${formatDateICal(ev.start)}\r\n`;
+                    const endExclusive = new Date(ev.end);
+                    endExclusive.setDate(endExclusive.getDate() + 1);
+                    icsContent += `DTEND;VALUE=DATE:${formatDateICal(endExclusive)}\r\n`;
+
+                    let summary = `${typeLabels[ev.type] || 'Abwesenheit'} - ${ev.empName}`;
+                    if (ev.text) summary += ` (${ev.text})`;
+                    icsContent += `SUMMARY:${summary}\r\n`;
+
+                    let description = `Mitarbeiter: ${ev.empName}\\nArt: ${typeLabels[ev.type] || 'Abwesenheit'}`;
+                    if (ev.text) description += `\\nBeschreibung: ${ev.text}`;
+                    if (ev.vertreter) description += `\\nVertreter: ${ev.vertreter}`;
+
+                    icsContent += `DESCRIPTION:${description}\r\n`;
+                    icsContent += "END:VEVENT\r\n";
+                });
+
+                icsContent += "END:VCALENDAR";
+
+                const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", url);
+                downloadAnchorNode.setAttribute("download", `abwesenheiten_${startDateStr}_bis_${endDateStr}.ics`);
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+                URL.revokeObjectURL(url);
+
+                document.getElementById('iCalExportModal').style.display = 'none';
             }
 
             importData(input) {
@@ -1913,6 +2178,22 @@
                 });
 
                 // 4. Employee Rows (Shifted starting Row 4)
+                const groupOrder = ['Chef', 'Privat', 'TAVI', 'TEER', 'Herzkatheter', 'Echo', 'EPU', 'Intensiv', 'Pneumo', 'Ambulanz', ''];
+                const getPrimaryGrp = (emp) => {
+                    const groups = Array.isArray(emp.groups) ? emp.groups : (emp.group ? [emp.group] : []);
+                    if (groups.length === 0) return '';
+                    let bestIdx = groupOrder.length;
+                    let bestGrp = '';
+                    groups.forEach(g => {
+                        const idx = groupOrder.indexOf(g);
+                        if (idx !== -1 && idx < bestIdx) {
+                            bestIdx = idx;
+                            bestGrp = g;
+                        }
+                    });
+                    return bestGrp;
+                };
+
                 CONFIG.employees.forEach((emp, empIndex) => {
                     // Name Cell
                     const nameEl = document.createElement('div');
@@ -1922,8 +2203,41 @@
 
                     // Highlight if this is the currently logged in user
                     if (this.currentUser === emp.id) {
-                        nameEl.style.backgroundColor = '#e0f2fe'; // Light blue background
-                        nameEl.style.color = 'var(--primary-color)'; // Set text to primary blue
+                        nameEl.style.backgroundColor = '#f0f9ff'; // Very light blue
+                        nameEl.style.color = 'var(--primary-color)';
+                        nameEl.style.fontWeight = 'bold';
+                    }
+
+                    // Group Frame Logic
+                    const currentGrp = getPrimaryGrp(emp);
+                    if (currentGrp) {
+                        const color = this.GROUP_COLORS[currentGrp] || '#ccc';
+                        const prevEmp = CONFIG.employees[empIndex - 1];
+                        const nextEmp = CONFIG.employees[empIndex + 1];
+                        const prevGrp = prevEmp ? getPrimaryGrp(prevEmp) : null;
+                        const nextGrp = nextEmp ? getPrimaryGrp(nextEmp) : null;
+
+                        nameEl.style.borderLeft = `2px solid ${color}`;
+                        nameEl.style.paddingLeft = '8px';
+                        nameEl.style.position = 'relative';
+
+                        if (currentGrp !== prevGrp) {
+                            nameEl.style.borderTop = `1px solid ${color}`;
+                            // Small group label at the top left
+                            const groupLabel = document.createElement('span');
+                            groupLabel.innerText = currentGrp;
+                            groupLabel.style.position = 'absolute';
+                            groupLabel.style.top = '1px';
+                            groupLabel.style.left = '4px';
+                            groupLabel.style.fontSize = '0.55rem';
+                            groupLabel.style.color = color;
+                            groupLabel.style.fontWeight = '700';
+                            groupLabel.style.opacity = '0.8';
+                            nameEl.appendChild(groupLabel);
+                        }
+                        if (currentGrp !== nextGrp) {
+                            nameEl.style.borderBottom = `1px solid ${color}`;
+                        }
                     }
 
                     container.appendChild(nameEl);
@@ -2095,7 +2409,7 @@
                 document.getElementById('adminView').style.display = (tabId === 'admin') ? 'block' : 'none';
 
                 // Special handling for Bulk Panel
-                if (tabId === 'calendar' && (this.currentUser === 'admin' || this.currentUser === 'sekretariat')) {
+                if (tabId === 'calendar' && this.currentUser === 'admin') {
                     bulkPanel.style.display = 'flex';
                 } else {
                     bulkPanel.style.display = 'none';
@@ -2128,6 +2442,15 @@
                 <td style="padding: 10px;"><input type="text" value="${emp.name || ''}" data-field="name" data-id="${emp.id}"></td>
                 <td style="padding: 10px;"><input type="text" value="${emp.email || ''}" data-field="email" data-id="${emp.id}"></td>
                 <td style="padding: 10px;"><input type="text" value="${emp.pin || ''}" data-field="pin" data-id="${emp.id}" style="width:80px;"></td>
+                <td style="padding: 10px;">
+                    <div class="group-checkboxes" data-id="${emp.id}" style="display: flex; flex-wrap: wrap; gap: 5px; font-size: 0.75rem; max-width: 250px;">
+                        ${['Chef', 'Privat', 'TAVI', 'TEER', 'Herzkatheter', 'Echo', 'EPU', 'Intensiv', 'Pneumo', 'Ambulanz'].map(g => `
+                            <label style="display: flex; align-items: center; gap: 2px; font-weight: normal; margin-right: 5px; white-space: nowrap;">
+                                <input type="checkbox" value="${g}" ${emp.groups && emp.groups.includes(g) ? 'checked' : (emp.group === g ? 'checked' : '')} ${isReadOnly ? 'disabled' : ''}> ${g}
+                            </label>
+                        `).join('')}
+                    </div>
+                </td>
                 <td style="padding: 10px; text-align: center;"><input type="checkbox" ${emp.active !== false ? 'checked' : ''} data-field="active" data-id="${emp.id}"></td>
                 <td style="padding: 10px; text-align: center;">
                     ${!isReadOnly ? `<button class="primary" onclick="app.deleteEmployee('${emp.id}')" style="background:var(--danger-color); padding: 5px 10px; font-size: 0.8rem;">Löschen</button>` : ''}
@@ -2135,25 +2458,34 @@
             `;
 
                 // Hook up changes immediately to CONFIG.employees (in memory)
-                const inputs = tr.querySelectorAll('input');
+                const inputs = tr.querySelectorAll('input, select');
                 inputs.forEach(input => {
                     input.onchange = (e) => {
-                        const field = e.target.getAttribute('data-field');
-                        const oldId = e.target.getAttribute('data-id');
+                        const oldId = e.target.closest('tr').querySelector('input[data-field="id"]').getAttribute('data-id');
                         const targetEmp = CONFIG.employees.find(x => x.id === oldId);
-                        if (targetEmp) {
-                            if (field === 'active') {
-                                targetEmp[field] = e.target.checked;
+                        if (!targetEmp) return;
+
+                        if (e.target.type === 'checkbox') {
+                            if (e.target.closest('.group-checkboxes')) {
+                                // Group multi-selection
+                                const groupDiv = e.target.closest('.group-checkboxes');
+                                const selected = Array.from(groupDiv.querySelectorAll('input:checked')).map(cb => cb.value);
+                                targetEmp.groups = selected;
+                                // Backward compatibility
+                                targetEmp.group = selected[0] || '';
                             } else {
-                                targetEmp[field] = e.target.value;
-                                // If ID changed, we also need to update the data-id attributes for this row
-                                if (field === 'id') {
-                                    inputs.forEach(inp => inp.setAttribute('data-id', e.target.value));
-                                    // Also update the delete button's onclick if it's not admin
-                                    if (targetEmp.id !== 'admin') {
-                                        const delBtn = tr.querySelector('button');
-                                        if (delBtn) delBtn.setAttribute('onclick', `app.deleteEmployee('${e.target.value}')`);
-                                    }
+                                const field = e.target.getAttribute('data-field');
+                                targetEmp[field] = e.target.checked;
+                            }
+                        } else {
+                            const field = e.target.getAttribute('data-field');
+                            targetEmp[field] = e.target.value;
+                            // If ID changed, update all data-id references in this row
+                            if (field === 'id') {
+                                tr.querySelectorAll('[data-id]').forEach(el => el.setAttribute('data-id', e.target.value));
+                                if (targetEmp.id !== 'admin') {
+                                    const delBtn = tr.querySelector('button');
+                                    if (delBtn) delBtn.setAttribute('onclick', `app.deleteEmployee('${e.target.value}')`);
                                 }
                             }
                         }
@@ -2167,6 +2499,8 @@
                 document.getElementById('addEmpId').value = '';
                 document.getElementById('addEmpName').value = '';
                 document.getElementById('addEmpEmail').value = '';
+                // Reset checkboxes
+                document.querySelectorAll('#addEmpGroups input').forEach(cb => cb.checked = false);
                 // Generate a random 4-digit PIN default
                 document.getElementById('addEmpPin').value = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
                 document.getElementById('addEmployeeModal').style.display = 'flex';
@@ -2200,7 +2534,9 @@
                     return;
                 }
 
-                CONFIG.employees.push({ id, name, email, pin, active: true, skills: [], role: 'User' });
+                const groups = Array.from(document.querySelectorAll('#addEmpGroups input:checked')).map(cb => cb.value);
+                CONFIG.employees.push({ id, name, email, pin, groups, active: true, role: 'User' });
+                this.sortEmployees();
                 document.getElementById('addEmployeeModal').style.display = 'none';
                 this.renderAdminTable();
             }
@@ -2215,15 +2551,7 @@
             saveEmployees() {
                 if (!confirm('Änderungen an der Mitarbeiterliste speichern?')) return;
 
-                // Sort employees by last name before saving
-                const admins = CONFIG.employees.filter(e => e.id === 'admin' || e.id === 'sekretariat');
-                const others = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat');
-                others.sort((a, b) => {
-                    const lastA = (a.name.split(' ').pop() || '').toLowerCase();
-                    const lastB = (b.name.split(' ').pop() || '').toLowerCase();
-                    return lastA.localeCompare(lastB);
-                });
-                CONFIG.employees = [...admins, ...others];
+                this.sortEmployees();
 
                 // Call the save logic, then re-render
                 document.body.style.cursor = 'wait';
@@ -2268,6 +2596,44 @@
                 const txt = start.val.text ? `: ${start.val.text}` : '';
 
                 return `${datePart} (${t}${txt})`;
+            }
+
+            sortEmployees() {
+                const groupOrder = ['Chef', 'Privat', 'TAVI', 'TEER', 'Herzkatheter', 'Echo', 'EPU', 'Intensiv', 'Pneumo', 'Ambulanz', ''];
+
+                const admins = CONFIG.employees.filter(e => e.id === 'admin' || e.id === 'sekretariat');
+                const others = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat');
+
+                others.sort((a, b) => {
+                    // Unified group field (handle array vs old string)
+                    const groupsA = Array.isArray(a.groups) ? a.groups : (a.group ? [a.group] : []);
+                    const groupsB = Array.isArray(b.groups) ? b.groups : (b.group ? [b.group] : []);
+
+                    // Primary group is the one with highest priority (lowest index in groupOrder)
+                    const getPrimaryIdx = (groups) => {
+                        if (groups.length === 0) return groupOrder.indexOf('');
+                        let minIdx = groupOrder.length;
+                        groups.forEach(g => {
+                            let idx = groupOrder.indexOf(g);
+                            if (idx !== -1 && idx < minIdx) minIdx = idx;
+                        });
+                        return minIdx;
+                    };
+
+                    const idxA = getPrimaryIdx(groupsA);
+                    const idxB = getPrimaryIdx(groupsB);
+
+                    if (idxA !== idxB) {
+                        return idxA - idxB;
+                    }
+
+                    // Same primary group -> sort alphabetically by last name
+                    const lastA = (a.name.split(' ').pop() || '').toLowerCase();
+                    const lastB = (b.name.split(' ').pop() || '').toLowerCase();
+                    return lastA.localeCompare(lastB);
+                });
+
+                CONFIG.employees = [...admins, ...others];
             }
         }
 
