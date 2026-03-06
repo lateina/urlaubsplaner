@@ -131,14 +131,15 @@
         /* Main Calendar Area */
         main {
             /* flex: 1; Removed to let content dictate height */
-            background: var(--surface-color);
+            background: var(--surface-color) !important;
             border-radius: var(--radius-lg);
             box-shadow: var(--shadow-md);
             /* overflow: hidden; Removed */
             position: relative;
             display: block;
             /* Normal block flow */
-            width: fit-content;
+            width: 100%;
+            overflow: hidden;
             /* Ensure container expands for sticky */
             min-width: 100%;
         }
