@@ -1296,20 +1296,35 @@
 
                 // UI RESTRICTION for Reset/Import/Export
                 // UI RESTRICTION for Reset/Import/Export
-                const displayStyle = (this.currentUser === 'admin') ? 'inline-block' : 'none';
+                // Specific Sekretariat restrictions (Hide specific elements)
+                const hideFromSekretariat = this.currentUser === 'sekretariat';
 
-                document.getElementById('btnExport').style.display = displayStyle;
-                document.getElementById('btnImport').style.display = displayStyle;
+                const btnExport = document.getElementById('btnExport');
+                if (btnExport) btnExport.style.display = hideFromSekretariat ? 'none' : (this.currentUser === 'admin' ? 'inline-block' : 'none');
+
+                const btnImport = document.getElementById('btnImport');
+                if (btnImport) btnImport.style.display = hideFromSekretariat ? 'none' : (this.currentUser === 'admin' ? 'inline-block' : 'none');
 
                 // UI RESTRICTION for non-admins
                 const isAdmin = (this.currentUser === 'admin' || this.currentUser === 'sekretariat');
                 const adminFlexStyle = isAdmin ? 'flex' : 'none';
                 const adminInlineStyle = isAdmin ? 'inline-block' : 'none';
 
-                document.getElementById('bulkImportPanel').style.display = adminFlexStyle;
+                // Keep the bulk panel hidden for sekretariat entirely
+                document.getElementById('bulkImportPanel').style.display = (this.currentUser === 'admin') ? 'flex' : 'none';
+
+                const btnAddAbsence = document.getElementById('btnAddAbsence');
+                if (btnAddAbsence) btnAddAbsence.style.display = hideFromSekretariat ? 'none' : 'inline-block';
+
+                const absenceInputModePanel = document.getElementById('absenceInputModePanel');
+                if (absenceInputModePanel) absenceInputModePanel.style.display = hideFromSekretariat ? 'none' : 'flex';
+
                 document.getElementById('tab-admin').style.display = (this.currentUser === 'admin') ? 'inline-block' : 'none';
                 document.getElementById('tab-summary').style.display = adminInlineStyle;
                 document.getElementById('tab-status').style.display = adminInlineStyle;
+
+                const btnExportICal = document.getElementById('btnExportICal');
+                if (btnExportICal) btnExportICal.style.display = isAdmin ? 'inline-block' : 'none';
 
                 // Ensure calendar tab is visible
                 this.switchTab('calendar');
