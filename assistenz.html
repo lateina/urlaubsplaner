@@ -58,8 +58,8 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow-x: auto;
-            /* Allow horizontal scroll */
+            overflow-x: hidden;
+            /* Prevent body scroll from breaking sticky */
         }
 
         header {
@@ -747,7 +747,18 @@
             <p style="margin-bottom:15px; color:#666;">Bitte wähle deinen Namen, um dich anzumelden.</p>
             <div class="form-group">
                 <label>Ich bin:</label>
-                <select id="loginSelect"></select>
+                <div style="position:relative;">
+                    <input type="text" id="loginSearch" placeholder="Namen suchen..." autocomplete="off"
+                        oninput="app.filterLoginEmployees()"
+                        style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:var(--radius-md);">
+                    <div id="loginResults" style="
+                        position:absolute; top:100%; left:0; right:0;
+                        background:white; border:1px solid var(--border-color);
+                        border-radius:var(--radius-md); max-height:200px; overflow-y:auto;
+                        z-index:9999; box-shadow:var(--shadow-md); display:none;
+                    "></div>
+                </div>
+                <input type="hidden" id="loginSelect" value="">
             </div>
             <div id="loginPwdGroup" class="form-group" style="margin-top:10px;">
                 <label style="font-size:0.8rem; color:#888;">Passwort / PIN:</label>
@@ -1013,7 +1024,7 @@
                     }
                     scrollTimeout = setTimeout(() => {
                         this.updateNavHighlighting();
-                    }, 150); // 150ms delay
+                    }, 50); // 50ms delay
                 }, { passive: true });
             }
 
@@ -1140,32 +1151,17 @@
             }
 
             showLoginModal() {
-                const select = document.getElementById('loginSelect');
-                select.innerHTML = '';
+                // Build the list of login options
+                this._loginOptions = [
+                    { id: 'admin', name: 'Administrator (Alles bearbeiten)', bold: true },
+                    { id: 'sekretariat', name: 'Sekretariat (Nur Ansicht)', italic: true },
+                    ...CONFIG.employees.filter(e => e && e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false).map(e => ({ id: e.id, name: e.name }))
+                ];
 
-                // Admin Option
-                const adminOpt = document.createElement('option');
-                adminOpt.value = 'admin';
-                adminOpt.innerText = 'Administrator (Alles bearbeiten)';
-                adminOpt.style.fontWeight = 'bold';
-                select.appendChild(adminOpt);
-
-                // Sekretariat Option
-                const sekOpt = document.createElement('option');
-                sekOpt.value = 'sekretariat';
-                sekOpt.innerText = 'Sekretariat (Nur Ansicht)';
-                sekOpt.style.fontStyle = 'italic';
-                select.appendChild(sekOpt);
-
-                CONFIG.employees.forEach(emp => {
-                    if (!emp) return;
-                    if (emp.id === 'admin' || emp.id === 'sekretariat') return;
-                    if (emp.active === false) return;
-                    const opt = document.createElement('option');
-                    opt.value = emp.id;
-                    opt.innerText = emp.name;
-                    select.appendChild(opt);
-                });
+                // Reset search field and hidden value
+                document.getElementById('loginSearch').value = '';
+                document.getElementById('loginSelect').value = '';
+                document.getElementById('loginResults').style.display = 'none';
 
                 // Clear Password Field
                 document.getElementById('loginPwdInput').value = '';
@@ -1174,10 +1170,60 @@
                 if (CONFIG.apiKey) {
                     document.getElementById('apiKeyInput').value = CONFIG.apiKey;
                 }
+
+                // Show results on focus
+                document.getElementById('loginSearch').onfocus = () => app.filterLoginEmployees();
+
+                // Hide results on outside click
+                document.addEventListener('mousedown', function hideResults(e) {
+                    if (!document.getElementById('loginResults').contains(e.target) &&
+                        e.target.id !== 'loginSearch') {
+                        document.getElementById('loginResults').style.display = 'none';
+                        document.removeEventListener('mousedown', hideResults);
+                    }
+                });
+            }
+
+            filterLoginEmployees() {
+                const query = document.getElementById('loginSearch').value.toLowerCase();
+                const results = document.getElementById('loginResults');
+                results.innerHTML = '';
+
+                const matches = (this._loginOptions || []).filter(o =>
+                    !query || o.name.toLowerCase().includes(query)
+                );
+
+                if (matches.length === 0) {
+                    results.style.display = 'none';
+                    return;
+                }
+
+                matches.forEach(opt => {
+                    const item = document.createElement('div');
+                    item.textContent = opt.name;
+                    item.style.cssText = 'padding:8px 12px; cursor:pointer; font-size:0.9rem;';
+                    if (opt.bold) item.style.fontWeight = 'bold';
+                    if (opt.italic) item.style.fontStyle = 'italic';
+                    item.onmouseenter = () => item.style.background = '#f1f5f9';
+                    item.onmouseleave = () => item.style.background = '';
+                    item.onmousedown = () => {
+                        document.getElementById('loginSearch').value = opt.name;
+                        document.getElementById('loginSelect').value = opt.id;
+                        document.getElementById('loginResults').style.display = 'none';
+                        document.getElementById('loginPwdInput').focus();
+                    };
+                    results.appendChild(item);
+                });
+
+                results.style.display = 'block';
             }
 
             async processLogin() {
                 const empId = document.getElementById('loginSelect').value;
+                if (!empId) {
+                    alert('Bitte einen Namen aus der Liste auswählen.');
+                    return;
+                }
                 const pwdInput = document.getElementById('loginPwdInput').value;
                 const keyInput = document.getElementById('apiKeyInput').value.trim();
 
@@ -1290,14 +1336,22 @@
                 let targetMonth = index;
 
                 if (!useCurrentYear) {
-                    // Absolute index (0-23)
+                    // Absolute index (0-24)
                     targetYear = CONFIG.years[Math.floor(index / 12)];
                     targetMonth = index % 12;
                     if (!targetYear) return;
                 }
 
                 const container = document.getElementById('calendar');
-                const el = document.getElementById(`month-header-${targetYear}-${targetMonth}`);
+                let el = document.getElementById(`month-header-${targetYear}-${targetMonth}`);
+
+                // FALLBACK: If month doesn't exist (e.g. Dec 2028), find the last available month in that year
+                if (!el) {
+                    for (let m = targetMonth - 1; m >= 0; m--) {
+                        el = document.getElementById(`month-header-${targetYear}-${m}`);
+                        if (el) break;
+                    }
+                }
 
                 if (el && container) {
                     container.scrollTo({
@@ -1990,6 +2044,7 @@
                 }
                 const statusEl = document.getElementById('statusSummary');
                 if (statusEl) statusEl.value = statusList.join('\n');
+                this.updateNavHighlighting();
             }
 
             switchTab(tabId) {
