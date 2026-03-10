@@ -7,7 +7,6 @@
     <title>Urlaubsplaner Oberärzte 2026/2027</title>
     <style>
         :root {
-            /* Color Palette */
             --primary-color: #2563eb;
             --primary-hover: #1d4ed8;
             --bg-color: #f8fafc;
@@ -18,69 +17,42 @@
             --danger-color: #ef4444;
             --warning-color: #f59e0b;
             --success-color: #10b981;
-
-            /* Status Colors */
             --status-vacation: #3b82f6;
-            /* Blue for Vacation */
             --status-trip: #8b5cf6;
-            /* Purple for Business Trip */
             --status-training: #f97316;
-            /* Orange for Training */
             --status-custom: #64748b;
-            /* Gray for Custom/Free Text */
-
             --status-absent: #ef4444;
-            /* Red for Absent (Legacy/Error) */
             --status-holiday: #f5f5f5;
-            /* Light Gray for Holidays */
             --status-weekend: #f1f5f9;
-            /* Slightly darker for Weekends */
-
-            /* Spacing & Radius */
             --radius-md: 8px;
             --radius-lg: 12px;
             --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
             --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
 
         body {
             background-color: var(--bg-color);
             color: var(--text-main);
             padding: 20px;
-            /* padding around the page */
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             overflow-x: hidden;
-            /* Prevent body scroll from breaking sticky */
         }
 
         header {
             background: var(--surface-color);
-            padding: 20px;
+            padding: 10px 15px;
             border-radius: var(--radius-lg);
             box-shadow: var(--shadow-sm);
-            margin-bottom: 20px;
-            /* Flex removed, handling children specifically */
+            margin-bottom: 10px;
         }
 
-        h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--text-main);
-        }
+        h1 { font-size: 1.1rem; font-weight: 700; color: var(--text-main); }
 
-        .controls {
-            display: flex;
-            gap: 10px;
-        }
+        .controls { display: flex; gap: 10px; }
 
         button {
             padding: 8px 16px;
@@ -92,93 +64,45 @@
             transition: all 0.2s;
         }
 
-        button:hover {
-            background: var(--bg-color);
-            border-color: var(--primary-color);
-            color: var(--primary-color);
-        }
-
-        button.primary {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-        }
-
-        button.primary:hover {
-            background: var(--primary-hover);
-        }
-
-        .legend {
-            display: flex;
-            gap: 20px;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            margin-top: 10px;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .color-box {
-            width: 16px;
-            height: 16px;
-            border-radius: 4px;
-        }
-
-
+        button.primary { background: var(--primary-color); color: white; border: none; }
 
         .calendar-container {
             display: grid;
             overflow-x: auto;
             overflow-y: auto;
-            /* Restore horizontal scroll */
             position: relative;
             width: 100%;
             height: auto;
             max-height: calc(100vh - 250px);
-            /* Full height */
-            /* First col for names, rest for days. 365 days + 1 label col */
             grid-template-columns: 200px repeat(762, 40px);
-            grid-template-rows: 30px 20px 140px;
+            grid-template-rows: 20px 20px 30px 50px;
             grid-auto-rows: minmax(50px, auto);
             padding-bottom: 80px;
         }
 
-        /* Sticky Columns/Rows */
         .sticky-col {
-            position: sticky;
-            left: 0;
-            background: #ffffff;
-            /* Explicit opaque white */
-            z-index: 50;
-            /* Increased */
-            border-right: 1px solid var(--border-color);
-            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+            position: -webkit-sticky !important;
+            position: sticky !important;
+            left: 0 !important;
+            background-color: #ffffff !important;
+            z-index: 100 !important;
+            border-right: 2px solid var(--border-color);
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
             min-width: 200px;
-            /* Enforce width */
-            will-change: transform;
-            /* Hint for compositing */
+            transform: translateZ(0);
         }
 
         .sticky-header {
-            position: sticky;
-            background: var(--surface-color);
-            z-index: 40;
-            /* Increased */
+            position: -webkit-sticky !important;
+            position: sticky !important;
+            top: 0 !important;
+            background-color: var(--surface-color) !important;
+            z-index: 90 !important;
             border-bottom: 1px solid var(--border-color);
         }
 
-        /* High Z-Index for top-left intersection */
-        .sticky-corner {
-            top: 0;
-            z-index: 100;
-            /* Increased */
-        }
+        .sticky-corner { top: 0 !important; left: 0 !important; z-index: 110 !important; }
 
-        /* Grid Cells */
         .cell {
             padding: 5px;
             border-bottom: 1px solid var(--border-color);
@@ -189,397 +113,85 @@
             font-size: 0.85rem;
         }
 
-        .header-cell {
-            font-weight: 600;
-            color: var(--text-secondary);
-            flex-direction: column;
-            gap: 2px;
-        }
+        .header-cell { font-weight: 600; color: var(--text-secondary); flex-direction: column; }
 
         .month-header {
-            grid-row: 1;
-            top: 0;
-            background: #f1f5f9;
-            font-weight: 700;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 0.05em;
+            grid-row: 1; top: 0; background: #f1f5f9; font-weight: 700; text-transform: uppercase;
+            font-size: 0.7rem; letter-spacing: 0.05em; line-height: 20px;
         }
 
-        .school-holiday-row {
-            grid-row: 2;
-            top: 30px;
-        }
+        .day-header { grid-row: 3; top: 40px; align-items: center; justify-content: flex-start; padding: 5px 0; }
 
-        .day-header {
-            grid-row: 3;
-            top: 50px;
-            /* height removed for grid compatibility */
-            align-items: center;
-            justify-content: flex-start;
-            padding-top: 5px;
-            padding-bottom: 5px;
-        }
-
-        .header-holiday-text {
-            writing-mode: vertical-rl;
-            transform: rotate(180deg);
-            font-size: 0.65rem;
-            color: #555;
-            margin-top: 5px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-height: 100px;
-        }
-
-        .employee-row-header {
-            justify-content: flex-start;
-            padding-left: 15px;
-            font-weight: 600;
-            background: var(--surface-color);
-        }
-
-        .employee-sub {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            font-weight: 400;
-            margin-left: 5px;
-        }
-
-        /* Interactive Cells */
-        .day-cell {
-            cursor: pointer;
-            transition: background 0.1s;
-            position: relative;
-        }
-
-        .day-cell:hover {
-            background-color: #f8fafc;
-        }
-
-        /* Cell Content (Text) */
-        .cell-text {
-            font-size: 0.6rem;
-            color: white;
-            pointer-events: none;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            max-width: 100%;
-            padding: 0 2px;
-        }
-
-        /* Status Styles */
-        .weekend {
-            background-color: var(--status-weekend);
-        }
-
-        .holiday {
-            background-color: #fee2e2;
-            /* Light Red tint */
-            color: white;
-        }
-
-        .school-holiday {
-            background-image: repeating-linear-gradient(45deg,
-                    transparent,
-                    transparent 5px,
-                    rgba(0, 0, 0, 0.2) 5px,
-                    rgba(0, 0, 0, 0.2) 10px);
-        }
-
-        .day-cell.status-vacation {
-            background-color: var(--status-vacation);
-            color: white;
-        }
-
-        .day-cell.status-trip {
-            background-color: var(--status-trip);
-            color: white;
-        }
-
-        .day-cell.status-training {
-            background-color: var(--status-training);
-            color: white;
-        }
-
-        .day-cell.status-custom {
-            background-color: var(--status-custom);
-            color: white;
-        }
-
-
-        /* 2. Navigation Bar */
-        .month-nav {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .month-nav button {
-            padding: 4px 10px;
-            font-size: 0.8rem;
-        }
-
-        .month-nav button {
-            padding: 4px 10px;
-            font-size: 0.8rem;
-        }
-
-        /* Custom Tooltip */
-        #custom-tooltip {
-            position: fixed;
-            background: #333;
-            color: white;
-            padding: 6px 10px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            z-index: 1000;
-            pointer-events: none;
-            display: none;
-            max-width: 200px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-        }
-
-        /* 3. Modal Styles */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-
-        .modal {
-            background: var(--surface-color);
-            padding: 20px;
-            border-radius: var(--radius-lg);
-            width: 400px;
-            max-width: 90vw;
-            box-shadow: var(--shadow-md);
-        }
-
-        .modal h2 {
-            margin-bottom: 15px;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-            font-size: 0.9rem;
-        }
-
-        .form-group select,
-        .form-group input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-        }
-
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        textarea.bulk-input {
-            width: 100%;
-            height: 150px;
-            padding: 8px;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            font-family: monospace;
-            font-size: 0.9rem;
-            resize: vertical;
-        }
-
-        .status-vacation {
-            background-color: var(--status-vacation);
-            color: white;
-        }
-
-        .status-absent {
-            background-color: var(--status-absent);
-            color: white;
-        }
-
-        /* Warning Footer */
         .validation-row {
-            background: #fff1f2;
-            color: var(--danger-color);
-            font-weight: bold;
-            justify-content: flex-start;
-            padding-left: 10px;
-            border-bottom: 2px solid var(--danger-color);
-            position: sticky;
-            top: 190px;
-            z-index: 100;
+            grid-row: 4; top: 70px; background: #fff1f2; color: var(--danger-color);
+            font-weight: bold; justify-content: flex-start; padding-left: 10px;
+            border-bottom: 2px solid var(--danger-color); z-index: 45;
         }
 
         .validation-cell {
-            border-bottom: 2px solid var(--danger-color);
-            position: sticky;
-            top: 190px;
-            z-index: 41;
-            background-color: var(--surface-color);
+            grid-row: 4; top: 70px; border-bottom: 2px solid var(--danger-color);
+            z-index: 41; background-color: #fff1f2;
         }
 
-        .warning-text {
-            color: var(--danger-color);
-            font-size: 0.7rem;
-            font-weight: bold;
-            line-height: 1.1;
-            display: block;
-            text-align: center;
+        .warning-text { color: var(--danger-color); font-size: 0.65rem; font-weight: bold; line-height: 1.1; text-align: center; }
+
+        .employee-row-header { justify-content: flex-start; padding-left: 15px; font-weight: 600; background: var(--surface-color); position: relative; }
+
+        .day-cell { cursor: pointer; transition: background 0.1s; position: relative; }
+        .cell-text { font-size: 0.6rem; color: white; pointer-events: none; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 100%; padding: 0 2px; }
+
+        .weekend { background-color: var(--status-weekend); }
+        .holiday { background-color: #fecaca; }
+        .day-header.holiday, .validation-cell.holiday { background-color: #fecaca !important; }
+        
+        .school-holiday { border-top: 3px solid #94a3b8; }
+        .holiday.school-holiday { border-top: 3px solid #64748b; }
+
+        .day-cell.status-vacation { background-color: var(--status-vacation) !important; color: white !important; }
+        .day-cell.status-trip { background-color: var(--status-trip) !important; color: white !important; }
+        .day-cell.status-training { background-color: var(--status-training) !important; color: white !important; }
+        .day-cell.status-custom { background-color: var(--status-custom) !important; color: white !important; }
+
+        .month-nav { display: flex; gap: 5px; margin-bottom: 20px; flex-wrap: wrap; }
+        .month-nav button { padding: 4px 10px; font-size: 0.8rem; }
+
+        #custom-tooltip {
+            position: fixed; background: #333; color: white; padding: 6px 10px; border-radius: 4px;
+            font-size: 0.8rem; z-index: 1000; pointer-events: none; display: none; max-width: 200px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
 
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5); display: none; align-items: center; justify-content: center; z-index: 1000;
         }
 
-        header {
-            background: var(--surface-color);
-            padding: 20px;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-sm);
-            margin-bottom: 20px;
-            display: flex;
-            flex-direction: column;
-        }
+        .modal { background: var(--surface-color); padding: 25px; border-radius: var(--radius-lg); width: 450px; max-width: 95vw; box-shadow: var(--shadow-md); }
+        .modal h2 { margin-bottom: 20px; font-size: 1.3rem; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-md); }
 
-        .calendar-toolbar {
-            background: var(--surface-color);
-            padding: 15px;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-sm);
-            margin-bottom: 20px;
-            display: flex;
-            flex-direction: column;
-            /* Stack items */
-            align-items: flex-start;
-            /* Align left */
-            gap: 15px;
-        }
+        body.pre-login header, body.pre-login .month-nav, body.pre-login #calendarView, body.pre-login .tab-container { display: none !important; }
 
-        /* Bulk Import Panel inside Header */
-        .bulk-import-panel {
-            background: #f8fafc;
-            /* Match bg inside header */
-            padding: 15px;
-            border-radius: var(--radius-md);
-            border: 1px solid var(--border-color);
-            display: flex;
-            gap: 20px;
-            align-items: flex-start;
-        }
+        .tab-container { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 15px; background: white; padding: 10px 15px 0; }
+        .tab-button { padding: 10px 20px; cursor: pointer; background: transparent; border: none; border-bottom: 3px solid transparent; font-size: 1rem; font-weight: bold; color: #64748b; margin-right: 10px; }
+        .tab-button.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
 
-        /* ... existing styles ... */
-
-        .summary-section {
-            margin-top: 20px;
-            background: var(--surface-color);
-            padding: 20px;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-md);
-        }
-
-        .summary-section h2 {
-            font-size: 1.1rem;
-            margin-bottom: 15px;
-            color: var(--text-main);
-        }
-
-        #exportSummary,
-        #statusSummary {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            font-family: inherit;
-            font-size: 0.85rem;
-            resize: vertical;
-            background: #f8fafc;
-            color: var(--text-main);
-        }
-
-        /* Admin Table Input Styling */
-        #adminEmployeeTable input[type="text"] {
-            width: 100%;
-            padding: 6px 8px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            font-size: 0.9rem;
-            transition: border-color 0.2s;
-        }
-
-        #adminEmployeeTable input[type="text"]:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            background: #fff;
-        }
-
-        #adminEmployeeTable tr:hover {
-            background: #f8fafc;
-        }
-
-        body.pre-login header,
-        body.pre-login .calendar-toolbar,
-        body.pre-login .month-nav,
-        body.pre-login #calendarView,
-        body.pre-login #adminView,
-        body.pre-login .tab-container,
-        body.pre-login #custom-tooltip {
-            display: none !important;
-        }
-
-        .tab-container {
-            display: flex;
-            border-bottom: 2px solid #ddd;
-            margin-bottom: 15px;
-            padding: 0 15px;
-            background: white;
-            padding-top: 10px;
-        }
-
-        .tab-button {
-            padding: 10px 20px;
-            cursor: pointer;
-            background: transparent;
-            border: none;
-            border-bottom: 3px solid transparent;
-            font-size: 1rem;
-            font-weight: bold;
-            color: #64748b;
-            margin-right: 10px;
-            border-radius: 4px 4px 0 0;
-            transition: all 0.2s;
-        }
-
-        .tab-button:hover {
-            color: var(--primary-color);
-            background: #f1f5f9;
-        }
-
-        .tab-button.active {
-            color: var(--primary-color);
-            border-bottom-color: var(--primary-color);
+        @media (max-width: 768px) {
+            body { padding: 4px; }
+            header { padding: 6px 10px; margin-bottom: 6px; }
+            .header-top { display: flex; flex-direction: row; justify-content: space-between; align-items: center; gap: 10px; }
+            h1 { font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .tab-container { margin-bottom: 6px; padding-top: 4px; }
+            .controls { display: flex; gap: 4px; }
+            .controls button { padding: 4px 6px; font-size: 0.7rem; width: auto; }
+            .calendar-container { grid-template-columns: 80px repeat(762, 40px); max-height: calc(100vh - 350px); }
+            .sticky-col { min-width: 80px; width: 80px; font-size: 0.75rem; }
+            .employee-row-header { padding-left: 5px; line-height: 1.2; word-break: break-word; }
+            .month-nav { overflow-x: auto; white-space: nowrap; padding-bottom: 5px; -webkit-overflow-scrolling: touch; display: block; }
+            .month-nav button { display: inline-block; padding: 8px 15px; margin-right: 5px; }
+            #btnAddAbsence { width: 100%; margin-left: 0 !important; padding: 10px !important; grid-column: span 2; }
         }
     </style>
 </head>
@@ -587,2100 +199,398 @@
 <body class="pre-login">
     <header>
         <div class="header-top">
-            <h1>Urlaubsplaner Oberärzte 2026/2027</h1>
+            <h1>Urlaubsplaner Oberärzte</h1>
             <div class="controls">
                 <button id="btnExport" onclick="app.exportData()">Export JSON</button>
-                <button id="btnExportICal" onclick="app.exportICal()"
-                    style="display:none; background-color: #10b981; color: white; border: none;">Export iCal</button>
-                <button id="btnImport" class="primary" onclick="document.getElementById('fileInput').click()">Import
-                    JSON</button>
+                <button id="btnExportICal" onclick="app.exportICal()" style="display:none; background-color: #10b981; color: white; border: none;">Export iCal</button>
+                <button id="btnImport" class="primary" onclick="document.getElementById('fileInput').click()">Import JSON</button>
                 <input type="file" id="fileInput" style="display:none" onchange="app.importData(this)">
             </div>
         </div>
-
         <div class="tab-container">
-            <button id="tab-calendar" class="tab-button active"
-                onclick="app.switchTab('calendar')">Kalenderansicht</button>
-            <button id="tab-summary" class="tab-button" onclick="app.switchTab('summary')"
-                style="display:none;">Zusammenfassung</button>
-            <button id="tab-status" class="tab-button" onclick="app.switchTab('status')"
-                style="display:none;">Eingabestatus</button>
-            <button id="tab-admin" class="tab-button" onclick="app.switchTab('admin')"
-                style="display:none;">Mitarbeiterverwaltung</button>
-        </div>
-
-        <div id="bulkImportPanel" class="bulk-import-panel">
-            <div class="form-group" style="max-width: 200px;">
-                <label>Import für:</label>
-                <select id="importEmp"></select>
-            </div>
-            <div class="form-group" style="flex: 2;">
-                <label>Format: TT.MM.YY [bis TT.MM.YY] Art [Vertreter: Name]</label>
-                <textarea id="importText" class="bulk-input" style="height: 60px"
-                    placeholder="z.B.: 01.01.26 bis 05.01.26 Urlaub Vertreter: Max Mustermann"></textarea>
-            </div>
-            <div class="actions">
-                <button class="primary" onclick="app.processBulkImport()">Importieren</button>
-            </div>
+            <button id="tab-calendar" class="tab-button active" onclick="app.switchTab('calendar')">Kalenderansicht</button>
+            <button id="tab-summary" class="tab-button" onclick="app.switchTab('summary')" style="display:none;">Zusammenfassung</button>
+            <button id="tab-status" class="tab-button" onclick="app.switchTab('status')" style="display:none;">Eingabestatus</button>
+            <button id="tab-admin" class="tab-button" onclick="app.switchTab('admin')" style="display:none;">Mitarbeiterverwaltung</button>
         </div>
     </header>
 
-    <div id="adminView" style="display:none; padding: 20px;">
-        <div class="summary-section" style="margin-top: 0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h2 style="margin: 0;">Mitarbeiterverwaltung</h2>
-                <div>
-                    <button class="primary" onclick="app.openAddEmployeeModal()">+ Neuer Mitarbeiter</button>
-                    <button class="primary" onclick="app.saveEmployees()"
-                        style="background: var(--success-color);">Änderungen speichern</button>
-                </div>
-            </div>
-            <div
-                style="overflow-x: auto; max-height: 600px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;">
-                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid #ccc; background: #f8fafc;">
-                            <th style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
-                                ID (emp_xxx)</th>
-                            <th style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
-                                Name</th>
-                            <th style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
-                                E-Mail</th>
-                            <th style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
-                                PIN</th>
-                            <th style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
-                                Gruppe</th>
-                            <th
-                                style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10; text-align: center;">
-                                Aktiv</th>
-                            <th
-                                style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10; text-align: center;">
-                                Aktion</th>
-                        </tr>
-                    </thead>
-                    <tbody id="adminEmployeeTable"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
     <div id="calendarView">
-        <div class="calendar-toolbar">
-            <div class="legend" style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-                <div class="legend-item">
-                    <div class="color-box" style="background:var(--status-vacation)"></div> Urlaub
-                </div>
-                <div class="legend-item">
-                    <div class="color-box" style="background:var(--status-trip)"></div> Dienstreise
-                </div>
-                <div class="legend-item">
-                    <div class="color-box" style="background:var(--status-training)"></div> Fortbildung
-                </div>
-                <div class="legend-item">
-                    <div class="color-box" style="background:var(--status-custom)"></div> Sonstiges
-                </div>
-
-                <div class="legend-item" style="margin-left: 10px; border-left: 1px solid #ddd; padding-left: 10px;">
-                    <div class="color-box" style="background:#fee2e2"></div> Feiertag
-                </div>
-                <div class="legend-item">
-                    <div class="color-box"
-                        style="background-image: repeating-linear-gradient(45deg, #ccc, #ccc 2px, transparent 2px, transparent 6px); border: 1px solid #ddd;">
-                    </div> Schulferien
-                </div>
-                <div class="legend-item"><span style="font-size: 1.2rem; color: var(--danger-color)">⚠</span>
-                    Unterbesetzung</div>
-
-                <!-- Moved Button -->
-                <button id="btnAddAbsence" onclick="app.openModal()"
-                    style="margin-left: 10px; padding: 4px 12px; font-size: 0.85rem; background: var(--primary-color); color: white; border: none;">+
-                    Abwesenheit eintragen</button>
-
-                <button id="btnFinish" onclick="app.markFinished()"
-                    style="margin-left: 10px; padding: 4px 12px; font-size: 0.85rem; background-color: var(--danger-color); color: white; border: none; display: none;">
-                    Eingabe fertig
-                </button>
-            </div>
-
-            <div id="absenceInputModePanel" style="display: flex; align-items: center; gap: 15px;">
-                <strong style="font-size: 0.9rem">Eingabe-Modus:</strong>
-                <label><input type="radio" name="mode" value="U" checked onchange="app.setMode('U')"> Urlaub</label>
-                <label><input type="radio" name="mode" value="D" onchange="app.setMode('D')"> Dienstreise</label>
-                <label><input type="radio" name="mode" value="F" onchange="app.setMode('F')"> Fortbildung</label>
-                <label><input type="radio" name="mode" value="T" onchange="app.setMode('T')"> Sonstiges</label>
-                <input type="text" id="customText" placeholder="Art der Abwesenheit"
-                    style="padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
-                    oninput="app.setCustomText(this.value)">
-                <input type="text" id="vertreterText" placeholder="Vertreter..."
-                    style="padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
-                    oninput="app.setVertreterText(this.value)">
+        <div class="calendar-toolbar" style="background:white; padding:10px; border-radius:8px; margin-bottom:10px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <button id="btnAddAbsence" class="primary" onclick="app.openModal()">+ Eintragen</button>
+            <div id="absenceInputModePanel" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <strong style="font-size: 0.9rem">Modus:</strong>
+                <label onmouseenter="app.showSimpleTip(event, 'Urlaub')" onmouseleave="app.hideTip()"><input type="radio" name="mode" value="U" checked onchange="app.setMode('U')"> U</label>
+                <label onmouseenter="app.showSimpleTip(event, 'Dienstreise')" onmouseleave="app.hideTip()"><input type="radio" name="mode" value="D" onchange="app.setMode('D')"> D</label>
+                <label onmouseenter="app.showSimpleTip(event, 'Fortbildung')" onmouseleave="app.hideTip()"><input type="radio" name="mode" value="F" onchange="app.setMode('F')"> F</label>
+                <label onmouseenter="app.showSimpleTip(event, 'Sonstiges')" onmouseleave="app.hideTip()"><input type="radio" name="mode" value="S" onchange="app.setMode('S')"> S</label>
+                <input type="text" id="customText" placeholder="Art..." title="Erläuterung zur Abwesenheit" style="padding: 4px; border: 1px solid #ccc; border-radius: 4px;" oninput="app.setCustomText(this.value)">
+                <input type="text" id="vertreterText" placeholder="Vertreter..." title="Name der Vertretung" style="padding: 4px; border: 1px solid #ccc; border-radius: 4px;" oninput="app.setVertreterText(this.value)">
             </div>
         </div>
-
-        <div class="month-nav" id="yearNav" style="margin-bottom: 5px;"></div>
-        <div class="month-nav" id="monthNav">
-            <!-- Generated by JS -->
-        </div>
-
+        <div class="month-nav" id="yearNav"></div>
+        <div class="month-nav" id="monthNav"></div>
         <div id="calendar" class="calendar-container"></div>
     </div>
 
-    <div id="summaryView" style="display:none; padding: 20px;">
-        <div class="summary-section" style="margin-top: 0;">
-            <h2>Zusammenfassung (Abwesenheiten)</h2>
-            <textarea id="exportSummary" readonly placeholder="Automatische Zusammenfassung..."
-                style="height: 400px;"></textarea>
-        </div>
-    </div>
+    <div id="adminView" style="display:none; padding: 20px;"></div>
+    <div id="summaryView" style="display:none; padding: 20px;"><textarea id="exportSummary" readonly style="width:100%; height:400px;"></textarea></div>
+    <div id="statusView" style="display:none; padding: 20px;"><textarea id="statusSummary" readonly style="width:100%; height:400px;"></textarea></div>
 
-    <div id="statusView" style="display:none; padding: 20px;">
-        <div class="summary-section" style="margin-top: 0;">
-            <h2>Eingabestatus</h2>
-            <textarea id="statusSummary" readonly placeholder="Noch niemand fertig..."
-                style="height: 400px; color: var(--success-color); font-weight: bold;"></textarea>
-        </div>
-    </div>
-
-    <div id="custom-tooltip"></div>
-
-    <!-- Login Modal -->
     <div id="loginModal" class="modal-overlay" style="display:flex;">
         <div class="modal">
-            <h2>Willkommen!</h2>
-            <p style="margin-bottom:15px; color:#666;">Bitte wähle deinen Namen, um dich anzumelden.</p>
+            <h2>Anmelden</h2>
             <div class="form-group">
-                <label>Ich bin:</label>
+                <label>Name:</label>
                 <div style="position:relative;">
-                    <input type="text" id="loginSearch" placeholder="Namen suchen..." autocomplete="off"
-                        oninput="app.filterLoginEmployees()"
-                        style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:var(--radius-md);">
-                    <div id="loginResults" style="
-                        position:absolute; top:100%; left:0; right:0;
-                        background:white; border:1px solid var(--border-color);
-                        border-radius:var(--radius-md); max-height:200px; overflow-y:auto;
-                        z-index:9999; box-shadow:var(--shadow-md); display:none;
-                    "></div>
+                    <input type="text" id="loginSearch" placeholder="Name suchen..." oninput="app.filterLoginEmployees()" autocomplete="off">
+                    <div id="loginResults" style="background:white; border:1px solid #ddd; max-height:150px; overflow-y:auto; position:absolute; left:0; right:0; z-index:100; display:none; box-shadow: var(--shadow-md);"></div>
                 </div>
-                <input type="hidden" id="loginSelect" value="">
+                <input type="hidden" id="loginSelect">
             </div>
-            <div id="loginPwdGroup" class="form-group" style="margin-top:10px;">
-                <label style="font-size:0.8rem; color:#888;">Passwort / PIN:</label>
-                <input type="password" id="loginPwdInput" placeholder="PIN eingeben...">
-            </div>
-            <div class="form-group" style="margin-top:20px; border-top:1px solid #eee; padding-top:10px;">
-                <label style="font-size:0.8rem; color:#888;">API Key (nur einmalig nötig):</label>
-                <input type="password" id="apiKeyInput" placeholder="Master Key (optional wenn gespeichert)">
-            </div>
-            <div class="modal-actions">
-                <button class="primary" onclick="app.processLogin()">Anmelden</button>
-            </div>
+            <div class="form-group"><label>PIN:</label><input type="password" id="loginPwdInput"></div>
+            <div class="form-group"><label>Master Key:</label><input type="password" id="apiKeyInput"></div>
+            <button class="primary" onclick="app.processLogin()" style="width:100%; padding:12px;">Anmelden</button>
         </div>
     </div>
 
-    <!-- Add Employee Modal -->
-    <div id="addEmployeeModal" class="modal-overlay">
-        <div class="modal">
-            <h2>Neuer Mitarbeiter</h2>
-            <div class="form-group">
-                <label>Employee ID (z.B. emp_00099)</label>
-                <input type="text" id="addEmpId" placeholder="Wird autogeneriert falls leer">
-            </div>
-            <div class="form-group">
-                <label>Vollständiger Name</label>
-                <input type="text" id="addEmpName" placeholder="Vorname Nachname">
-            </div>
-            <div class="form-group">
-                <label>E-Mail Adresse</label>
-                <input type="email" id="addEmpEmail" placeholder="email@klinik.uni-regensburg.de">
-            </div>
-            <div class="form-group">
-                <label>PIN (für Login)</label>
-                <input type="text" id="addEmpPin" placeholder="4-stellige Nummer">
-            </div>
-            <div class="form-group">
-                <label>Mitarbeitergruppen</label>
-                <div id="addEmpGroups"
-                    style="display: flex; flex-wrap: wrap; gap: 10px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
-                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
-                            type="checkbox" value="Chef"> Chef</label>
-                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
-                            type="checkbox" value="Privat"> Privat</label>
-                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
-                            type="checkbox" value="TAVI"> TAVI</label>
-                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
-                            type="checkbox" value="TEER"> TEER</label>
-                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
-                            type="checkbox" value="Herzkatheter"> Herzkatheter</label>
-                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
-                            type="checkbox" value="Echo"> Echo</label>
-                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
-                            type="checkbox" value="EPU"> EPU</label>
-                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
-                            type="checkbox" value="Intensiv"> Intensiv</label>
-                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
-                            type="checkbox" value="Pneumo"> Pneumo</label>
-                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
-                            type="checkbox" value="Ambulanz"> Ambulanz</label>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button onclick="document.getElementById('addEmployeeModal').style.display='none'">Abbrechen</button>
-                <button class="primary" onclick="app.confirmAddEmployee()">Hinzufügen</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- iCal Export Modal -->
-    <div id="iCalExportModal" class="modal-overlay">
-        <div class="modal">
-            <h2>iCal Exportieren</h2>
-            <div class="form-group">
-                <label>Zeitraum (Von - Bis)</label>
-                <div style="display: flex; gap: 10px;">
-                    <input type="date" id="icalStart" value="2026-01-01" style="flex: 1;">
-                    <input type="date" id="icalEnd" value="2026-12-31" style="flex: 1;">
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Mitarbeiter auswählen</label>
-                <div id="icalEmpCheckboxes"
-                    style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); padding: 5px; border-radius: var(--radius-md);">
-                    <!-- Checkboxes generated by JS -->
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button onclick="document.getElementById('iCalExportModal').style.display='none'">Abbrechen</button>
-                <button class="primary" onclick="app.executeICalExport()">Exportieren</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal -->
     <div id="addModal" class="modal-overlay">
         <div class="modal">
             <h2>Abwesenheit eintragen</h2>
-            <div class="form-group">
-                <label>Mitarbeiter</label>
-                <select id="modalEmp">
-                    <!-- Options via JS -->
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Art</label>
-                <select id="modalType">
-                    <option value="U">Urlaub</option>
-                    <option value="D">Dienstreise</option>
-                    <option value="F">Fortbildung</option>
-                    <option value="T">Sonstiges</option>
-                </select>
-            </div>
-            <div class="form-group" id="modalTextGroup">
-                <label>Beschreibung (Optional)</label>
-                <input type="text" id="modalText" placeholder="Art der Abwesenheit">
-            </div>
-            <div class="form-group" id="modalVertreterGroup">
-                <label>Vertreter</label>
-                <input type="text" id="modalVertreter" placeholder="Name des Vertreters">
-            </div>
-            <div class="form-group">
-                <label>Von</label>
-                <input type="date" id="modalStart" value="2026-01-01">
-            </div>
-            <div class="form-group">
-                <label>Bis (einschließlich)</label>
-                <input type="date" id="modalEnd" value="2026-01-05">
-            </div>
-            <div class="modal-actions">
-                <button onclick="document.getElementById('addModal').style.display = 'none'">Abbrechen</button>
+            <div class="form-group"><label>Mitarbeiter:</label><select id="modalEmp"></select></div>
+            <div class="form-group"><label>Art:</label><select id="modalType"><option value="U">Urlaub</option><option value="D">Dienstreise</option><option value="F">Fortbildung</option><option value="S">Sonstiges</option></select></div>
+            <div class="form-group"><label>Beschreibung:</label><input type="text" id="modalText"></div>
+            <div class="form-group"><label>Vertreter:</label><input type="text" id="modalVertreter"></div>
+            <div class="form-group"><label>Von:</label><input type="date" id="modalStart"></div>
+            <div class="form-group"><label>Bis:</label><input type="date" id="modalEnd"></div>
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+                <button onclick="document.getElementById('addModal').style.display='none'">Abbrechen</button>
                 <button class="primary" onclick="app.addRange()">Speichern</button>
             </div>
         </div>
     </div>
 
+    <div id="custom-tooltip"></div>
+
     <script>
         function getBavarianHolidays(year) {
-            // Osterdatum berechnen (Meeus/Jones/Butcher Algorithmus)
             function getEaster(year) {
-                const a = year % 19;
-                const b = Math.floor(year / 100);
-                const c = year % 100;
-                const d = Math.floor(b / 4);
-                const e = b % 4;
-                const f = Math.floor((b + 8) / 25);
-                const g = Math.floor((b - f + 1) / 3);
-                const h = (19 * a + b - d - g + 15) % 30;
-                const i = Math.floor(c / 4);
-                const k = c % 4;
-                const l = (32 + 2 * e + 2 * i - h - k) % 7;
-                const m = Math.floor((a + 11 * h + 22 * l) / 451);
-
-                const month = Math.floor((h + l - 7 * m + 114) / 31);
-                const day = ((h + l - 7 * m + 114) % 31) + 1;
-
+                const a = year % 19, b = Math.floor(year / 100), c = year % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+                const month = Math.floor((h + l - 7 * m + 114) / 31), day = ((h + l - 7 * m + 114) % 31) + 1;
                 return new Date(year, month - 1, day);
             }
-
-            function formatDate(d) {
-                const yyyy = d.getFullYear();
-                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                const dd = String(d.getDate()).padStart(2, '0');
-                return `${yyyy}-${mm}-${dd}`;
-            }
-
-            function addDays(date, days) {
-                const d = new Date(date);
-                d.setDate(d.getDate() + days);
-                return d;
-            }
-
             const easter = getEaster(year);
-
-            const holidays = {
-                // feste Feiertage
-                [`${year}-01-01`]: 'Neujahr',
-                [`${year}-01-06`]: 'Hl. 3 Könige',
-                [`${year}-05-01`]: 'Tag der Arbeit',
-                [`${year}-08-15`]: 'Mariä Himmelfahrt',
-                [`${year}-10-03`]: 'Tag d. dt. Einheit',
-                [`${year}-11-01`]: 'Allerheiligen',
-                [`${year}-12-25`]: '1. Weihnachtstag',
-                [`${year}-12-26`]: '2. Weihnachtstag',
-
-                // bewegliche Feiertage
-                [formatDate(addDays(easter, -2))]: 'Karfreitag',
-                [formatDate(addDays(easter, 1))]: 'Ostermontag',
-                [formatDate(addDays(easter, 39))]: 'Christi Himmelfahrt',
-                [formatDate(addDays(easter, 50))]: 'Pfingstmontag',
-                [formatDate(addDays(easter, 60))]: 'Fronleichnam'
+            const add = (d, n) => { let r = new Date(d); r.setDate(r.getDate() + n); return `${r.getFullYear()}-${String(r.getMonth()+1).padStart(2,'0')}-${String(r.getDate()).padStart(2,'0')}`; };
+            return {
+                [`${year}-01-01`]: 'Neujahr', [`${year}-01-06`]: 'Hl. 3 Könige', [`${year}-05-01`]: 'Tag der Arbeit', [`${year}-08-15`]: 'Mariä Himmelfahrt', [`${year}-10-03`]: 'Tag d. dt. Einheit', [`${year}-11-01`]: 'Allerheiligen', [`${year}-12-25`]: '1. Weihnachtstag', [`${year}-12-26`]: '2. Weihnachtstag',
+                [add(easter, -2)]: 'Karfreitag', [add(easter, 1)]: 'Ostermontag', [add(easter, 39)]: 'Christi Himmelfahrt', [add(easter, 50)]: 'Pfingstmontag', [add(easter, 60)]: 'Fronleichnam'
             };
-
-            return holidays;
         }
 
         const CONFIG = {
-            years: [2026, 2027, 2028],
-            binId: '694548d1d0ea881f403427e3', // Central Database
-            apiKey: localStorage.getItem('jsonbin_key') || '', // Stored locally
-            employees: [], // Loaded from JSONBin
-            holidays: {
-                ...getBavarianHolidays(2026),
-                ...getBavarianHolidays(2027),
-                ...getBavarianHolidays(2028)
-            },
+            years: [2026, 2027, 2028], binId: '694548d1d0ea881f403427e3', apiKey: localStorage.getItem('jsonbin_key') || '',
+            employees: [], holidays: {},
+            groupOrder: ['Chef', 'Privat', 'TAVI', 'TEER', 'Herzkatheter', 'Echo', 'EPU', 'Intensiv', 'Pneumo', 'Ambulanz', ''],
+            groupColors: { 'Chef': '#ef4444', 'Privat': '#3b82f6', 'TAVI': '#10b981', 'TEER': '#f59e0b', 'Herzkatheter': '#8b5cf6', 'Echo': '#06b6d4', 'EPU': '#ec4899', 'Intensiv': '#6366f1', 'Pneumo': '#14b8a6', 'Ambulanz': '#84cc16' },
             schoolHolidays: [
-                { start: '2026-01-01', end: '2026-01-05', name: 'Weihnachtsferien' },
-                { start: '2026-02-16', end: '2026-02-20', name: 'Winterferien' },
-                { start: '2026-03-30', end: '2026-04-10', name: 'Osterferien' },
-                { start: '2026-05-26', end: '2026-06-05', name: 'Pfingstferien' },
-                { start: '2026-08-03', end: '2026-09-14', name: 'Sommerferien' },
-                { start: '2026-11-02', end: '2026-11-06', name: 'Herbstferien' },
-                { start: '2026-12-24', end: '2027-01-08', name: 'Weihnachtsferien' },
-                { start: '2027-02-08', end: '2027-02-12', name: 'Winterferien' },
-                { start: '2027-03-22', end: '2027-04-02', name: 'Osterferien' },
-                { start: '2027-05-18', end: '2027-05-28', name: 'Pfingstferien' },
-                { start: '2027-08-02', end: '2027-09-13', name: 'Sommerferien' },
-                { start: '2027-11-02', end: '2027-11-05', name: 'Herbstferien' },
-                { start: '2027-12-24', end: '2028-01-07', name: 'Weihnachtsferien' }
+                { start: '2026-01-01', end: '2026-01-05', name: 'Weihnachtsferien' }, { start: '2026-02-16', end: '2026-02-20', name: 'Winterferien' }, { start: '2026-03-30', end: '2026-04-10', name: 'Osterferien' }, { start: '2026-05-26', end: '2026-06-05', name: 'Pfingstferien' }, { start: '2026-08-03', end: '2026-09-14', name: 'Sommerferien' }, { start: '2026-11-02', end: '2026-11-06', name: 'Herbstferien' }, { start: '2026-12-24', end: '2027-01-08', name: 'Weihnachtsferien' }, { start: '2027-02-08', end: '2027-02-12', name: 'Winterferien' }, { start: '2027-03-22', end: '2027-04-02', name: 'Osterferien' }, { start: '2027-05-18', end: '2027-05-28', name: 'Pfingstferien' }, { start: '2027-08-02', end: '2027-09-13', name: 'Sommerferien' }, { start: '2027-11-02', end: '2027-11-05', name: 'Herbstferien' }, { start: '2027-12-24', end: '2028-01-07', name: 'Weihnachtsferien' }
             ]
         };
+        CONFIG.years.forEach(y => Object.assign(CONFIG.holidays, getBavarianHolidays(y)));
 
-        /* Data Service for JSONbin */
         class DataService {
             static async load() {
-                if (!CONFIG.binId || !CONFIG.apiKey) return null;
-                try {
-                    const res = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}/latest`, {
-                        headers: { 'X-Master-Key': CONFIG.apiKey }
-                    });
-                    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-                    const json = await res.json();
-                    return json.record; // Expected to look like: { employees: [...], state: {...} }
-                } catch (e) {
-                    console.error('DataService load failed', e);
-                    return null;
-                }
+                try { const res = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}/latest`, { headers: { 'X-Master-Key': CONFIG.apiKey } }); return (await res.json()).record; } catch (e) { return null; }
             }
-
-            static async save(stateToSave) {
-                // We always save the full record: employees from config, and the state object
-                const record = {
-                    employees: CONFIG.employees,
-                    state: stateToSave
-                };
-
-                // Save local backup just in case
-                localStorage.setItem('urlaubsplaner_2026_backup', JSON.stringify(record));
-
-                if (!CONFIG.binId || !CONFIG.apiKey) return;
-
-                try {
-                    await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Master-Key': CONFIG.apiKey
-                        },
-                        body: JSON.stringify(record)
-                    });
-                } catch (e) {
-                    console.error('Sync error', e);
-                }
+            static async save(state) {
+                try { await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Master-Key': CONFIG.apiKey }, body: JSON.stringify({ employees: CONFIG.employees, state }) }); } catch (e) {}
             }
         }
 
         class App {
             constructor() {
-                this.currentUser = null;
-                this.state = {}; // Will be loaded
+                this.currentUser = null; this.state = {}; this.isDragging = false; this.dragLock = false; this.currentMode = 'U';
+                this.currentText = ''; this.currentVertreterText = '';
                 this.dates = this.generateDates();
-                this.isDragging = false;
-                this.dragStartVal = null;
-
-                this.currentMode = 'U';
-                this.currentText = '';
-                this.currentVertreterText = '';
-                this.currentMonthIndex = 0;
-
-                this.GROUP_COLORS = {
-                    'Chef': '#475569',
-                    'Privat': '#0891b2',
-                    'TAVI': '#2563eb',
-                    'TEER': '#7c3aed',
-                    'Herzkatheter': '#dc2626',
-                    'Echo': '#059669',
-                    'EPU': '#d97706',
-                    'Intensiv': '#9333ea',
-                    'Pneumo': '#db2777',
-                    'Ambulanz': '#ca8a04'
-                };
-
-                // Make init async to fetch data before UI
                 this.initApp();
-
-                // Keyboard Navigation
-                document.addEventListener('keydown', (e) => {
-                    // Ignore if typing in input
-                    // Ignore if typing in text-like input
-                    const activeEl = document.activeElement;
-                    const activeTag = activeEl ? activeEl.tagName : '';
-                    if (activeTag === 'TEXTAREA' || activeTag === 'SELECT') return;
-                    if (activeTag === 'INPUT' && !['radio', 'checkbox', 'button', 'submit', 'reset'].includes(activeEl.type)) return;
-
-                    const container = document.getElementById('calendar');
-                    if (!container) return;
-
-                    // Determine current month based on scroll position
-                    let limit = container.scrollLeft + 210; // Offset for sticky col
-                    let currentAbsIdx = 0;
-
-                    for (let i = 0; i < 25; i++) { // Max 25 months (2 years + 1 month)
-                        const y_loop = CONFIG.years[Math.floor(i / 12)];
-                        const m_loop = i % 12;
-                        const el = document.getElementById(`month-header-${y_loop}-${m_loop}`);
-                        if (el && el.offsetLeft <= limit) {
-                            currentAbsIdx = i;
-                        } else {
-                            break;
-                        }
-                    }
-
-                    // Force the last month if scrolled to the absolute right side
-                    if (Math.ceil(container.scrollLeft + container.clientWidth) >= container.scrollWidth - 10) {
-                        currentAbsIdx = 24; // Index 24 = Jan 2028
-                    }
-
-                    if (e.key === 'ArrowRight') {
-                        if (currentAbsIdx < 24) {
-                            this.scrollToMonth(currentAbsIdx + 1, false);
-                        }
-                    } else if (e.key === 'ArrowLeft') {
-                        if (currentAbsIdx > 0) {
-                            this.scrollToMonth(currentAbsIdx - 1, false);
-                        }
-                    }
+                document.getElementById('calendar').addEventListener('scroll', () => this.updateNavHighlighting(), { passive: true });
+                document.addEventListener('mouseup', () => { 
+                    if (this.isDragging) { 
+                        this.isDragging = false; 
+                        this.dragLock = true; 
+                        setTimeout(() => this.dragLock = false, 200);
+                        this.saveState(); 
+                        this.render(); 
+                    } 
                 });
-
-                document.addEventListener('mouseup', () => {
-                    if (this.isDragging) {
-                        this.isDragging = false;
-                        this.dragStartVal = null;
-                        this.saveState();
-                        this.updateSummary();
-                    }
-                });
-
-                // Scroll Sync for Navigation (with debounce to prevent flickering)
-                const container = document.getElementById('calendar');
-                let scrollTimeout;
-                container.addEventListener('scroll', () => {
-                    if (scrollTimeout) {
-                        clearTimeout(scrollTimeout);
-                    }
-                    scrollTimeout = setTimeout(() => {
-                        this.updateNavHighlighting();
-                    }, 50); // 50ms delay
-                }, { passive: true });
             }
 
+            formatDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
             generateDates() {
-                const dates = [];
-                CONFIG.years.forEach(year => {
-                    const date = new Date(year, 0, 1);
-                    while (date.getFullYear() === year) {
-                        // For 2028, only render January
-                        if (year === 2028 && date.getMonth() > 0) break;
-
-                        const dateStr = this.formatDate(date);
-                        const dayOfWeek = date.getDay(); // 0 = Sun, 6 = Sat
-
-                        // Find school holiday name
-                        let shName = null;
-                        const sh = CONFIG.schoolHolidays.find(h => dateStr >= h.start && dateStr <= h.end);
-                        if (sh) shName = sh.name;
-
-                        dates.push({
-                            year: year,
-                            dateStr,
-                            day: date.getDate(),
-                            month: date.getMonth(), // 0-11
-                            weekday: dayOfWeek,
-                            isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
-                            holiday: CONFIG.holidays[dateStr],
-                            schoolHoliday: shName,
-                            isSchoolHoliday: !!shName
-                        });
-                        date.setDate(date.getDate() + 1);
+                const res = [];
+                CONFIG.years.forEach(y => {
+                    let d = new Date(y, 0, 1);
+                    while (d.getFullYear() === y) {
+                        if (y === 2028 && d.getMonth() > 0) break;
+                        const s = this.formatDate(d), sh = CONFIG.schoolHolidays.find(h => s >= h.start && s <= h.end);
+                        res.push({ year: y, dateStr: s, day: d.getDate(), month: d.getMonth(), weekday: d.getDay(), isWeekend: d.getDay() === 0 || d.getDay() === 6, holiday: CONFIG.holidays[s], isSchoolHoliday: !!sh, schoolHoliday: sh ? sh.name : null });
+                        d.setDate(d.getDate() + 1);
                     }
                 });
-                return dates;
+                return res;
             }
 
             async initApp() {
-                // Ask for API Key immediately to load data
                 const storedKey = localStorage.getItem('jsonbin_key');
-                if (storedKey) {
-                    CONFIG.apiKey = storedKey;
-                } else {
-                    const promptKey = prompt('Bitte den Master Key eingeben, um die Mitarbeiterdaten zu laden:', '');
-                    if (promptKey) {
-                        CONFIG.apiKey = promptKey;
-                    }
-                }
-
-                if (CONFIG.apiKey) {
-                    document.body.style.cursor = 'wait';
-                    const data = await DataService.load();
-                    document.body.style.cursor = 'default';
-
-                    if (data && data.employees) {
-                        CONFIG.employees = data.employees;
-                        this.state = data.state || {};
-                        this.sortEmployees();
-                    } else if (data && !data.employees) {
-                        // Legacy mode: DB only had state, no employees
-                        this.state = data;
-                        alert('JSONBin enthält keine Mitarbeiterliste. Bitte Admin kontaktieren, um das Format zu migrieren.');
-                    } else {
-                        alert('Konnte Daten nicht laden. Bitte API Key prüfen.');
-                    }
-                } else {
-                    alert('Kein API Key vorhanden. Tool kann nicht gestartet werden.');
-                }
-
-                // Now initialize UI and Login Modal with the loaded employees
+                if (storedKey) { CONFIG.apiKey = storedKey; document.getElementById('apiKeyInput').value = storedKey; }
+                const data = await DataService.load();
+                if (data) { CONFIG.employees = data.employees; this.state = data.state || {}; this.sortEmployees(); }
                 this.initUI();
-
-                // Only show login if we successfully loaded employees
-                if (CONFIG.employees.length > 0) {
-                    this.showLoginModal();
-                } else {
-                    alert('Laden fehlgeschlagen. Seite neu laden.');
-                }
+                this.showLoginModal();
             }
 
             initUI() {
-                // Populate Year Nav
-                const yearNav = document.getElementById('yearNav');
-                this.currentYear = CONFIG.years[0];
-                CONFIG.years.forEach(y => {
-                    const btn = document.createElement('button');
-                    btn.innerText = y;
-                    btn.id = `btn-year-${y}`;
-                    if (y === this.currentYear) btn.classList.add('primary');
-                    btn.onclick = () => this.setYear(y);
-                    yearNav.appendChild(btn);
-                });
-
-                // Populate Month Nav
-                const nav = document.getElementById('monthNav');
-                const months = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
-                months.forEach((m, i) => {
-                    const btn = document.createElement('button');
-                    btn.innerText = m;
-                    btn.id = `btn-month-${i}`;
-                    btn.onclick = () => this.scrollToMonth(i, true);
-                    nav.appendChild(btn);
-                });
-
-                // Populate Modal Select
-                const select = document.getElementById('modalEmp');
-                const importSelect = document.getElementById('importEmp');
-                CONFIG.employees.forEach(emp => {
-                    const opt = document.createElement('option');
-                    opt.value = emp.id;
-                    opt.innerText = emp.name;
-                    select.appendChild(opt);
-
-                    const opt2 = document.createElement('option');
-                    opt2.value = emp.id;
-                    opt2.innerText = emp.name;
-                    importSelect.appendChild(opt2);
-                });
-
-                // Modal Type Change Listener
-                document.getElementById('modalType').onchange = (e) => {
-                    // Always show text field now
-                };
+                const yNav = document.getElementById('yearNav'), mNav = document.getElementById('monthNav');
+                CONFIG.years.forEach(y => { const b = document.createElement('button'); b.innerText = y; b.id = `btn-year-${y}`; b.onclick = () => this.setYear(y); yNav.appendChild(b); });
+                ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'].forEach((m, i) => { const b = document.createElement('button'); b.innerText = m; b.id = `btn-month-${i}`; b.onclick = () => this.scrollToMonth(i, true); mNav.appendChild(b); });
             }
 
             showLoginModal() {
-                // Build the list of login options
-                this._loginOptions = [
-                    { id: 'admin', name: 'Administrator (Alles bearbeiten)', bold: true },
-                    { id: 'sekretariat', name: 'Sekretariat (Nur Ansicht)', italic: true },
-                    ...CONFIG.employees.filter(e => e && e.id !== 'admin' && e.id !== 'sekretariat').map(e => ({ id: e.id, name: e.name }))
-                ];
-
-                // Reset search field and hidden value
-                document.getElementById('loginSearch').value = '';
-                document.getElementById('loginSelect').value = '';
-                document.getElementById('loginResults').style.display = 'none';
-
-                // Clear Password Field
-                document.getElementById('loginPwdInput').value = '';
-
-                // Pre-fill Key if known
-                if (CONFIG.apiKey) {
-                    document.getElementById('apiKeyInput').value = CONFIG.apiKey;
-                }
-
-                // Show results on focus
-                document.getElementById('loginSearch').onfocus = () => app.filterLoginEmployees();
-
-                // Hide results on outside click
-                document.addEventListener('mousedown', function hideResults(e) {
-                    if (!document.getElementById('loginResults').contains(e.target) &&
-                        e.target.id !== 'loginSearch') {
-                        document.getElementById('loginResults').style.display = 'none';
-                        document.removeEventListener('mousedown', hideResults);
-                    }
-                });
+                this._loginOptions = [{ id: 'admin', name: 'Admin' }, { id: 'sekretariat', name: 'Sekretariat' }, ...CONFIG.employees.filter(e => e.id !== 'admin' && e.active !== false).map(e => ({ id: e.id, name: e.name }))];
+                document.getElementById('loginSearch').onfocus = () => this.filterLoginEmployees();
             }
 
             filterLoginEmployees() {
-                const query = document.getElementById('loginSearch').value.toLowerCase();
-                const results = document.getElementById('loginResults');
-                results.innerHTML = '';
-
-                const matches = (this._loginOptions || []).filter(o =>
-                    !query || o.name.toLowerCase().includes(query)
-                );
-
-                if (matches.length === 0) {
-                    results.style.display = 'none';
-                    return;
-                }
-
-                matches.forEach(opt => {
-                    const item = document.createElement('div');
-                    item.textContent = opt.name;
-                    item.style.cssText = 'padding:8px 12px; cursor:pointer; font-size:0.9rem;';
-                    if (opt.bold) item.style.fontWeight = 'bold';
-                    if (opt.italic) item.style.fontStyle = 'italic';
-                    item.onmouseenter = () => item.style.background = '#f1f5f9';
-                    item.onmouseleave = () => item.style.background = '';
-                    item.onmousedown = () => {
-                        document.getElementById('loginSearch').value = opt.name;
-                        document.getElementById('loginSelect').value = opt.id;
-                        document.getElementById('loginResults').style.display = 'none';
-                        document.getElementById('loginPwdInput').focus();
-                    };
-                    results.appendChild(item);
+                const q = document.getElementById('loginSearch').value.toLowerCase(), res = document.getElementById('loginResults');
+                res.innerHTML = '';
+                const matches = this._loginOptions.filter(o => !q || o.name.toLowerCase().includes(q));
+                if (matches.length === 0) { res.style.display = 'none'; return; }
+                matches.forEach(o => {
+                    const i = document.createElement('div'); i.textContent = o.name; i.style.padding = '10px'; i.style.cursor = 'pointer'; i.onmousedown = () => { document.getElementById('loginSearch').value = o.name; document.getElementById('loginSelect').value = o.id; res.style.display = 'none'; };
+                    res.appendChild(i);
                 });
-
-                results.style.display = 'block';
+                res.style.display = 'block';
             }
 
             async processLogin() {
-                const empId = document.getElementById('loginSelect').value;
-                if (!empId) {
-                    alert('Bitte einen Namen aus der Liste auswählen.');
-                    return;
-                }
-                const pwdInput = document.getElementById('loginPwdInput').value;
-                const keyInput = document.getElementById('apiKeyInput').value.trim();
-
-                // Validate Password/PIN
-                if (empId === 'admin') {
-                    const adminEmp = CONFIG.employees.find(e => e.id === 'admin');
-                    if (adminEmp && adminEmp.pin && pwdInput !== adminEmp.pin) {
-                        alert('Falsches Admin-Passwort!');
-                        return;
-                    }
-                } else if (empId !== 'sekretariat') {
-                    const emp = CONFIG.employees.find(e => e.id === empId);
-                    if (emp && emp.pin && pwdInput !== emp.pin) {
-                        alert('Falsche PIN!');
-                        return;
-                    }
-                }
-
-                if (!keyInput) {
-                    alert('Bitte Master Key eingeben');
-                    return;
-                }
-
-                // Save Key locally
-                localStorage.setItem('jsonbin_key', keyInput);
-                CONFIG.apiKey = keyInput;
-
-                this.currentUser = empId;
-                document.getElementById('loginModal').style.display = 'none';
-                document.body.classList.remove('pre-login');
-
-                // UI RESTRICTION for non-admins
-                const modalSelect = document.getElementById('modalEmp');
-                const importSelect = document.getElementById('importEmp');
-
-                // Clear current options
-                modalSelect.innerHTML = '';
-                importSelect.innerHTML = '';
-
-                // Determine allowed employees
-                let allowed = [];
-                if (this.currentUser === 'admin') {
-                    // Admins see all ACTIVE employees except admin/sekretariat for planning
-                    allowed = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false);
-                } else {
-                    allowed = CONFIG.employees.filter(e => e.id === this.currentUser);
-                }
-
-                // Populate Modal Select
-                allowed.forEach(emp => {
-                    const opt = document.createElement('option');
-                    opt.value = emp.id;
-                    opt.innerText = emp.name;
-                    modalSelect.appendChild(opt);
-                });
-
-                // Populate Import Select
-                allowed.forEach(emp => {
-                    const opt = document.createElement('option');
-                    opt.value = emp.id;
-                    opt.innerText = emp.name;
-                    importSelect.appendChild(opt);
-                });
-
-                // Set initial value
-                if (allowed.length > 0) {
-                    modalSelect.value = allowed[0].id;
-                    importSelect.value = allowed[0].id;
-                }
-
-                // UI RESTRICTION for non-admins
-                const isAdmin = (this.currentUser === 'admin' || this.currentUser === 'sekretariat');
-                const adminFlexStyle = isAdmin ? 'flex' : 'none';
-                const adminInlineStyle = isAdmin ? 'inline-block' : 'none';
-
-                // Specific Sekretariat restrictions (Hide specific elements)
-                const hideFromSekretariat = this.currentUser === 'sekretariat';
-
+                const id = document.getElementById('loginSelect').value, key = document.getElementById('apiKeyInput').value.trim();
+                if (!id || !key) return alert('Daten fehlen');
+                localStorage.setItem('jsonbin_key', key); CONFIG.apiKey = key; this.currentUser = id;
+                document.getElementById('loginModal').style.display = 'none'; document.body.classList.remove('pre-login');
+                
+                const isAdmin = (id === 'admin' || id === 'sekretariat');
+                const isRealAdmin = (id === 'admin');
+                
+                document.querySelector('.tab-container').style.display = isAdmin ? 'flex' : 'none';
+                
+                // Control Export/Import button visibility
                 const btnExport = document.getElementById('btnExport');
-                if (btnExport) btnExport.style.display = hideFromSekretariat ? 'none' : 'inline-block';
-
-                const btnImport = document.getElementById('btnImport');
-                if (btnImport) btnImport.style.display = hideFromSekretariat ? 'none' : 'inline-block';
-
-                // Keep the bulk panel hidden for sekretariat entirely
-                document.getElementById('bulkImportPanel').style.display = (this.currentUser === 'admin') ? 'flex' : 'none';
-
-                const btnAddAbsence = document.getElementById('btnAddAbsence');
-                if (btnAddAbsence) btnAddAbsence.style.display = hideFromSekretariat ? 'none' : 'inline-block';
-
-                const absenceInputModePanel = document.getElementById('absenceInputModePanel');
-                if (absenceInputModePanel) absenceInputModePanel.style.display = hideFromSekretariat ? 'none' : 'flex';
-
-                document.getElementById('tab-admin').style.display = (this.currentUser === 'admin') ? 'inline-block' : 'none';
-                document.getElementById('tab-summary').style.display = adminInlineStyle;
-                document.getElementById('tab-status').style.display = adminInlineStyle;
-
+                if (btnExport) btnExport.style.display = isAdmin ? 'inline-block' : 'none';
+                
                 const btnExportICal = document.getElementById('btnExportICal');
                 if (btnExportICal) btnExportICal.style.display = isAdmin ? 'inline-block' : 'none';
+                
+                const btnImport = document.getElementById('btnImport');
+                if (btnImport) btnImport.style.display = isRealAdmin ? 'inline-block' : 'none';
 
-                // Ensure calendar tab is visible
-                this.switchTab('calendar');
-
-                // Hide Finish Button for Employees (Non-Admin) unless allowed
-                const finishStyle = (this.currentUser !== 'admin' && this.currentUser !== 'sekretariat') ? 'inline-block' : 'none';
-                const finishBtn = document.getElementById('btnFinish');
-                if (finishBtn) finishBtn.style.display = finishStyle;
-
-                // Data is already loaded in initApp, just render
+                document.getElementById('btnAddAbsence').style.display = (id === 'sekretariat' ? 'none' : 'inline-block');
+                
+                const mSel = document.getElementById('modalEmp'); mSel.innerHTML = '';
+                const allowed = (isAdmin ? CONFIG.employees.filter(e => e.active !== false && e.id !== 'admin' && e.id !== 'sekretariat') : CONFIG.employees.filter(e => e.id === id));
+                allowed.forEach(e => { const o = document.createElement('option'); o.value = e.id; o.innerText = e.name; mSel.appendChild(o); });
                 this.render();
+                setTimeout(() => this.scrollToMonth(new Date().getMonth(), true), 500);
             }
 
-            openModal() {
-                // Sync with current mode
-                document.getElementById('modalType').value = this.currentMode;
-                document.getElementById('modalTextGroup').style.display = 'block';
-                document.getElementById('modalText').value = ''; // Reset text
-                document.getElementById('addModal').style.display = 'flex';
-            }
-
-            scrollToMonth(index, useCurrentYear = true) {
-                let targetYear = this.currentYear;
-                let targetMonth = index;
-
-                if (!useCurrentYear) {
-                    // Absolute index (0-24)
-                    targetYear = CONFIG.years[Math.floor(index / 12)];
-                    targetMonth = index % 12;
-                    if (!targetYear) return;
-                }
-
-                const container = document.getElementById('calendar');
-                let el = document.getElementById(`month-header-${targetYear}-${targetMonth}`);
-
-                // FALLBACK: If month doesn't exist (e.g. Dec 2028), find the last available month in that year
-                if (!el) {
-                    for (let m = targetMonth - 1; m >= 0; m--) {
-                        el = document.getElementById(`month-header-${targetYear}-${m}`);
-                        if (el) break;
-                    }
-                }
-
-                if (el && container) {
-                    container.scrollTo({
-                        left: el.offsetLeft - 200,
-                        behavior: 'smooth'
-                    });
-                }
-            }
-
-            setYear(y) {
-                const container = document.getElementById('calendar');
-                let limit = container.scrollLeft + 210;
-                let currentAbsIdx = 0;
-
-                // Determine which month is currently centered/visible
-                for (let i = 0; i < 25; i++) {
-                    const y_loop = CONFIG.years[Math.floor(i / 12)];
-                    const m_loop = i % 12;
-                    const el = document.getElementById(`month-header-${y_loop}-${m_loop}`);
-                    if (el && el.offsetLeft <= limit) {
-                        currentAbsIdx = i;
-                    } else {
-                        break;
-                    }
-                }
-                const currentMonthPart = currentAbsIdx % 12;
-
-                this.currentYear = y;
-                // Highlighting is now handled by the scroll listener
-
-                // Scroll to the same month in the new year
-                this.scrollToMonth(currentMonthPart, true);
-            }
-
-            updateNavHighlighting() {
-                const container = document.getElementById('calendar');
-                if (!container) return;
-
-                let limit = container.scrollLeft + 210;
-                let currentAbsIdx = 0;
-
-                // Determine which month is currently visible
-                for (let i = 0; i < 25; i++) {
-                    const y_loop = CONFIG.years[Math.floor(i / 12)];
-                    const m_loop = i % 12;
-                    const el = document.getElementById(`month-header-${y_loop}-${m_loop}`);
-                    if (el && el.offsetLeft <= limit) {
-                        currentAbsIdx = i;
-                    } else {
-                        break;
-                    }
-                }
-
-                // Force the last month if scrolled to the absolute right side
-                if (Math.ceil(container.scrollLeft + container.clientWidth) >= container.scrollWidth - 10) {
-                    currentAbsIdx = 24; // Index 24 = Jan 2028
-                }
-
-                const visibleYear = CONFIG.years[Math.floor(currentAbsIdx / 12)];
-                const visibleMonth = currentAbsIdx % 12;
-
-                this.currentYear = visibleYear; // Keep internal state in sync
-
-                // Update Year Buttons
-                CONFIG.years.forEach(y => {
-                    const btn = document.getElementById(`btn-year-${y}`);
-                    if (btn) {
-                        if (y === visibleYear) btn.classList.add('primary');
-                        else btn.classList.remove('primary');
-                    }
-                });
-
-                // Update Month Buttons
-                for (let i = 0; i < 12; i++) {
-                    const btn = document.getElementById(`btn-month-${i}`);
-                    if (btn) {
-                        if (i === visibleMonth) btn.classList.add('primary');
-                        else btn.classList.remove('primary');
-                    }
-                }
-            }
-
-            setMode(mode) {
-                this.currentMode = mode;
-            }
-
-            setCustomText(txt) {
-                this.currentText = txt;
-            }
-
-            setVertreterText(txt) {
-                this.currentVertreterText = txt;
-            }
-
-            handleMouseDown(empId, dateStr) {
-                if (this.currentUser === 'sekretariat') {
-                    alert('Du bist als Sekretariat angemeldet und kannst keine Bearbeitungen machen');
-                    return;
-                }
-                if (this.currentUser !== 'admin' && this.currentUser !== empId) {
-                    alert(`Du bist als "${this.getEmpName(this.currentUser)}" angemeldet und darfst nur deine eigenen Einträge bearbeiten.`);
-                    return;
-                }
-
-                this.isDragging = true;
-                const current = this.state[empId]?.[dateStr];
-
-                // If clicking on existing, toggle off. If empty, toggle on with current Mode
-                this.dragStartVal = current ? null : { type: this.currentMode, text: this.currentText, vertreter: this.currentVertreterText };
-
-                // Skip Save & Summary -> Deferred to mouseup
-                this.setVacation(empId, dateStr, this.dragStartVal, true, true);
-            }
-
-            handleMouseOver(empId, dateStr) {
-                if (this.isDragging) {
-                    // Skip Save & Summary -> Deferred to mouseup
-                    this.setVacation(empId, dateStr, this.dragStartVal, true, true);
-                }
-            }
-
-            getEmpName(id) {
-                if (id === 'admin') return 'Administrator';
-                if (id === 'sekretariat') return 'Sekretariat';
-                const emp = CONFIG.employees.find(e => e.id === id);
-                return emp ? emp.name : id;
-            }
-
-            isSameAbsence(s1, s2) {
-                if (!s1 || !s2) return false;
-                // Treat 'V' (old style) as type 'U'
-                const t1 = s1 === 'V' ? 'U' : s1.type;
-                const t2 = s2 === 'V' ? 'U' : s2.type;
-                const txt1 = s1.text || '';
-                const txt2 = s2.text || '';
-                return t1 === t2 && txt1 === txt2;
-            }
-
-            editAbsence(empId, dateStr) {
-                const status = this.state[empId]?.[dateStr];
-                if (!status) return;
-
-                // ACCESS CONTROL
-                if (this.currentUser === 'sekretariat') {
-                    alert('Du bist als Sekretariat angemeldet und kannst keine Bearbeitungen machen');
-                    return;
-                }
-                if (this.currentUser !== 'admin' && this.currentUser !== empId) {
-                    alert(`Du bist als "${this.getEmpName(this.currentUser)}" angemeldet und darfst nur deine eigenen Einträge bearbeiten.`);
-                    return;
-                }
-
-                // Smart Range Detection
-                let start = new Date(dateStr);
-                while (true) {
-                    let prev = new Date(start);
-                    prev.setDate(prev.getDate() - 1);
-                    let prevStr = this.formatDate(prev);
-                    if (this.isSameAbsence(status, this.state[empId]?.[prevStr])) {
-                        start = prev;
-                    } else {
-                        break;
-                    }
-                }
-
-                let end = new Date(dateStr);
-                while (true) {
-                    let next = new Date(end);
-                    next.setDate(next.getDate() + 1);
-                    let nextStr = this.formatDate(next);
-                    if (this.isSameAbsence(status, this.state[empId]?.[nextStr])) {
-                        end = next;
-                    } else {
-                        break;
-                    }
-                }
-
-                // Fill Modal
-                document.getElementById('modalEmp').value = empId;
-                document.getElementById('modalType').value = (status === 'V' ? 'U' : status.type);
-                document.getElementById('modalText').value = status.text || '';
-                document.getElementById('modalVertreter').value = status.vertreter || '';
-                document.getElementById('modalStart').value = this.formatDate(start);
-                document.getElementById('modalEnd').value = this.formatDate(end);
-
-                document.getElementById('addModal').style.display = 'flex';
-            }
-
-            setVacation(empId, dateStr, value, skipSave = false, skipSummary = false) {
-                // ACCESS CONTROL
-                if (this.currentUser === 'sekretariat') {
-                    alert('Du bist als Sekretariat angemeldet und kannst keine Bearbeitungen machen');
-                    return;
-                }
-                if (this.currentUser !== 'admin' && this.currentUser !== empId) {
-                    alert(`Du bist als "${this.getEmpName(this.currentUser)}" angemeldet und darfst nur deine eigenen Einträge bearbeiten.`);
-                    return;
-                }
-
-                if (!this.state[empId]) this.state[empId] = {};
-
-                if (value) {
-                    this.state[empId][dateStr] = value;
-                } else {
-                    delete this.state[empId][dateStr];
-                }
-
-                if (!skipSave) this.saveState();
-
-                // Optimized UI Update
-                const cell = document.getElementById(`cell-${empId}-${dateStr}`);
-                if (cell) {
-                    // Remove all status classes
-                    cell.classList.remove('status-vacation', 'status-trip', 'status-training', 'status-custom');
-                    cell.innerHTML = ''; // Clear text
-
-                    if (value) {
-                        if (value.type === 'U' || value === 'V') cell.classList.add('status-vacation');
-                        else if (value.type === 'D') cell.classList.add('status-trip');
-                        else if (value.type === 'F') cell.classList.add('status-training');
-                        else if (value.type === 'T') cell.classList.add('status-custom');
-
-                        // Text for all
-                        if (value.text) cell.innerHTML = `<span class="cell-text">${value.text}</span>`;
-                    }
-                }
-
-                this.updateValidationUI(dateStr);
-
-                if (!skipSummary) this.updateSummary();
-            }
-
-            showTooltip(e, empId, dateStr) {
-                const status = this.state[empId]?.[dateStr];
-                if (status) { // Show tooltip for all absences
-                    const tip = document.getElementById('custom-tooltip');
-
-                    let typeText = 'Sonstiges';
-                    if (status.type === 'U') typeText = 'Urlaub';
-                    else if (status.type === 'D') typeText = 'Dienstreise';
-                    else if (status.type === 'F') typeText = 'Fortbildung';
-
-                    let content = `<strong>${typeText}</strong>`;
-
-                    // Only show "Grund:" if it is different from the type text itself
-                    if (status.text && status.text.trim().toLowerCase() !== typeText.toLowerCase()) {
-                        content += `<br>Grund: ${status.text}`;
-                    }
-                    if (status.vertreter) content += `<br>Vertreter: ${status.vertreter}`;
-
-                    tip.innerHTML = content;
-                    tip.style.display = 'block';
-
-                    let posX = e.clientX + 10;
-                    let posY = e.clientY + 10;
-
-                    // Prevent tooltip from going off-screen right
-                    if (posX + tip.offsetWidth > window.innerWidth) {
-                        posX = window.innerWidth - tip.offsetWidth - 10;
-                    }
-
-                    tip.style.left = posX + 'px';
-                    tip.style.top = posY + 'px';
-                }
-            }
-
-            hideTooltip() {
-                document.getElementById('custom-tooltip').style.display = 'none';
-            }
-
-            addRange() {
-                const empId = document.getElementById('modalEmp').value;
-                const type = document.getElementById('modalType').value;
-                const text = document.getElementById('modalText').value;
-                const startStr = document.getElementById('modalStart').value;
-                const endStr = document.getElementById('modalEnd').value;
-
-                if (!empId || !startStr || !endStr || startStr > endStr) {
-                    alert('Ungültige Eingabe');
-                    return;
-                }
-
-                if (this.currentUser !== 'admin' && empId !== this.currentUser) {
-                    alert('Du darfst nur für dich selbst Einträge hinzufügen.');
-                    return;
-                }
-
-                let curr = new Date(startStr);
-                const end = new Date(endStr);
-
-                const val = { type, text, vertreter: document.getElementById('modalVertreter').value };
-
-                while (curr <= end) {
-                    const dStr = this.formatDate(curr);
-                    if (dStr.startsWith('2026') || dStr.startsWith('2027') || (dStr.startsWith('2028') && parseInt(dStr.split('-')[1]) === 1)) {
-                        this.setVacation(empId, dStr, val, true, true);
-                    }
-                    curr.setDate(curr.getDate() + 1);
-                }
-
-                this.saveState();
-                this.updateSummary();
-
-                document.getElementById('addModal').style.display = 'none';
-            }
-
-            processBulkImport() {
-                const empId = document.getElementById('importEmp').value;
-                const text = document.getElementById('importText').value;
-
-                if (this.currentUser !== 'admin' && empId !== this.currentUser) {
-                    alert('Bulk-Import ist nur für den eigenen Nutzer möglich.');
-                    return;
-                }
-
-                if (!text) return;
-
-                const lines = text.split('\n');
-                let count = 0;
-
-                lines.forEach(line => {
-                    line = line.trim();
-                    if (!line) return;
-
-                    // 1. Try Range Regex
-                    // Regex: DD.MM.[YYYY] (bis|-) DD.MM.[YYYY] [Text]
-                    let match = line.match(/(\d{1,2})\.(\d{1,2})\.(?:(\d{2,4})?)\s*(?:bis|-)\s*(\d{1,2})\.(\d{1,2})\.(?:(\d{2,4})?)\s*(.*)/i);
-                    let start, end, descRaw;
-
-                    if (match) {
-                        const [, d1, m1, y1, d2, m2, y2, desc] = match;
-                        start = this.parseDate(d1, m1, y1);
-                        end = this.parseDate(d2, m2, y2);
-                        descRaw = desc;
-                    } else {
-                        // 2. Try Single Day Regex
-                        // Regex: DD.MM.[YYYY] [Text]
-                        match = line.match(/(\d{1,2})\.(\d{1,2})\.(?:(\d{2,4})?)\s*(.*)/i);
-                        if (match) {
-                            const [, d1, m1, y1, desc] = match;
-                            start = this.parseDate(d1, m1, y1);
-                            end = new Date(start); // Same day
-                            descRaw = desc;
-                        }
-                    }
-
-                    if (start && end && start <= end) {
-                        // Detect Type and Substitute
-                        let type = 'T'; // Default Custom
-                        let desc = descRaw ? descRaw.trim() : '';
-                        let vertreter = '';
-
-                        // Extract "Vertreter: [Name]" or "Vertr: [Name]"
-                        const vertMatch = desc.match(/(?:Vertreter|Vertr|V):?\s*(.*)/i);
-                        if (vertMatch) {
-                            vertreter = vertMatch[1].trim();
-                            // Remove the "Vertreter: ..." part from the description text itself
-                            desc = desc.replace(/(?:Vertreter|Vertr|V):?\s*.*/i, '').trim();
-                        }
-
-                        const lowerDesc = desc.toLowerCase();
-                        if (lowerDesc.includes('urlaub')) type = 'U';
-                        else if (lowerDesc.includes('dienstreise')) type = 'D';
-                        else if (lowerDesc.includes('fortbildung')) type = 'F';
-
-                        // Apply
-                        let curr = new Date(start);
-                        const val = { type, text: desc, vertreter: vertreter };
-
-                        while (curr <= end) {
-                            const dStr = this.formatDate(curr);
-                            if (dStr.startsWith('2026') || dStr.startsWith('2027') || (dStr.startsWith('2028') && parseInt(dStr.split('-')[1]) === 1)) {
-                                this.setVacation(empId, dStr, val);
-                            }
-                            curr.setDate(curr.getDate() + 1);
-                        }
-                        count++;
-                    }
-                });
-
-                alert(`${count} Einträge verarbeitet.`);
-                document.getElementById('importText').value = '';
-            }
-
-            parseDate(d, m, y) {
-                let year = y ? parseInt(y) : this.currentYear;
-                if (isNaN(year)) year = this.currentYear;
-
-                if (year < 100) year += 2000; // Assume 20xx
-                // JS Month is 0-indexed
-                return new Date(year, parseInt(m) - 1, parseInt(d));
-            }
-
-            formatDate(date) {
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            }
-
-            updateValidationUI(dateStr) {
-                const issues = this.validateCoverage(this.dates.find(d => d.dateStr === dateStr));
-                const valCell = document.getElementById(`val-${dateStr}`);
-
-                if (valCell) {
-                    if (issues) {
-                        valCell.innerHTML = `<span class="warning-text">${issues.join('<br>')}</span>`;
-                        valCell.title = 'Fehlend: ' + issues.join(', ');
-                        valCell.style.background = '#fee2e2';
-                    } else {
-                        const dateObj = this.dates.find(d => d.dateStr === dateStr);
-                        valCell.innerHTML = '';
-                        valCell.title = '';
-                        valCell.style.background = (dateObj.isWeekend || dateObj.holiday) ? 'var(--status-weekend)' : '';
-                    }
-                }
-            }
-
-            saveState() {
-                DataService.save(this.state);
-            }
-
-            // loadState removed - served by DataService
-
-            validateCoverage(dateObj) {
-                const dateStr = dateObj.dateStr;
-                if (dateObj.isWeekend || dateObj.holiday) return null; // No validation needed
-
-                const presentEmployees = CONFIG.employees.filter(emp => {
-                    const status = this.state[emp.id]?.[dateStr];
-                    return !status; // Present if no status set (Vacation/Absent/Free text)
-                });
-
-                const issues = [];
-                // Helper to check if employee has a group (handling new array and old string property)
-                const hasGrp = (e, g) => (Array.isArray(e.groups) && e.groups.includes(g)) || (e.group === g);
-
-                // Check TAVI (min 1)
-                if (!presentEmployees.some(e => hasGrp(e, 'TAVI'))) issues.push('TAVI');
-                // Check Privat (min 1)
-                if (!presentEmployees.some(e => hasGrp(e, 'Privat'))) issues.push('Privat');
-                // Check TEER (min 1)
-                if (!presentEmployees.some(e => hasGrp(e, 'TEER'))) issues.push('TEER');
-                // Check Herzkatheter (min 3)
-                if (presentEmployees.filter(e => hasGrp(e, 'Herzkatheter')).length < 3) issues.push('Herzkatheter');
-                // Check Echo (min 1)
-                if (!presentEmployees.some(e => hasGrp(e, 'Echo'))) issues.push('Echo');
-                // Check EPU (at least 2 present)
-                if (presentEmployees.filter(e => hasGrp(e, 'EPU')).length < 2) issues.push('EPU');
-                // Check Intensiv (at least 1 present)
-                if (presentEmployees.filter(e => hasGrp(e, 'Intensiv')).length < 1) issues.push('Intensiv');
-                // Check Pneumo (at least 1 present)
-                if (presentEmployees.filter(e => hasGrp(e, 'Pneumo')).length < 1) issues.push('Pneumo');
-
-                return issues.length > 0 ? issues : null;
-            }
-
-            resetData() {
-                if (confirm('Wirklich alles löschen?')) {
-                    this.state = {};
-                    this.saveState();
-                    this.render();
-                }
-            }
-
-            exportData() {
-                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.state));
-                const downloadAnchorNode = document.createElement('a');
-                downloadAnchorNode.setAttribute("href", dataStr);
-                downloadAnchorNode.setAttribute("download", "urlaubsplaner_2026.json");
-                document.body.appendChild(downloadAnchorNode);
-                downloadAnchorNode.click();
-                downloadAnchorNode.remove();
-            }
-
-            exportICal() {
-                if (this.currentUser !== 'admin' && this.currentUser !== 'sekretariat') {
-                    alert('Nur Admin und Sekretariat können iCal exportieren.');
-                    return;
-                }
-
-                // Populate checkboxes
-                const container = document.getElementById('icalEmpCheckboxes');
-                container.innerHTML = '';
-
-                // Add "Select All" Option
-                const selectAllDiv = document.createElement('div');
-                selectAllDiv.style.marginBottom = '5px';
-                selectAllDiv.style.borderBottom = '1px solid #eee';
-                selectAllDiv.style.paddingBottom = '5px';
-                selectAllDiv.innerHTML = `
-                    <label style="display: flex; align-items: center; gap: 8px; font-weight: bold; cursor: pointer;">
-                        <input type="checkbox" id="icalSelectAll" style="width: auto;" onchange="
-                            const checkboxes = document.querySelectorAll('.ical-emp-checkbox');
-                            checkboxes.forEach(cb => cb.checked = this.checked);
-                        "> <span>Alle auswählen</span>
-                    </label>
-                `;
-                container.appendChild(selectAllDiv);
-
-                CONFIG.employees.forEach(emp => {
-                    if (emp.id === 'admin' || emp.id === 'sekretariat' || emp.active === false) return;
-
-                    const empName = emp.name || this.getEmpName(emp.id) || emp.id;
-
-                    const div = document.createElement('div');
-                    div.style.padding = '3px 0';
-                    div.innerHTML = `
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: normal; color: #333;">
-                            <input type="checkbox" class="ical-emp-checkbox" value="${emp.id}" style="width: auto;">
-                            <span>${empName}</span>
-                        </label>
-                    `;
-                    container.appendChild(div);
-                });
-
-                // Add event listeners to individual checkboxes to update Select All state
-                const checkboxes = document.querySelectorAll('.ical-emp-checkbox');
-                checkboxes.forEach(cb => {
-                    cb.addEventListener('change', () => {
-                        const allChecked = Array.from(checkboxes).every(c => c.checked);
-                        document.getElementById('icalSelectAll').checked = allChecked;
-                    });
-                });
-
-                document.getElementById('iCalExportModal').style.display = 'flex';
-            }
-
-            executeICalExport() {
-                const startDateStr = document.getElementById('icalStart').value;
-                const endDateStr = document.getElementById('icalEnd').value;
-
-                if (!startDateStr || !endDateStr || startDateStr > endDateStr) {
-                    alert('Bitte einen gültigen Zeitraum auswählen.');
-                    return;
-                }
-
-                const startDate = new Date(startDateStr);
-                const endDate = new Date(endDateStr);
-                endDate.setHours(23, 59, 59, 999); // Include the whole end day
-
-                // Get selected employees
-                const selectedEmps = Array.from(document.querySelectorAll('.ical-emp-checkbox:checked')).map(cb => cb.value);
-
-                if (selectedEmps.length === 0) {
-                    alert('Bitte mindestens einen Mitarbeiter auswählen.');
-                    return;
-                }
-
-                let icsContent = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Urlaubsplaner//DE\r\nCALSCALE:GREGORIAN\r\n";
-
-                const events = [];
-
-                for (const empId of selectedEmps) {
-                    if (!this.state[empId]) continue;
-
-                    const empName = this.getEmpName(empId);
-                    const dates = Object.keys(this.state[empId]).sort();
-
-                    if (dates.length === 0) continue;
-
-                    let currentEvent = null;
-
-                    for (const dateStr of dates) {
-                        const eventDate = new Date(dateStr);
-
-                        // Filter by selected date range
-                        if (eventDate < startDate || eventDate > endDate) continue;
-
-                        const val = this.state[empId][dateStr];
-
-                        if (!currentEvent) {
-                            currentEvent = { empName, type: val.type, text: val.text, vertreter: val.vertreter, start: new Date(dateStr), end: new Date(dateStr) };
-                        } else {
-                            const expectedNextDay = new Date(currentEvent.end);
-                            expectedNextDay.setDate(expectedNextDay.getDate() + 1);
-
-                            if (this.formatDate(expectedNextDay) === dateStr &&
-                                currentEvent.type === val.type &&
-                                currentEvent.text === val.text &&
-                                currentEvent.vertreter === val.vertreter) {
-                                currentEvent.end = new Date(dateStr);
-                            } else {
-                                events.push(currentEvent);
-                                currentEvent = { empName, type: val.type, text: val.text, vertreter: val.vertreter, start: new Date(dateStr), end: new Date(dateStr) };
-                            }
-                        }
-                    }
-                    if (currentEvent) {
-                        events.push(currentEvent);
-                    }
-                }
-
-                if (events.length === 0) {
-                    alert('Es wurden keine Abwesenheiten im gewählten Zeitraum für die ausgewählten Mitarbeiter gefunden.');
-                    return;
-                }
-
-                const formatDateICal = (date) => {
-                    const y = date.getFullYear();
-                    const m = String(date.getMonth() + 1).padStart(2, '0');
-                    const d = String(date.getDate()).padStart(2, '0');
-                    return `${y}${m}${d}`;
-                };
-
-                const timestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-                const typeLabels = { 'U': 'Urlaub', 'D': 'Dienstreise', 'F': 'Fortbildung', 'T': 'Sonstiges' };
-
-                events.forEach(ev => {
-                    icsContent += "BEGIN:VEVENT\r\n";
-                    const uid = `${ev.empName.replace(/\s+/g, '')}-${formatDateICal(ev.start)}@urlaubsplaner`;
-                    icsContent += `UID:${uid}\r\n`;
-                    icsContent += `DTSTAMP:${timestamp}\r\n`;
-
-                    icsContent += `DTSTART;VALUE=DATE:${formatDateICal(ev.start)}\r\n`;
-                    const endExclusive = new Date(ev.end);
-                    endExclusive.setDate(endExclusive.getDate() + 1);
-                    icsContent += `DTEND;VALUE=DATE:${formatDateICal(endExclusive)}\r\n`;
-
-                    let summary = `${typeLabels[ev.type] || 'Abwesenheit'} - ${ev.empName}`;
-                    if (ev.text) summary += ` (${ev.text})`;
-                    icsContent += `SUMMARY:${summary}\r\n`;
-
-                    let description = `Mitarbeiter: ${ev.empName}\\nArt: ${typeLabels[ev.type] || 'Abwesenheit'}`;
-                    if (ev.text) description += `\\nBeschreibung: ${ev.text}`;
-                    if (ev.vertreter) description += `\\nVertreter: ${ev.vertreter}`;
-
-                    icsContent += `DESCRIPTION:${description}\r\n`;
-                    icsContent += "END:VEVENT\r\n";
-                });
-
-                icsContent += "END:VCALENDAR";
-
-                const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                const downloadAnchorNode = document.createElement('a');
-                downloadAnchorNode.setAttribute("href", url);
-                downloadAnchorNode.setAttribute("download", `abwesenheiten_${startDateStr}_bis_${endDateStr}.ics`);
-                document.body.appendChild(downloadAnchorNode);
-                downloadAnchorNode.click();
-                downloadAnchorNode.remove();
-                URL.revokeObjectURL(url);
-
-                document.getElementById('iCalExportModal').style.display = 'none';
-            }
-
-            importData(input) {
-                const file = input.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        this.state = JSON.parse(e.target.result);
-                        this.saveState();
-                        this.render();
-                    } catch (err) {
-                        alert('Fehler beim Laden der Datei');
-                    }
-                };
-                reader.readAsText(file);
+            checkPermission(eid) {
+                if (this.currentUser === 'admin' || this.currentUser === 'sekretariat' || eid === this.currentUser) return true;
+                alert('Stopp! Du kannst Abwesenheiten nur in deiner eigenen Zeile eintragen oder bearbeiten.');
+                return false;
             }
 
             render() {
-                const container = document.getElementById('calendar');
-                container.innerHTML = '';
-
-                // 1. Month Headers
-                let colStart = 2; // 1 is name col
-
-                let lastMonth = -1;
-                let lastYear = -1;
-
-                this.dates.forEach((d, index) => {
-                    if (d.month !== lastMonth || d.year !== lastYear) {
-                        const monthName = new Date(d.year, d.month, 1).toLocaleString('de-DE', { month: 'long', year: 'numeric' });
-                        const monthEl = document.createElement('div');
-                        monthEl.className = 'cell header-cell sticky-header month-header';
-                        monthEl.id = `month-header-${d.year}-${d.month}`;
-                        monthEl.innerText = monthName;
-                        monthEl.style.gridColumnStart = colStart + index;
-
-                        let span = 1;
-                        let i = index + 1;
-                        while (i < this.dates.length && this.dates[i].month === d.month && this.dates[i].year === d.year) {
-                            span++;
-                            i++;
-                        }
-                        monthEl.style.gridColumnEnd = `span ${span}`;
-                        container.appendChild(monthEl);
-
-                        lastMonth = d.month;
-                        lastYear = d.year;
-                    }
-                });
-
-                // 2. School Holiday Row
-                // Add a full-width filler element to prevent transparency when scrolling
-                const shFiller = document.createElement('div');
-                shFiller.className = 'cell header-cell sticky-header school-holiday-row';
-                shFiller.style.gridRow = 2;
-                shFiller.style.gridColumnStart = 2;
-                shFiller.style.gridColumnEnd = `span ${this.dates.length}`;
-                shFiller.style.backgroundColor = '#f1f5f9'; // Match standard header background
-                shFiller.style.borderBottom = 'none'; // Avoid double borders if any
-                container.appendChild(shFiller);
-
-                // New logic: Iterate school holidays and place them
-                CONFIG.schoolHolidays.forEach(sh => {
-                    // Find start and end index
-                    const startIdx = this.dates.findIndex(d => d.dateStr >= sh.start && d.dateStr <= sh.end);
-
-                    // Simple check if holiday is within range (might be partial if year cut)
-                    if (startIdx !== -1) {
-                        let endIdx = this.dates.findIndex(d => d.dateStr > sh.end);
-                        if (endIdx === -1) endIdx = this.dates.length;
-
-                        const span = endIdx - startIdx;
-                        if (span > 0) {
-                            const shEl = document.createElement('div');
-                            shEl.className = 'cell header-cell sticky-header school-holiday-row';
-                            shEl.style.gridRow = 2;
-                            shEl.style.gridColumnStart = startIdx + 2;
-                            shEl.style.gridColumnEnd = `span ${span}`;
-                            shEl.innerText = sh.name;
-                            shEl.title = sh.name;
-                            shEl.style.backgroundColor = '#cbd5e1'; // Darker background
-                            shEl.style.fontSize = '0.7rem';
-                            shEl.style.overflow = 'hidden';
-                            shEl.style.textOverflow = 'ellipsis';
-                            shEl.style.whiteSpace = 'nowrap';
-                            shEl.style.textAlign = 'center';
-                            shEl.style.lineHeight = '20px'; // Adjust height
-                            // shEl.style.borderLeft = '1px solid #ccc';
-                            container.appendChild(shEl);
-                        }
-                    }
-                });
-
-                // 3. Day Headers (Shifted to Row 3)
-                const corner = document.createElement('div');
-                corner.className = 'cell header-cell sticky-col sticky-corner sticky-header';
-                corner.style.gridRow = '1 / span 3'; // Spans Month, School Hol, Day
-                corner.innerText = 'Mitarbeiter';
-                container.appendChild(corner);
+                const container = document.getElementById('calendar'); container.innerHTML = '';
+                const isMobile = window.innerWidth <= 768;
+                let lastM = -1, lastY = -1;
 
                 this.dates.forEach((d, i) => {
-                    const dayEl = document.createElement('div');
-                    dayEl.className = `cell header-cell sticky-header day-header ${d.isWeekend ? 'weekend' : ''} ${d.holiday ? 'holiday' : ''} ${d.isSchoolHoliday ? 'school-holiday' : ''}`;
-
-                    let text = '';
-                    if (d.holiday) text = d.holiday;
-                    // Removed school holiday text from day header as it's now above
-
-                    dayEl.innerHTML = `<span>${d.day}</span>${text ? `<span class="header-holiday-text">${text}</span>` : ''}`;
-                    dayEl.style.gridRow = 3; // Shifted
-                    dayEl.style.gridColumn = i + 2;
-                    dayEl.title = text || '';
-                    container.appendChild(dayEl);
+                    if (d.month !== lastM || d.year !== lastY) {
+                        const m = document.createElement('div'); m.className = 'cell header-cell sticky-header month-header'; m.innerText = new Date(d.year, d.month, 1).toLocaleString('de-DE', { month: 'long', year: 'numeric' });
+                        m.id = `month-header-${d.year}-${d.month}`; m.style.gridColumnStart = i + 2;
+                        let s = 1, j = i + 1; while (j < this.dates.length && this.dates[j].month === d.month && this.dates[j].year === d.year) { s++; j++; }
+                        m.style.gridColumnEnd = `span ${s}`; container.appendChild(m); lastM = d.month; lastY = d.year;
+                    }
                 });
 
-                // 4. Employee Rows (Shifted starting Row 4)
-                const groupOrder = ['Chef', 'Privat', 'TAVI', 'TEER', 'Herzkatheter', 'Echo', 'EPU', 'Intensiv', 'Pneumo', 'Ambulanz', ''];
-                const getPrimaryGrp = (emp) => {
-                    const groups = Array.isArray(emp.groups) ? emp.groups : (emp.group ? [emp.group] : []);
-                    if (groups.length === 0) return '';
-                    let bestIdx = groupOrder.length;
-                    let bestGrp = '';
-                    groups.forEach(g => {
-                        const idx = groupOrder.indexOf(g);
-                        if (idx !== -1 && idx < bestIdx) {
-                            bestIdx = idx;
-                            bestGrp = g;
+                const corner = document.createElement('div'); corner.className = 'cell header-cell sticky-col sticky-corner sticky-header'; corner.style.gridRow = '1 / span 3'; corner.style.gridColumn = '1'; corner.innerText = isMobile ? 'Name' : 'Mitarbeiter'; container.appendChild(corner);
+
+                this.dates.forEach((d, i) => {
+                    const h = document.createElement('div'); h.className = `cell header-cell sticky-header day-header ${d.isWeekend ? 'weekend' : ''} ${d.holiday ? 'holiday' : ''} ${d.isSchoolHoliday ? 'school-holiday' : ''}`;
+                    h.innerHTML = `<span>${d.day}</span>`; h.style.gridRow = 3; h.style.gridColumn = i + 2;
+                    h.onmouseenter = (ev) => this.showTip(ev, null, d.dateStr); h.onmouseleave = () => this.hideTip();
+                    container.appendChild(h);
+                });
+
+                const valH = document.createElement('div'); valH.className = 'cell sticky-col validation-row'; valH.style.gridColumn = '1'; valH.innerText = '⚠ Abdeckung'; container.appendChild(valH);
+                this.dates.forEach((d, i) => {
+                    const issues = this.validateCoverage(d), c = document.createElement('div'); c.className = `cell validation-cell ${d.holiday ? 'holiday' : ''}`; c.id = `val-${d.dateStr}`;
+                    c.style.gridColumn = i + 2; if (issues) { c.innerHTML = `<span class="warning-text">${issues.join('<br>')}</span>`; c.title = 'Fehlend: ' + issues.join(', '); }
+                    container.appendChild(c);
+                });
+
+                const emps = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false);
+                emps.forEach((e, ei) => {
+                    const n = document.createElement('div'); n.className = 'cell employee-row-header sticky-col'; n.style.gridRow = ei + 5; n.style.gridColumn = '1';
+                    if (isMobile) { const p = e.name.split(' '); n.innerText = p[p.length - 1]; } else n.innerText = e.name;
+                    if (this.currentUser === e.id) n.style.backgroundColor = '#e0f2fe';
+                    const grp = this.getPrimaryGrp(e);
+                    if (grp) {
+                        const color = CONFIG.groupColors[grp] || '#ccc'; n.style.borderLeft = `4px solid ${color}`;
+                        const prev = emps[ei-1]; if (!prev || this.getPrimaryGrp(prev) !== grp) {
+                            const lbl = document.createElement('span'); lbl.innerText = grp; lbl.style.cssText = `position:absolute; top:1px; left:4px; font-size:0.5rem; color:${color}; font-weight:bold;`;
+                            n.appendChild(lbl); n.style.borderTop = `1px solid ${color}`;
                         }
-                    });
-                    return bestGrp;
-                };
-
-                CONFIG.employees.forEach((emp, empIndex) => {
-                    // Name Cell
-                    const nameEl = document.createElement('div');
-                    nameEl.className = 'cell employee-row-header sticky-col';
-                    nameEl.style.gridRow = empIndex + 5; // Shifted
-                    nameEl.innerHTML = `${emp.name}`;
-
-                    // Highlight if this is the currently logged in user
-                    if (this.currentUser === emp.id) {
-                        nameEl.style.backgroundColor = '#f0f9ff'; // Very light blue
-                        nameEl.style.color = 'var(--primary-color)';
-                        nameEl.style.fontWeight = 'bold';
+                        const next = emps[ei+1]; if (!next || this.getPrimaryGrp(next) !== grp) n.style.borderBottom = `1px solid ${color}`;
                     }
+                    container.appendChild(n);
 
-                    // Group Frame Logic
-                    const currentGrp = getPrimaryGrp(emp);
-                    if (currentGrp) {
-                        const color = this.GROUP_COLORS[currentGrp] || '#ccc';
-                        const prevEmp = CONFIG.employees[empIndex - 1];
-                        const nextEmp = CONFIG.employees[empIndex + 1];
-                        const prevGrp = prevEmp ? getPrimaryGrp(prevEmp) : null;
-                        const nextGrp = nextEmp ? getPrimaryGrp(nextEmp) : null;
-
-                        nameEl.style.borderLeft = `2px solid ${color}`;
-                        nameEl.style.paddingLeft = '8px';
-
-                        if (currentGrp !== prevGrp) {
-                            nameEl.style.borderTop = `1px solid ${color}`;
-                            // Small group label at the top left
-                            const groupLabel = document.createElement('span');
-                            groupLabel.innerText = currentGrp;
-                            groupLabel.style.position = 'absolute';
-                            groupLabel.style.top = '1px';
-                            groupLabel.style.left = '4px';
-                            groupLabel.style.fontSize = '0.55rem';
-                            groupLabel.style.color = color;
-                            groupLabel.style.fontWeight = '700';
-                            groupLabel.style.opacity = '0.8';
-                            nameEl.appendChild(groupLabel);
+                    this.dates.forEach((d, di) => {
+                        const c = document.createElement('div'); c.className = `cell day-cell ${d.isWeekend ? 'weekend' : ''} ${d.holiday ? 'holiday' : ''} ${d.isSchoolHoliday ? 'school-holiday' : ''}`;
+                        c.style.gridRow = ei + 5; c.style.gridColumn = di + 2; c.id = `cell-${e.id}-${d.dateStr}`;
+                        const s = this.state[e.id]?.[d.dateStr];
+                        if (s) {
+                            const t = s.type || s; c.classList.add(t === 'U' || t === 'V' ? 'status-vacation' : t === 'D' ? 'status-trip' : t === 'F' ? 'status-training' : 'status-custom');
+                            if (s.text) c.innerHTML = `<span class="cell-text">${s.text}</span>`;
                         }
-                        if (currentGrp !== nextGrp) {
-                            nameEl.style.borderBottom = `1px solid ${color}`;
+                        if (isMobile) { c.onclick = () => { if (!this.dragLock) this.editAbsence(e.id, d.dateStr); }; }
+                        else {
+                            c.onmousedown = (ev) => { if (ev.button === 0) { ev.preventDefault(); if (!this.checkPermission(e.id)) return; this.isDragging = true; this._dragVal = s ? null : { type: this.currentMode, text: this.currentText, vertreter: this.currentVertreterText }; this.setVal(e.id, d.dateStr, this._dragVal, c); } };
+                            c.onmouseover = () => { if (this.isDragging) this.setVal(e.id, d.dateStr, this._dragVal, c); };
+                            c.ondblclick = () => { if (!this.dragLock) this.editAbsence(e.id, d.dateStr); };
                         }
-                    }
-
-                    container.appendChild(nameEl);
-
-                    // Day Cells
-                    this.dates.forEach((d, dateIndex) => {
-                        const cell = document.createElement('div');
-                        let classes = ['cell', 'day-cell'];
-                        if (d.isWeekend) classes.push('weekend');
-                        if (d.isSchoolHoliday) classes.push('school-holiday');
-                        if (d.holiday) classes.push('holiday');
-
-                        const status = this.state[emp.id]?.[d.dateStr];
-                        if (status) {
-                            if (status === 'V' || status.type === 'U') classes.push('status-vacation');
-                            else if (status.type === 'D') classes.push('status-trip');
-                            else if (status.type === 'F') classes.push('status-training');
-                            else if (status.type === 'T') {
-                                classes.push('status-custom');
-                            }
-                        }
-
-                        cell.className = classes.join(' ');
-                        cell.style.gridRow = empIndex + 5; // Shifted
-                        cell.style.gridColumn = dateIndex + 2;
-                        cell.id = `cell-${emp.id}-${d.dateStr}`;
-
-                        if (status && status.text) {
-                            cell.innerHTML = `<span class="cell-text">${status.text}</span>`;
-                        }
-
-                        // Interaction Events
-                        cell.onmousedown = (e) => {
-                            if (e.button === 0) { // Left click only for dragging
-                                e.preventDefault();
-                                this.handleMouseDown(emp.id, d.dateStr);
-                            }
-                        };
-                        cell.onmouseover = () => this.handleMouseOver(emp.id, d.dateStr);
-                        cell.onmouseenter = (e) => this.showTooltip(e, emp.id, d.dateStr);
-                        cell.onmouseleave = () => this.hideTooltip();
-                        cell.oncontextmenu = (e) => {
-                            e.preventDefault();
-                            this.editAbsence(emp.id, d.dateStr);
-                        };
-                        cell.ondblclick = () => this.editAbsence(emp.id, d.dateStr);
-
-                        container.appendChild(cell);
+                        c.onmouseenter = (ev) => this.showTip(ev, e.id, d.dateStr); c.onmouseleave = () => this.hideTip();
+                        container.appendChild(c);
                     });
                 });
-
-                // 5. Validation Row (Shifted)
-                const valHeader = document.createElement('div');
-                valHeader.className = 'cell sticky-col validation-row';
-                valHeader.style.gridRow = 4; // Shifted to top
-                valHeader.style.gridColumn = 1;
-                valHeader.innerHTML = '⚠ Fehlende Abdeckung';
-                container.appendChild(valHeader);
-
-                this.dates.forEach((d, dateIndex) => {
-                    const issues = this.validateCoverage(d);
-                    const cell = document.createElement('div');
-                    cell.className = 'cell validation-cell';
-                    cell.id = `val-${d.dateStr}`;
-
-                    if (d.isWeekend || d.holiday) cell.style.background = 'var(--status-weekend)';
-
-                    cell.style.gridRow = 4; // Shifted to top
-                    cell.style.gridColumn = dateIndex + 2;
-
-                    if (issues) {
-                        cell.innerHTML = `<span class="warning-text">${issues.join('<br>')}</span>`;
-                        cell.title = 'Fehlend: ' + issues.join(', ');
-                        cell.style.background = '#fee2e2';
-                    }
-
-                    container.appendChild(cell);
-                });
-
-                this.updateSummary();
                 this.updateNavHighlighting();
             }
 
-            markFinished() {
-                if (!this.currentUser || this.currentUser === 'admin') return;
-
-                if (!this.state.__STATUS__) this.state.__STATUS__ = {};
-                this.state.__STATUS__[this.currentUser] = true;
-                this.saveState();
-
-                alert('Status "Fertig" gespeichert!');
-                this.updateSummary();
+            getPrimaryGrp(e) {
+                const grps = Array.isArray(e.groups) ? e.groups : (e.group ? [e.group] : []);
+                if (grps.length === 0) return '';
+                let best = CONFIG.groupOrder.length, res = '';
+                grps.forEach(g => { const i = CONFIG.groupOrder.indexOf(g); if (i !== -1 && i < best) { best = i; res = g; } });
+                return res;
             }
 
-            updateSummary() {
-                const list = [];
-                CONFIG.employees.forEach(emp => {
-                    if (emp.id === 'admin' || emp.id === 'sekretariat') return;
-                    if (emp.active === false) return;
-                    if (!this.state[emp.id]) return;
-
-                    const entries = Object.keys(this.state[emp.id]).sort().map(d => ({
-                        date: d,
-                        val: this.state[emp.id][d]
-                    }));
-
-                    if (entries.length === 0) return;
-
-                    const ranges = [];
-                    let rStart = entries[0];
-                    let rEnd = entries[0];
-
-                    for (let i = 1; i < entries.length; i++) {
-                        const curr = entries[i];
-
-                        // Check if consecutive day
-                        const d1 = new Date(rEnd.date);
-                        d1.setDate(d1.getDate() + 1);
-                        const isNext = this.formatDate(d1) === curr.date;
-
-                        // Check if same type/text
-                        const isSame = (rEnd.val.type === curr.val.type) && (rEnd.val.text === curr.val.text);
-
-                        if (isNext && isSame) {
-                            rEnd = curr;
-                        } else {
-                            ranges.push(this.formatRange(rStart, rEnd));
-                            rStart = curr;
-                            rEnd = curr;
-                        }
-                    }
-                    ranges.push(this.formatRange(rStart, rEnd));
-
-                    list.push(`${emp.name}: ${ranges.join(', ')}`);
-                });
-
-                document.getElementById('exportSummary').value = list.join('\n');
-
-                // Update Status Summary
-                const statusList = [];
-                if (this.state.__STATUS__) {
-                    CONFIG.employees.forEach(emp => {
-                        if (emp.id === 'admin' || emp.id === 'sekretariat') return;
-                        if (emp.active === false) return;
-                        if (this.state.__STATUS__[emp.id]) {
-                            statusList.push(`Mitarbeiter ${emp.name} fertig`);
-                        }
-                    });
-                }
-                const statusEl = document.getElementById('statusSummary');
-                if (statusEl) statusEl.value = statusList.join('\n');
-            }
-
-            switchTab(tabId) {
-                // Update buttons
-                const tabs = ['calendar', 'summary', 'status', 'admin'];
-                tabs.forEach(t => {
-                    const btn = document.getElementById('tab-' + t);
-                    if (btn) btn.classList.remove('active');
-                });
-                const activeBtn = document.getElementById('tab-' + tabId);
-                if (activeBtn) activeBtn.classList.add('active');
-
-                const bulkPanel = document.getElementById('bulkImportPanel');
-
-                // Update views
-                document.getElementById('calendarView').style.display = (tabId === 'calendar') ? 'block' : 'none';
-                document.getElementById('summaryView').style.display = (tabId === 'summary') ? 'block' : 'none';
-                document.getElementById('statusView').style.display = (tabId === 'status') ? 'block' : 'none';
-                document.getElementById('adminView').style.display = (tabId === 'admin') ? 'block' : 'none';
-
-                // Special handling for Bulk Panel
-                if (tabId === 'calendar' && this.currentUser === 'admin') {
-                    bulkPanel.style.display = 'flex';
-                } else {
-                    bulkPanel.style.display = 'none';
-                }
-
-                if (tabId === 'admin') {
-                    this.renderAdminTable();
-                }
-            }
-
-            // ADMIN MANAGEMENT logic
-            renderAdminTable() {
-                const tbody = document.getElementById('adminEmployeeTable');
-                tbody.innerHTML = '';
-
-                CONFIG.employees.forEach(emp => {
-                    if (emp.id === 'sekretariat') return;
-                    this.createEmployeeRow(tbody, emp);
-                });
-            }
-
-            createEmployeeRow(tbody, emp) {
-                const tr = document.createElement('tr');
-                tr.style.borderBottom = '1px solid #eee';
-
-                const isReadOnly = (emp.id === 'admin');
-
-                tr.innerHTML = `
-                <td style="padding: 10px;"><input type="text" value="${emp.id}" ${isReadOnly ? 'readonly style="background:#f1f5f9; border:none;"' : ''} data-field="id" data-id="${emp.id}"></td>
-                <td style="padding: 10px;"><input type="text" value="${emp.name || ''}" data-field="name" data-id="${emp.id}"></td>
-                <td style="padding: 10px;"><input type="text" value="${emp.email || ''}" data-field="email" data-id="${emp.id}"></td>
-                <td style="padding: 10px;"><input type="text" value="${emp.pin || ''}" data-field="pin" data-id="${emp.id}" style="width:80px;"></td>
-                <td style="padding: 10px;">
-                    <div class="group-checkboxes" data-id="${emp.id}" style="display: flex; flex-wrap: wrap; gap: 5px; font-size: 0.75rem; max-width: 250px;">
-                        ${['Chef', 'Privat', 'TAVI', 'TEER', 'Herzkatheter', 'Echo', 'EPU', 'Intensiv', 'Pneumo', 'Ambulanz'].map(g => `
-                            <label style="display: flex; align-items: center; gap: 2px; font-weight: normal; margin-right: 5px; white-space: nowrap;">
-                                <input type="checkbox" value="${g}" ${emp.groups && emp.groups.includes(g) ? 'checked' : (emp.group === g ? 'checked' : '')} ${isReadOnly ? 'disabled' : ''}> ${g}
-                            </label>
-                        `).join('')}
-                    </div>
-                </td>
-                <td style="padding: 10px; text-align: center;"><input type="checkbox" ${emp.active !== false ? 'checked' : ''} data-field="active" data-id="${emp.id}"></td>
-                <td style="padding: 10px; text-align: center;">
-                    ${!isReadOnly ? `<button class="primary" onclick="app.deleteEmployee('${emp.id}')" style="background:var(--danger-color); padding: 5px 10px; font-size: 0.8rem;">Löschen</button>` : ''}
-                </td>
-            `;
-
-                // Hook up changes immediately to CONFIG.employees (in memory)
-                const inputs = tr.querySelectorAll('input, select');
-                inputs.forEach(input => {
-                    input.onchange = (e) => {
-                        const oldId = e.target.closest('tr').querySelector('input[data-field="id"]').getAttribute('data-id');
-                        const targetEmp = CONFIG.employees.find(x => x.id === oldId);
-                        if (!targetEmp) return;
-
-                        if (e.target.type === 'checkbox') {
-                            if (e.target.closest('.group-checkboxes')) {
-                                // Group multi-selection
-                                const groupDiv = e.target.closest('.group-checkboxes');
-                                const selected = Array.from(groupDiv.querySelectorAll('input:checked')).map(cb => cb.value);
-                                targetEmp.groups = selected;
-                                // Backward compatibility
-                                targetEmp.group = selected[0] || '';
-                            } else {
-                                const field = e.target.getAttribute('data-field');
-                                targetEmp[field] = e.target.checked;
-                            }
-                        } else {
-                            const field = e.target.getAttribute('data-field');
-                            targetEmp[field] = e.target.value;
-                            // If ID changed, update all data-id references in this row
-                            if (field === 'id') {
-                                tr.querySelectorAll('[data-id]').forEach(el => el.setAttribute('data-id', e.target.value));
-                                if (targetEmp.id !== 'admin') {
-                                    const delBtn = tr.querySelector('button');
-                                    if (delBtn) delBtn.setAttribute('onclick', `app.deleteEmployee('${e.target.value}')`);
-                                }
-                            }
-                        }
-                    };
-                });
-
-                tbody.appendChild(tr);
-            }
-
-            openAddEmployeeModal() {
-                document.getElementById('addEmpId').value = '';
-                document.getElementById('addEmpName').value = '';
-                document.getElementById('addEmpEmail').value = '';
-                // Reset checkboxes
-                document.querySelectorAll('#addEmpGroups input').forEach(cb => cb.checked = false);
-                // Generate a random 4-digit PIN default
-                document.getElementById('addEmpPin').value = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
-                document.getElementById('addEmployeeModal').style.display = 'flex';
-            }
-
-            confirmAddEmployee() {
-                let id = document.getElementById('addEmpId').value.trim();
-                const name = document.getElementById('addEmpName').value.trim();
-                const email = document.getElementById('addEmpEmail').value.trim();
-                const pin = document.getElementById('addEmpPin').value.trim();
-
-                if (!name) {
-                    alert('Bitte Name eingeben');
-                    return;
-                }
-
-                if (!id) {
-                    let maxId = 0;
-                    CONFIG.employees.forEach(e => {
-                        if (e.id.startsWith('emp_')) {
-                            const num = parseInt(e.id.replace('emp_', ''), 10);
-                            if (!isNaN(num) && num > maxId) maxId = num;
-                        }
-                    });
-                    id = 'emp_' + String(maxId + 1).padStart(5, '0');
-                }
-
-                // Check for duplicate ID
-                if (CONFIG.employees.some(e => e.id === id)) {
-                    alert('Ein Mitarbeiter mit dieser ID existiert bereits!');
-                    return;
-                }
-
-                const groups = Array.from(document.querySelectorAll('#addEmpGroups input:checked')).map(cb => cb.value);
-                CONFIG.employees.push({ id, name, email, pin, groups, active: true, role: 'User' });
-                this.sortEmployees();
-                document.getElementById('addEmployeeModal').style.display = 'none';
-                this.renderAdminTable();
-            }
-
-            deleteEmployee(empId) {
-                if (confirm('Mitarbeiter wirklich löschen? Alle Daten werden entfernt.')) {
-                    CONFIG.employees = CONFIG.employees.filter(e => e.id !== empId);
-                    this.renderAdminTable();
-                }
-            }
-
-            saveEmployees() {
-                if (!confirm('Änderungen an der Mitarbeiterliste speichern?')) return;
-
-                this.sortEmployees();
-
-                // Call the save logic, then re-render
-                document.body.style.cursor = 'wait';
-                DataService.save(this.state).then(() => {
-                    document.body.style.cursor = 'default';
-
-                    // Rebuild Modal Dropdowns
-                    const select = document.getElementById('modalEmp');
-                    const importSelect = document.getElementById('importEmp');
-                    select.innerHTML = '';
-                    importSelect.innerHTML = '';
-
-                    CONFIG.employees.forEach(emp => {
-                        if (emp.id === 'admin' || emp.id === 'sekretariat') return;
-                        if (emp.active === false) return;
-                        const opt = document.createElement('option');
-                        opt.value = emp.id;
-                        opt.innerText = emp.name;
-                        select.appendChild(opt);
-
-                        const opt2 = document.createElement('option');
-                        opt2.value = emp.id;
-                        opt2.innerText = emp.name;
-                        importSelect.appendChild(opt2);
-                    });
-
-                    alert('Mitarbeiterliste gespeichert!');
-                    this.renderAdminTable();
-                    this.render(); // Redraw main calendar
-                });
-            }
-            formatRange(start, end) {
-                const fmt = d => {
-                    const [y, m, day] = d.split('-');
-                    return `${day}.${m}.`;
-                };
-
-                const datePart = (start.date === end.date) ? fmt(start.date) : `${fmt(start.date)} - ${fmt(end.date)}`;
-
-                const typeMap = { 'U': 'Urlaub', 'D': 'Dienstreise', 'F': 'Fortbildung', 'T': 'Sonstiges' };
-                const t = typeMap[start.val.type] || 'Abwesend';
-                const txt = start.val.text ? `: ${start.val.text}` : '';
-
-                return `${datePart} (${t}${txt})`;
+            validateCoverage(d) {
+                if (d.isWeekend || d.holiday) return null;
+                const pres = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && !this.state[e.id]?.[d.dateStr]);
+                const has = (e, g) => (Array.isArray(e.groups) && e.groups.includes(g)) || (e.group === g);
+                const issues = [];
+                if (!pres.some(e => has(e, 'TAVI'))) issues.push('TAVI');
+                if (!pres.some(e => has(e, 'Privat'))) issues.push('Privat');
+                if (!pres.some(e => has(e, 'TEER'))) issues.push('TEER');
+                if (pres.filter(e => has(e, 'Herzkatheter')).length < 3) issues.push('HK');
+                if (!pres.some(e => has(e, 'Echo'))) issues.push('Echo');
+                if (pres.filter(e => has(e, 'EPU')).length < 2) issues.push('EPU');
+                return issues.length > 0 ? issues : null;
             }
 
             sortEmployees() {
-                const groupOrder = ['Chef', 'Privat', 'TAVI', 'TEER', 'Herzkatheter', 'Echo', 'EPU', 'Intensiv', 'Pneumo', 'Ambulanz', ''];
-
                 const admins = CONFIG.employees.filter(e => e.id === 'admin' || e.id === 'sekretariat');
                 const others = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat');
-
                 others.sort((a, b) => {
-                    // Unified group field (handle array vs old string)
-                    const groupsA = Array.isArray(a.groups) ? a.groups : (a.group ? [a.group] : []);
-                    const groupsB = Array.isArray(b.groups) ? b.groups : (b.group ? [b.group] : []);
-
-                    // Primary group is the one with highest priority (lowest index in groupOrder)
-                    const getPrimaryIdx = (groups) => {
-                        if (groups.length === 0) return groupOrder.indexOf('');
-                        let minIdx = groupOrder.length;
-                        groups.forEach(g => {
-                            let idx = groupOrder.indexOf(g);
-                            if (idx !== -1 && idx < minIdx) minIdx = idx;
-                        });
-                        return minIdx;
-                    };
-
-                    const idxA = getPrimaryIdx(groupsA);
-                    const idxB = getPrimaryIdx(groupsB);
-
-                    if (idxA !== idxB) {
-                        return idxA - idxB;
-                    }
-
-                    // Same primary group -> sort alphabetically by last name
-                    const lastA = (a.name.split(' ').pop() || '').toLowerCase();
-                    const lastB = (b.name.split(' ').pop() || '').toLowerCase();
-                    return lastA.localeCompare(lastB);
+                    const iA = CONFIG.groupOrder.indexOf(this.getPrimaryGrp(a)), iB = CONFIG.groupOrder.indexOf(this.getPrimaryGrp(b));
+                    if (iA !== iB) return iA - iB;
+                    return (a.name.split(' ').pop() || '').localeCompare((b.name.split(' ').pop() || ''));
                 });
-
                 CONFIG.employees = [...admins, ...others];
             }
-        }
 
+            openModal() {
+                document.getElementById('modalType').value = this.currentMode;
+                document.getElementById('modalText').value = ''; document.getElementById('modalVertreter').value = '';
+                document.getElementById('addModal').style.display = 'flex';
+            }
+
+            setVal(eid, d, v, cellEl = null) {
+                if (!this.checkPermission(eid)) return;
+                if (!this.state[eid]) this.state[eid] = {};
+                if (v) this.state[eid][d] = v; else delete this.state[eid][d];
+                if (cellEl) {
+                    const typeMap = { 'U': 'status-vacation', 'D': 'status-trip', 'F': 'status-training', 'S': 'status-custom' };
+                    cellEl.classList.remove('status-vacation', 'status-trip', 'status-training', 'status-custom');
+                    cellEl.innerHTML = ''; if (v) { cellEl.classList.add(typeMap[v.type] || 'status-custom'); if (v.text) cellEl.innerHTML = `<span class="cell-text">${v.text}</span>`; }
+                } else { this.render(); }
+            }
+
+            scrollToMonth(m, cur) {
+                const y = cur ? this.currentYear || 2026 : 2026, el = document.getElementById(`month-header-${y}-${m}`), c = document.getElementById('calendar');
+                if (el && c) { const offset = document.querySelector('.sticky-corner').offsetWidth; c.scrollTo({ left: el.offsetLeft - offset, behavior: 'smooth' }); }
+            }
+
+            setYear(y) { this.currentYear = y; this.scrollToMonth(0, true); }
+
+            updateNavHighlighting() {
+                const c = document.getElementById('calendar'); if (!c) return;
+                const d = this.dates[Math.min(Math.floor(c.scrollLeft / 40), this.dates.length - 1)];
+                if (d) {
+                    this.currentYear = d.year;
+                    CONFIG.years.forEach(y => { const b = document.getElementById(`btn-year-${y}`); if (b) b.classList.toggle('primary', y === d.year); });
+                    for (let i = 0; i < 12; i++) { const b = document.getElementById(`btn-month-${i}`); if (b) b.classList.toggle('primary', i === d.month); }
+                }
+            }
+
+            editAbsence(eid, d) {
+                if (!this.checkPermission(eid)) return;
+                const s = this.state[eid]?.[d]; if (!s) return;
+                document.getElementById('modalEmp').value = eid; document.getElementById('modalType').value = (s.type === 'T' ? 'S' : s.type) || 'U';
+                document.getElementById('modalText').value = s.text || ''; document.getElementById('modalVertreter').value = s.vertreter || '';
+                document.getElementById('modalStart').value = document.getElementById('modalEnd').value = d; document.getElementById('addModal').style.display = 'flex';
+            }
+
+            addRange() {
+                const eid = document.getElementById('modalEmp').value, t = document.getElementById('modalType').value, txt = document.getElementById('modalText').value, v = document.getElementById('modalVertreter').value, s = document.getElementById('modalStart').value, e = document.getElementById('modalEnd').value;
+                if (!this.checkPermission(eid)) return;
+                let curr = new Date(s), end = new Date(e); if (!this.state[eid]) this.state[eid] = {};
+                while (curr <= end) { this.state[eid][this.formatDate(curr)] = { type: t, text: txt, vertreter: v }; curr.setDate(curr.getDate() + 1); }
+                this.saveState(); this.render(); document.getElementById('addModal').style.display = 'none';
+            }
+
+            showTip(ev, eid, d) {
+                const s = eid ? this.state[eid]?.[d] : null, dObj = this.dates.find(x => x.dateStr === d);
+                const info = [dObj.holiday, dObj.schoolHoliday].filter(x => x).join(' & ');
+                if (!s && !info) return;
+                let tip = `<strong>${s ? (s.text || s.type) : ''}</strong>`;
+                if (s && s.vertreter) tip += `<br>Vertreter: ${s.vertreter}`;
+                if (info) tip += `<br>${info}`;
+                this.showSimpleTip(ev, tip, true);
+            }
+
+            showSimpleTip(ev, text, isHTML = false) {
+                const t = document.getElementById('custom-tooltip');
+                if (isHTML) t.innerHTML = text;
+                else t.innerHTML = `<strong>${text}</strong>`;
+                t.style.display = 'block';
+                t.style.left = ev.clientX + 10 + 'px';
+                t.style.top = ev.clientY + 10 + 'px';
+            }
+
+            hideTip() {
+                const t = document.getElementById('custom-tooltip');
+                if (t) t.style.display = 'none';
+            }
+
+            switchTab(t) { ['calendar', 'summary', 'status', 'admin'].forEach(x => { const v = document.getElementById(x + 'View'); if (v) v.style.display = (x === t ? 'block' : 'none'); }); }
+            setMode(m) { this.currentMode = m; }
+            setCustomText(t) { this.currentText = t; }
+            setVertreterText(t) { this.currentVertreterText = t; }
+            saveState() { DataService.save(this.state); }
+            exportData() { const d = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.state)); const a = document.createElement('a'); a.href = d; a.download = "oa_planer.json"; a.click(); }
+        }
         const app = new App();
     </script>
-
 </body>
-
 </html>
