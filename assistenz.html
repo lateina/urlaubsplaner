@@ -28,7 +28,12 @@
             --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
 
         body {
             background-color: var(--bg-color);
@@ -50,9 +55,16 @@
             flex-direction: column;
         }
 
-        h1 { font-size: 1.1rem; font-weight: 700; color: var(--text-main); }
+        h1 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
 
-        .controls { display: flex; gap: 10px; }
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
 
         button {
             padding: 8px 16px;
@@ -64,7 +76,11 @@
             transition: all 0.2s;
         }
 
-        button.primary { background: var(--primary-color); color: white; border: none; }
+        button.primary {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+        }
 
         .calendar-container {
             display: grid;
@@ -73,11 +89,13 @@
             position: relative;
             width: 100%;
             height: auto;
-            max-height: calc(100vh - 250px);
+            max-height: calc(100vh - 140px);
             grid-template-columns: 200px repeat(762, 40px);
             grid-template-rows: 20px 20px 30px;
             grid-auto-rows: minmax(50px, auto);
             padding-bottom: 80px;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         .sticky-col {
@@ -101,7 +119,11 @@
             border-bottom: 1px solid var(--border-color);
         }
 
-        .sticky-corner { top: 0 !important; left: 0 !important; z-index: 110 !important; }
+        .sticky-corner {
+            top: 0 !important;
+            left: 0 !important;
+            z-index: 110 !important;
+        }
 
         .cell {
             padding: 5px;
@@ -113,72 +135,281 @@
             font-size: 0.85rem;
         }
 
-        .header-cell { font-weight: 600; color: var(--text-secondary); flex-direction: column; }
-
-        .month-header {
-            grid-row: 1; top: 0; background: #f1f5f9; font-weight: 700; text-transform: uppercase;
-            font-size: 0.7rem; letter-spacing: 0.05em; line-height: 20px;
+        .header-cell {
+            font-weight: 600;
+            color: var(--text-secondary);
+            flex-direction: column;
         }
 
-        .day-header { grid-row: 3; top: 40px; align-items: center; justify-content: flex-start; padding: 5px 0; }
+        .month-header {
+            grid-row: 1;
+            top: 0;
+            background: #f1f5f9;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.05em;
+            line-height: 20px;
+        }
 
-        .employee-row-header { justify-content: flex-start; padding-left: 15px; font-weight: 600; background: var(--surface-color); position: relative; }
+        .day-header {
+            grid-row: 3;
+            top: 40px;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 5px 0;
+        }
 
-        .day-cell { cursor: pointer; transition: background 0.1s; position: relative; }
-        .cell-text { font-size: 0.6rem; color: white; pointer-events: none; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 100%; padding: 0 2px; }
+        .employee-row-header {
+            justify-content: flex-start;
+            padding-left: 15px;
+            font-weight: 600;
+            background: var(--surface-color);
+        }
 
-        .weekend { background-color: var(--status-weekend); }
-        .holiday { background-color: #fecaca; }
-        .day-header.holiday { background-color: #fecaca !important; }
-        
-        .school-holiday { border-top: 3px solid #94a3b8; }
-        .holiday.school-holiday { border-top: 3px solid #64748b; }
+        .day-cell {
+            cursor: pointer;
+            transition: background 0.1s;
+            position: relative;
+            user-select: none;
+            -webkit-user-select: none;
+        }
 
-        .day-cell.status-vacation { background-color: var(--status-vacation) !important; color: white !important; }
-        .day-cell.status-trip { background-color: var(--status-trip) !important; color: white !important; }
-        .day-cell.status-training { background-color: var(--status-training) !important; color: white !important; }
-        .day-cell.status-custom { background-color: var(--status-custom) !important; color: white !important; }
+        .cell-text {
+            font-size: 0.6rem;
+            color: white;
+            pointer-events: none;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            padding: 0 2px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
 
-        .month-nav { display: flex; gap: 5px; margin-bottom: 20px; flex-wrap: wrap; }
-        .month-nav button { padding: 4px 10px; font-size: 0.8rem; }
+        .weekend {
+            background-color: var(--status-weekend);
+        }
+
+        .holiday {
+            background-color: #fecaca;
+        }
+
+        .day-header.holiday {
+            background-color: #fecaca !important;
+        }
+
+        .school-holiday {
+            border-top: 3px solid #94a3b8;
+        }
+
+        .holiday.school-holiday {
+            border-top: 3px solid #64748b;
+        }
+
+        .day-cell.status-vacation {
+            background-color: var(--status-vacation) !important;
+            color: white !important;
+        }
+
+        .day-cell.status-trip {
+            background-color: var(--status-trip) !important;
+            color: white !important;
+        }
+
+        .day-cell.status-training {
+            background-color: var(--status-training) !important;
+            color: white !important;
+        }
+
+        .day-cell.status-custom {
+            background-color: var(--status-custom) !important;
+            color: white !important;
+        }
+
+        .month-nav {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .month-nav button {
+            padding: 4px 10px;
+            font-size: 0.8rem;
+        }
 
         #custom-tooltip {
-            position: fixed; background: #333; color: white; padding: 6px 10px; border-radius: 4px;
-            font-size: 0.8rem; z-index: 1000; pointer-events: none; display: none; max-width: 200px;
+            position: fixed;
+            background: #333;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            z-index: 1000;
+            pointer-events: none;
+            display: none;
+            max-width: 200px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
 
         .modal-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.5); display: none; align-items: center; justify-content: center; z-index: 1000;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
         }
 
-        .modal { background: var(--surface-color); padding: 25px; border-radius: var(--radius-lg); width: 450px; max-width: 95vw; box-shadow: var(--shadow-md); }
-        .modal h2 { margin-bottom: 20px; font-size: 1.3rem; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; }
-        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-md); }
+        .modal {
+            background: var(--surface-color);
+            padding: 25px;
+            border-radius: var(--radius-lg);
+            width: 450px;
+            max-width: 95vw;
+            box-shadow: var(--shadow-md);
+        }
 
-        body.pre-login header, body.pre-login .month-nav, body.pre-login #calendarView, body.pre-login .tab-container { display: none !important; }
+        .modal h2 {
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
 
-        .tab-container { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 15px; background: white; padding: 10px 15px 0; }
-        .tab-button { padding: 10px 20px; cursor: pointer; background: transparent; border: none; border-bottom: 3px solid transparent; font-size: 1rem; font-weight: bold; color: #64748b; margin-right: 10px; }
-        .tab-button.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+        }
+
+        body.pre-login header,
+        body.pre-login .month-nav,
+        body.pre-login #calendarView,
+        body.pre-login .tab-container {
+            display: none !important;
+        }
+
+        .tab-container {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 15px;
+            background: white;
+            padding: 10px 15px 0;
+        }
+
+        .tab-button {
+            padding: 10px 20px;
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-size: 1rem;
+            font-weight: bold;
+            color: #64748b;
+            margin-right: 10px;
+        }
+
+        .tab-button.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
 
         @media (max-width: 768px) {
-            body { padding: 4px; }
-            header { padding: 6px 10px; margin-bottom: 6px; }
-            .header-top { display: flex; flex-direction: row; justify-content: space-between; align-items: center; gap: 10px; }
-            h1 { font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-            .tab-container { margin-bottom: 6px; padding-top: 4px; }
-            .controls { display: flex; gap: 4px; }
-            .controls button { padding: 4px 6px; font-size: 0.7rem; width: auto; }
-            .calendar-container { grid-template-columns: 80px repeat(762, 40px); max-height: calc(100vh - 140px); }
-            .sticky-col { min-width: 80px; width: 80px; font-size: 0.75rem; }
-            .employee-row-header { padding-left: 5px; line-height: 1.2; word-break: break-word; }
-            .month-nav { overflow-x: auto; white-space: nowrap; padding-bottom: 5px; -webkit-overflow-scrolling: touch; display: block; }
-            .month-nav button { display: inline-block; padding: 8px 15px; margin-right: 5px; }
-            #btnAddAbsence { width: 100%; margin-left: 0 !important; padding: 10px !important; grid-column: span 2; }
+            body {
+                padding: 4px;
+            }
+
+            header {
+                padding: 6px 10px;
+                margin-bottom: 6px;
+            }
+
+            .header-top {
+                display: flex;
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                gap: 10px;
+            }
+
+            h1 {
+                font-size: 0.95rem;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .tab-container {
+                margin-bottom: 6px;
+                padding-top: 4px;
+            }
+
+            .controls {
+                display: flex;
+                gap: 4px;
+            }
+
+            .controls button {
+                padding: 4px 6px;
+                font-size: 0.7rem;
+                width: auto;
+            }
+
+            .calendar-container {
+                grid-template-columns: 80px repeat(762, 40px);
+                max-height: calc(100vh - 140px);
+            }
+
+            .sticky-col {
+                min-width: 80px;
+                width: 80px;
+                font-size: 0.75rem;
+            }
+
+            .employee-row-header {
+                padding-left: 5px;
+                line-height: 1.2;
+                word-break: break-word;
+            }
+
+            .month-nav {
+                overflow-x: auto;
+                white-space: nowrap;
+                padding-bottom: 5px;
+                -webkit-overflow-scrolling: touch;
+                display: block;
+            }
+
+            .month-nav button {
+                display: inline-block;
+                padding: 8px 15px;
+                margin-right: 5px;
+            }
+
+            #btnAddAbsence {
+                width: 100%;
+                margin-left: 0 !important;
+                padding: 10px !important;
+                grid-column: span 2;
+            }
         }
     </style>
 </head>
@@ -189,29 +420,43 @@
             <h1>Urlaubsplaner Assistenzärzte</h1>
             <div class="controls">
                 <button id="btnExport" onclick="app.exportData()">Export JSON</button>
-                <button id="btnImport" class="primary" onclick="document.getElementById('fileInput').click()">Import JSON</button>
+                <button id="btnImport" class="primary" onclick="document.getElementById('fileInput').click()">Import
+                    JSON</button>
                 <input type="file" id="fileInput" style="display:none" onchange="app.importData(this)">
             </div>
         </div>
         <div class="tab-container">
-            <button id="tab-calendar" class="tab-button active" onclick="app.switchTab('calendar')">Kalenderansicht</button>
-            <button id="tab-summary" class="tab-button" onclick="app.switchTab('summary')" style="display:none;">Zusammenfassung</button>
-            <button id="tab-status" class="tab-button" onclick="app.switchTab('status')" style="display:none;">Eingabestatus</button>
-            <button id="tab-admin" class="tab-button" onclick="app.switchTab('admin')" style="display:none;">Verwaltung</button>
+            <button id="tab-calendar" class="tab-button active"
+                onclick="app.switchTab('calendar')">Kalenderansicht</button>
+            <button id="tab-summary" class="tab-button" onclick="app.switchTab('summary')"
+                style="display:none;">Zusammenfassung</button>
+            <button id="tab-status" class="tab-button" onclick="app.switchTab('status')"
+                style="display:none;">Eingabestatus</button>
+            <button id="tab-admin" class="tab-button" onclick="app.switchTab('admin')"
+                style="display:none;">Verwaltung</button>
         </div>
     </header>
 
     <div id="calendarView">
-        <div class="calendar-toolbar" style="background:white; padding:10px; border-radius:8px; margin-bottom:10px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <div class="calendar-toolbar"
+            style="background:white; padding:10px; border-radius:8px; margin-bottom:10px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
             <button id="btnAddAbsence" class="primary" onclick="app.openModal()">+ Eintragen</button>
             <div id="absenceInputModePanel" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                 <strong style="font-size: 0.9rem">Modus:</strong>
-                <label onmouseenter="app.showSimpleTip(event, 'Urlaub')" onmouseleave="app.hideTip()"><input type="radio" name="mode" value="U" checked onchange="app.setMode('U')"> U</label>
-                <label onmouseenter="app.showSimpleTip(event, 'Dienstreise')" onmouseleave="app.hideTip()"><input type="radio" name="mode" value="D" onchange="app.setMode('D')"> D</label>
-                <label onmouseenter="app.showSimpleTip(event, 'Fortbildung')" onmouseleave="app.hideTip()"><input type="radio" name="mode" value="F" onchange="app.setMode('F')"> F</label>
-                <label onmouseenter="app.showSimpleTip(event, 'Sonstiges')" onmouseleave="app.hideTip()"><input type="radio" name="mode" value="S" onchange="app.setMode('S')"> S</label>
-                <input type="text" id="customText" placeholder="Art..." title="Erläuterung zur Abwesenheit" style="padding: 4px; border: 1px solid #ccc; border-radius: 4px;" oninput="app.setCustomText(this.value)">
-                <input type="text" id="vertreterText" placeholder="Vertreter..." title="Name der Vertretung" style="padding: 4px; border: 1px solid #ccc; border-radius: 4px;" oninput="app.setVertreterText(this.value)">
+                <label onmouseenter="app.showSimpleTip(event, 'Urlaub')" onmouseleave="app.hideTip()"><input
+                        type="radio" name="mode" value="U" checked onchange="app.setMode('U')"> U</label>
+                <label onmouseenter="app.showSimpleTip(event, 'Dienstreise')" onmouseleave="app.hideTip()"><input
+                        type="radio" name="mode" value="D" onchange="app.setMode('D')"> D</label>
+                <label onmouseenter="app.showSimpleTip(event, 'Fortbildung')" onmouseleave="app.hideTip()"><input
+                        type="radio" name="mode" value="F" onchange="app.setMode('F')"> F</label>
+                <label onmouseenter="app.showSimpleTip(event, 'Sonstiges')" onmouseleave="app.hideTip()"><input
+                        type="radio" name="mode" value="S" onchange="app.setMode('S')"> S</label>
+                <input type="text" id="customText" placeholder="Art..." title="Erläuterung zur Abwesenheit"
+                    style="padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+                    oninput="app.setCustomText(this.value)">
+                <input type="text" id="vertreterText" placeholder="Vertreter..." title="Name der Vertretung"
+                    style="padding: 4px; border: 1px solid #ccc; border-radius: 4px;"
+                    oninput="app.setVertreterText(this.value)">
             </div>
         </div>
         <div class="month-nav" id="yearNav"></div>
@@ -220,8 +465,10 @@
     </div>
 
     <div id="adminView" style="display:none; padding:20px;"></div>
-    <div id="summaryView" style="display:none; padding:20px;"><textarea id="exportSummary" readonly style="width:100%; height:400px;"></textarea></div>
-    <div id="statusView" style="display:none; padding:20px;"><textarea id="statusSummary" readonly style="width:100%; height:400px;"></textarea></div>
+    <div id="summaryView" style="display:none; padding:20px;"><textarea id="exportSummary" readonly
+            style="width:100%; height:400px;"></textarea></div>
+    <div id="statusView" style="display:none; padding:20px;"><textarea id="statusSummary" readonly
+            style="width:100%; height:400px;"></textarea></div>
 
     <div id="loginModal" class="modal-overlay" style="display:flex;">
         <div class="modal">
@@ -229,8 +476,11 @@
             <div class="form-group">
                 <label>Name:</label>
                 <div style="position:relative;">
-                    <input type="text" id="loginSearch" placeholder="Name suchen..." oninput="app.filterLoginEmployees()" autocomplete="off">
-                    <div id="loginResults" style="background:white; border:1px solid #ddd; max-height:150px; overflow-y:auto; position:absolute; left:0; right:0; z-index:100; display:none; box-shadow: var(--shadow-md);"></div>
+                    <input type="text" id="loginSearch" placeholder="Name suchen..."
+                        oninput="app.filterLoginEmployees()" autocomplete="off">
+                    <div id="loginResults"
+                        style="background:white; border:1px solid #ddd; max-height:150px; overflow-y:auto; position:absolute; left:0; right:0; z-index:100; display:none; box-shadow: var(--shadow-md);">
+                    </div>
                 </div>
                 <input type="hidden" id="loginSelect">
             </div>
@@ -244,7 +494,12 @@
         <div class="modal">
             <h2>Abwesenheit eintragen</h2>
             <div class="form-group"><label>Mitarbeiter:</label><select id="modalEmp"></select></div>
-            <div class="form-group"><label>Art:</label><select id="modalType"><option value="U">Urlaub</option><option value="D">Dienstreise</option><option value="F">Fortbildung</option><option value="S">Sonstiges</option></select></div>
+            <div class="form-group"><label>Art:</label><select id="modalType">
+                    <option value="U">Urlaub</option>
+                    <option value="D">Dienstreise</option>
+                    <option value="F">Fortbildung</option>
+                    <option value="S">Sonstiges</option>
+                </select></div>
             <div class="form-group"><label>Beschreibung:</label><input type="text" id="modalText"></div>
             <div class="form-group"><label>Vertreter:</label><input type="text" id="modalVertreter"></div>
             <div class="form-group"><label>Von:</label><input type="date" id="modalStart"></div>
@@ -266,7 +521,7 @@
                 return new Date(year, month - 1, day);
             }
             const easter = getEaster(year);
-            const add = (d, n) => { let r = new Date(d); r.setDate(r.getDate() + n); return `${r.getFullYear()}-${String(r.getMonth()+1).padStart(2,'0')}-${String(r.getDate()).padStart(2,'0')}`; };
+            const add = (d, n) => { let r = new Date(d); r.setDate(r.getDate() + n); return `${r.getFullYear()}-${String(r.getMonth() + 1).padStart(2, '0')}-${String(r.getDate()).padStart(2, '0')}`; };
             return {
                 [`${year}-01-01`]: 'Neujahr', [`${year}-01-06`]: 'Hl. 3 Könige', [`${year}-05-01`]: 'Tag der Arbeit', [`${year}-08-15`]: 'Mariä Himmelfahrt', [`${year}-10-03`]: 'Tag d. dt. Einheit', [`${year}-11-01`]: 'Allerheiligen', [`${year}-12-25`]: '1. Weihnachtstag', [`${year}-12-26`]: '2. Weihnachtstag',
                 [add(easter, -2)]: 'Karfreitag', [add(easter, 1)]: 'Ostermontag', [add(easter, 39)]: 'Christi Himmelfahrt', [add(easter, 50)]: 'Pfingstmontag', [add(easter, 60)]: 'Fronleichnam'
@@ -286,7 +541,7 @@
                 try { const res = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}/latest`, { headers: { 'X-Master-Key': CONFIG.apiKey } }); return (await res.json()).record; } catch (e) { return null; }
             }
             static async save(state) {
-                try { await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Master-Key': CONFIG.apiKey }, body: JSON.stringify({ employees: CONFIG.employees, state }) }); } catch (e) {}
+                try { await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Master-Key': CONFIG.apiKey }, body: JSON.stringify({ employees: CONFIG.employees, state }) }); } catch (e) { }
             }
         }
 
@@ -297,18 +552,39 @@
                 this.dates = this.generateDates();
                 this.initApp();
                 document.getElementById('calendar').addEventListener('scroll', () => this.updateNavHighlighting(), { passive: true });
-                document.addEventListener('mouseup', () => { 
-                    if (this.isDragging) { 
-                        this.isDragging = false; 
-                        this.dragLock = true; 
-                        setTimeout(() => this.dragLock = false, 200);
-                        this.saveState(); 
-                        this.render(); 
-                    } 
-                });
+                this.stopDrag = this.stopDrag.bind(this);
+                document.addEventListener('mouseup', this.stopDrag);
+                document.addEventListener('touchend', this.stopDrag);
+                document.addEventListener('touchcancel', this.stopDrag);
+                document.addEventListener('touchmove', (ev) => {
+                    if (this._longPressTimer) { clearTimeout(this._longPressTimer); this._longPressTimer = null; }
+                    if (this.isDragging) {
+                        ev.preventDefault();
+                        const touch = ev.touches[0];
+                        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+                        if (el && el.classList.contains('day-cell')) {
+                            const eid = el.dataset.eid, dStr = el.dataset.date;
+                            if (eid && dStr) {
+                                // Only paint if moved into an empty cell OR starting value was dragging out
+                                this.setVal(eid, dStr, this._dragVal, el);
+                            }
+                        }
+                    }
+                }, { passive: false });
             }
 
-            formatDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+            stopDrag() {
+                if (this._longPressTimer) { clearTimeout(this._longPressTimer); this._longPressTimer = null; }
+                if (this.isDragging) {
+                    this.isDragging = false;
+                    this.dragLock = true;
+                    setTimeout(() => this.dragLock = false, 200);
+                    this.saveState();
+                    this.render();
+                }
+            }
+
+            formatDate(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 
             generateDates() {
                 const res = [];
@@ -361,16 +637,16 @@
                 if (!id || !key) return alert('Daten fehlen');
                 localStorage.setItem('jsonbin_key', key); CONFIG.apiKey = key; this.currentUser = id;
                 document.getElementById('loginModal').style.display = 'none'; document.body.classList.remove('pre-login');
-                
+
                 const isAdmin = (id === 'admin' || id === 'sekretariat');
                 const isRealAdmin = (id === 'admin');
-                
+
                 document.querySelector('.tab-container').style.display = isAdmin ? 'flex' : 'none';
-                
+
                 // Control Export/Import button visibility
                 const btnExport = document.getElementById('btnExport');
                 if (btnExport) btnExport.style.display = isAdmin ? 'inline-block' : 'none';
-                
+
                 const btnImport = document.getElementById('btnImport');
                 if (btnImport) btnImport.style.display = isRealAdmin ? 'inline-block' : 'none';
 
@@ -426,13 +702,49 @@
                             const t = s.type || s; c.classList.add(t === 'U' || t === 'V' ? 'status-vacation' : t === 'D' ? 'status-trip' : t === 'F' ? 'status-training' : (t === 'S' || t === 'T' ? 'status-custom' : ''));
                             if (s.text) c.innerHTML = `<span class="cell-text">${s.text}</span>`;
                         }
-                        if (isMobile) { c.onclick = () => { if (!this.dragLock) this.editAbsence(e.id, d.dateStr); }; }
-                        else {
-                            c.onmousedown = (ev) => { if (ev.button === 0) { ev.preventDefault(); if (!this.checkPermission(e.id)) return; this.isDragging = true; this._dragVal = s ? null : { type: this.currentMode, text: this.currentText, vertreter: this.currentVertreterText }; this.setVal(e.id, d.dateStr, this._dragVal, c); } };
-                            c.onmouseover = () => { if (this.isDragging) this.setVal(e.id, d.dateStr, this._dragVal, c); };
-                            c.ondblclick = () => { if (!this.dragLock) this.editAbsence(e.id, d.dateStr); };
-                        }
+                        c.dataset.eid = e.id; c.dataset.date = d.dateStr;
+                        c.onmousedown = (ev) => {
+                            if (ev.button === 0) {
+                                ev.preventDefault();
+                                if (!this.checkPermission(e.id)) return;
+                                this.isDragging = true;
+                                const currentS = this.state[e.id]?.[d.dateStr];
+                                this._dragVal = currentS ? null : { type: this.currentMode, text: this.currentText, vertreter: this.currentVertreterText };
+                                this.setVal(e.id, d.dateStr, this._dragVal, c);
+                            }
+                        };
+                        c.onmouseover = () => { if (this.isDragging) this.setVal(e.id, d.dateStr, this._dragVal, c); };
+                        c.ondblclick = () => { if (!this.dragLock) this.editAbsence(e.id, d.dateStr); };
                         c.onmouseenter = (ev) => this.showTip(ev, e.id, d.dateStr); c.onmouseleave = () => this.hideTip();
+                        c.ontouchstart = (ev) => {
+                            const now = Date.now();
+                            if (this._lastTapCell === c && now - this._lastTapTime < 300) {
+                                if (ev.cancelable) ev.preventDefault();
+                                clearTimeout(this._longPressTimer); this._longPressTimer = null;
+                                if (!this.dragLock) this.editAbsence(e.id, d.dateStr);
+                                this._lastTapTime = 0; return;
+                            }
+                            this._lastTapTime = now; this._lastTapCell = c;
+                            this._longPressTimer = setTimeout(() => {
+                                if (!this.checkPermission(e.id)) return;
+                                this.isDragging = true;
+                                const currentS = this.state[e.id]?.[d.dateStr];
+                                this._dragVal = currentS ? null : { type: this.currentMode, text: this.currentText, vertreter: this.currentVertreterText };
+                                this.setVal(e.id, d.dateStr, this._dragVal, c);
+                                if (navigator.vibrate) navigator.vibrate(50);
+                            }, 400);
+                        };
+                        c.ontouchend = (ev) => {
+                            if (this._longPressTimer) {
+                                clearTimeout(this._longPressTimer); this._longPressTimer = null;
+                                if (ev.cancelable) ev.preventDefault();
+                                if (!this.checkPermission(e.id)) return;
+                                this.isDragging = true;
+                                const currentS = this.state[e.id]?.[d.dateStr];
+                                this._dragVal = currentS ? null : { type: this.currentMode, text: this.currentText, vertreter: this.currentVertreterText };
+                                this.setVal(e.id, d.dateStr, this._dragVal, c);
+                            }
+                        };
                         container.appendChild(c);
                     });
                 });
@@ -519,4 +831,5 @@
         const app = new App();
     </script>
 </body>
+
 </html>
