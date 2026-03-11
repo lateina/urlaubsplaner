@@ -300,6 +300,59 @@
             border-radius: var(--radius-md);
         }
 
+        .form-group input[type="checkbox"],
+        .form-group input[type="radio"] {
+            width: auto;
+            padding: 0;
+            margin: 0;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: var(--surface-color);
+            padding: 25px;
+            border-radius: var(--radius-lg);
+            width: 450px;
+            max-width: 95vw;
+            box-shadow: var(--shadow-md);
+        }
+
+        .modal h2 {
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+        }
+
         body.pre-login header,
         body.pre-login .month-nav,
         body.pre-login #calendarView,
@@ -411,6 +464,25 @@
                 grid-column: span 2;
             }
         }
+
+        /* Bulk Import Panel inside Header */
+        .bulk-import-panel {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .summary-section {
+            margin-top: 20px;
+            background: var(--surface-color);
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+        }
     </style>
 </head>
 
@@ -434,6 +506,23 @@
                 style="display:none;">Eingabestatus</button>
             <button id="tab-admin" class="tab-button" onclick="app.switchTab('admin')"
                 style="display:none;">Verwaltung</button>
+            <button id="tab-skills" class="tab-button" onclick="app.switchTab('skills')"
+                style="display:none;">Skillverwaltung</button>
+        </div>
+
+        <div id="bulkImportPanel" class="bulk-import-panel" style="display:none;">
+            <div class="form-group" style="max-width: 200px;">
+                <label>Import für:</label>
+                <select id="importEmp"></select>
+            </div>
+            <div class="form-group" style="flex: 2;">
+                <label>Format: TT.MM.YY [bis TT.MM.YY] Art [Vertreter: Name]</label>
+                <textarea id="importText" class="bulk-input" style="height: 60px"
+                    placeholder="z.B.: 01.01.26 bis 05.01.26 Urlaub Vertreter: Max Mustermann"></textarea>
+            </div>
+            <div style="display:flex; align-items:flex-end;">
+                <button class="primary" onclick="app.processBulkImport()">Importieren</button>
+            </div>
         </div>
     </header>
 
@@ -464,7 +553,62 @@
         <div id="calendar" class="calendar-container"></div>
     </div>
 
-    <div id="adminView" style="display:none; padding:20px;"></div>
+    <div id="adminView" style="display:none; padding: 20px;">
+        <div class="summary-section" style="margin-top: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="margin: 0;">Mitarbeiterverwaltung</h2>
+                <div>
+                    <button class="primary" onclick="app.openAddEmployeeModal()">+ Neuer Mitarbeiter</button>
+                    <button class="primary" onclick="app.saveEmployees()"
+                        style="background: var(--success-color);">Änderungen speichern</button>
+                </div>
+            </div>
+            <div
+                style="overflow-x: auto; max-height: 600px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #ccc; background: #f8fafc;">
+                            <th style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                ID (emp_xxx)</th>
+                            <th style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                Name</th>
+                            <th style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                E-Mail</th>
+                            <th style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                PIN</th>
+                            <th style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                Gruppe</th>
+                            <th
+                                style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10; text-align: center;">
+                                Aktiv</th>
+                            <th
+                                style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10; text-align: center;">
+                                Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminEmployeeTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="skillsView" style="display:none; padding: 20px;">
+        <div class="summary-section" style="margin-top: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="margin: 0;">Skillverwaltung / Mitarbeitergruppen</h2>
+                <div style="display:flex; gap: 10px; align-items:center;">
+                    <input type="text" id="newSkillName" placeholder="Neue Gruppe/Skill..."
+                        style="padding: 6px; border-radius: 4px; border: 1px solid #ccc;">
+                    <button class="primary" onclick="app.addSkill()">Hinzufügen</button>
+                </div>
+            </div>
+            <div id="adminSkillList"
+                style="display: flex; flex-direction: column; gap: 10px; max-height: 600px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; border-radius: 4px; background: #fff;">
+                <!-- Filled via JS -->
+            </div>
+        </div>
+    </div>
     <div id="summaryView" style="display:none; padding:20px;"><textarea id="exportSummary" readonly
             style="width:100%; height:400px;"></textarea></div>
     <div id="statusView" style="display:none; padding:20px;"><textarea id="statusSummary" readonly
@@ -513,6 +657,65 @@
 
     <div id="custom-tooltip"></div>
 
+    <div id="addEmployeeModal" class="modal-overlay">
+        <div class="modal">
+            <h2>Neuer Mitarbeiter</h2>
+            <div class="form-group">
+                <label>Employee ID (z.B. emp_00099)</label>
+                <input type="text" id="addEmpId" placeholder="Wird autogeneriert falls leer">
+            </div>
+            <div class="form-group">
+                <label>Vollständiger Name</label>
+                <input type="text" id="addEmpName" placeholder="Vorname Nachname">
+            </div>
+            <div class="form-group">
+                <label>E-Mail Adresse</label>
+                <input type="email" id="addEmpEmail" placeholder="email@klinik.uni-regensburg.de">
+            </div>
+            <div class="form-group">
+                <label>PIN (für Login)</label>
+                <input type="text" id="addEmpPin" placeholder="4-stellige Nummer">
+            </div>
+            <div class="form-group">
+                <label>Mitarbeitergruppen</label>
+                <div id="addEmpGroups"
+                    style="display: flex; flex-wrap: wrap; gap: 10px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                    <!-- Filled via JS -->
+                </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:20px;">
+                <button class="primary" onclick="app.confirmAddEmployee()">Speichern</button>
+                <button onclick="document.getElementById('addEmployeeModal').style.display='none'">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- iCal Export Modal -->
+    <div id="iCalExportModal" class="modal-overlay">
+        <div class="modal">
+            <h2>iCal Export Einstellungen</h2>
+            <p style="margin-bottom: 15px; font-size: 0.9rem; color: #555;">Wähle die Mitarbeiter aus, deren Daten in
+                die iCal-Datei exportiert werden sollen.</p>
+
+            <div class="form-group" style="margin-bottom: 10px;">
+                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                    <input type="checkbox" id="icalSelectAll" checked>
+                    <strong>Alle auswählen</strong>
+                </label>
+            </div>
+
+            <div id="icalEmpList"
+                style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+                <!-- Filled via JS -->
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap: 10px;">
+                <button onclick="document.getElementById('iCalExportModal').style.display='none'">Abbrechen</button>
+                <button class="primary" onclick="app.executeICalExport()">Exportieren</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         function getBavarianHolidays(year) {
             function getEaster(year) {
@@ -529,7 +732,8 @@
         }
 
         const CONFIG = {
-            years: [2026, 2027, 2028], binId: '699ffb53ae596e708f4b3de5', apiKey: localStorage.getItem('jsonbin_key') || '', employees: [], holidays: {},
+            years: [2026, 2027, 2028], binId: '699ffb53ae596e708f4b3de5', apiKey: localStorage.getItem('jsonbin_key') || '', employees: [], holidays: {}, skills: ['Station 50-52', 'Interm/ITS', 'Notaufnahme', 'Fremdrotation', 'Kardiologie'],
+            groupColors: { 'Station 50-52': '#3b82f6', 'Interm/ITS': '#6366f1', 'Notaufnahme': '#14b8a6', 'Fremdrotation': '#8b5cf6', 'Kardiologie': '#06b6d4', 'Chef': '#ef4444', 'Privat': '#84cc16' },
             schoolHolidays: [
                 { start: '2026-01-01', end: '2026-01-05', name: 'Weihnachtsferien' }, { start: '2026-02-16', end: '2026-02-20', name: 'Winterferien' }, { start: '2026-03-30', end: '2026-04-10', name: 'Osterferien' }, { start: '2026-05-26', end: '2026-06-05', name: 'Pfingstferien' }, { start: '2026-08-03', end: '2026-09-14', name: 'Sommerferien' }, { start: '2026-11-02', end: '2026-11-06', name: 'Herbstferien' }, { start: '2026-12-24', end: '2027-01-08', name: 'Weihnachtsferien' }, { start: '2027-02-08', end: '2027-02-12', name: 'Winterferien' }, { start: '2027-03-22', end: '2027-04-02', name: 'Osterferien' }, { start: '2027-05-18', end: '2027-05-28', name: 'Pfingstferien' }, { start: '2027-08-02', end: '2027-09-13', name: 'Sommerferien' }, { start: '2027-11-02', end: '2027-11-05', name: 'Herbstferien' }, { start: '2027-12-24', end: '2028-01-07', name: 'Weihnachtsferien' }
             ]
@@ -541,7 +745,7 @@
                 try { const res = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}/latest`, { headers: { 'X-Master-Key': CONFIG.apiKey } }); return (await res.json()).record; } catch (e) { return null; }
             }
             static async save(state) {
-                try { await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Master-Key': CONFIG.apiKey }, body: JSON.stringify({ employees: CONFIG.employees, state }) }); } catch (e) { }
+                try { await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Master-Key': CONFIG.apiKey }, body: JSON.stringify({ employees: CONFIG.employees, skills: CONFIG.skills, groupColors: CONFIG.groupColors, state }) }); } catch (e) { }
             }
         }
 
@@ -604,7 +808,12 @@
                 const storedKey = localStorage.getItem('jsonbin_key');
                 if (storedKey) { CONFIG.apiKey = storedKey; document.getElementById('apiKeyInput').value = storedKey; }
                 const data = await DataService.load();
-                if (data) { CONFIG.employees = data.employees; this.state = data.state || {}; }
+                if (data) {
+                    CONFIG.employees = data.employees || [];
+                    if (data.skills) CONFIG.skills = data.skills;
+                    if (data.groupColors) CONFIG.groupColors = data.groupColors;
+                    this.state = data.state || {};
+                }
                 this.initUI();
                 this.showLoginModal();
             }
@@ -616,7 +825,7 @@
             }
 
             showLoginModal() {
-                this._loginOptions = [{ id: 'admin', name: 'Admin' }, { id: 'sekretariat', name: 'Sekretariat' }, ...CONFIG.employees.filter(e => e.id !== 'admin' && e.active !== false).map(e => ({ id: e.id, name: e.name }))];
+                this._loginOptions = [{ id: 'admin', name: 'Admin' }, { id: 'sekretariat', name: 'Sekretariat' }, ...CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false).map(e => ({ id: e.id, name: e.name }))];
                 document.getElementById('loginSearch').onfocus = () => this.filterLoginEmployees();
             }
 
@@ -639,22 +848,46 @@
                 document.getElementById('loginModal').style.display = 'none'; document.body.classList.remove('pre-login');
 
                 const isAdmin = (id === 'admin' || id === 'sekretariat');
-                const isRealAdmin = (id === 'admin');
+                const adminOnly = (id === 'admin');
 
                 document.querySelector('.tab-container').style.display = isAdmin ? 'flex' : 'none';
 
-                // Control Export/Import button visibility
+                // Controls visibility
                 const btnExport = document.getElementById('btnExport');
                 if (btnExport) btnExport.style.display = isAdmin ? 'inline-block' : 'none';
-
+                const btnExportICal = document.getElementById('btnExportICal');
+                if (btnExportICal) btnExportICal.style.display = isAdmin ? 'inline-block' : 'none';
                 const btnImport = document.getElementById('btnImport');
-                if (btnImport) btnImport.style.display = isRealAdmin ? 'inline-block' : 'none';
+                if (btnImport) btnImport.style.display = adminOnly ? 'inline-block' : 'none';
 
                 document.getElementById('btnAddAbsence').style.display = (id === 'sekretariat' ? 'none' : 'inline-block');
+
+                // Tabs
+                ['admin', 'summary', 'status', 'skills'].forEach(t => {
+                    const el = document.getElementById('tab-' + t);
+                    if (el) {
+                        if (t === 'skills') el.style.display = adminOnly ? 'inline-block' : 'none';
+                        else el.style.display = isAdmin ? 'inline-block' : 'none';
+                    }
+                });
+
+                document.getElementById('bulkImportPanel').style.display = isAdmin ? 'flex' : 'none';
+
                 const mSel = document.getElementById('modalEmp'); mSel.innerHTML = '';
+                const iSel = document.getElementById('importEmp');
+                if (iSel) iSel.innerHTML = '';
+
                 const allowed = (isAdmin ? CONFIG.employees.filter(e => e.active !== false && e.id !== 'admin' && e.id !== 'sekretariat') : CONFIG.employees.filter(e => e.id === id));
-                allowed.forEach(e => { const o = document.createElement('option'); o.value = e.id; o.innerText = e.name; mSel.appendChild(o); });
+                allowed.forEach(e => {
+                    const o = document.createElement('option'); o.value = e.id; o.innerText = e.name; mSel.appendChild(o);
+                    if (iSel) {
+                        const o2 = document.createElement('option'); o2.value = e.id; o2.innerText = e.name; iSel.appendChild(o2);
+                    }
+                });
+
                 this.render();
+                this.updateSummary();
+                this.switchTab('calendar');
                 setTimeout(() => this.scrollToMonth(new Date().getMonth(), true), 500);
             }
 
@@ -688,10 +921,39 @@
                 });
 
                 const emps = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false);
+
+                // Sort employees by primary group priority (index in CONFIG.skills)
+                emps.sort((a, b) => {
+                    const gA = this.getPrimaryGrp(a), gB = this.getPrimaryGrp(b);
+                    if (gA === gB) return a.name.localeCompare(b.name);
+                    const iA = CONFIG.skills.indexOf(gA), iB = CONFIG.skills.indexOf(gB);
+                    const pA = iA === -1 ? 999 : iA, pB = iB === -1 ? 999 : iB;
+                    return pA - pB;
+                });
+
                 emps.forEach((e, ei) => {
                     const n = document.createElement('div'); n.className = 'cell employee-row-header sticky-col'; n.style.gridRow = ei + 4; n.style.gridColumn = '1';
+                    n.style.position = 'relative'; // For absolute labels
+
                     if (isMobile) { const p = e.name.split(' '); n.innerText = p[p.length - 1]; } else n.innerText = e.name;
                     if (this.currentUser === e.id) n.style.backgroundColor = '#e0f2fe';
+
+                    // Visual Grouping
+                    const grp = this.getPrimaryGrp(e);
+                    if (grp) {
+                        const color = this.getGroupColor(grp);
+                        n.style.borderLeft = `4px solid ${color}`;
+
+                        const prev = emps[ei - 1];
+                        if (!prev || this.getPrimaryGrp(prev) !== grp) {
+                            const lbl = document.createElement('span');
+                            lbl.innerText = grp;
+                            lbl.style.cssText = `position:absolute; top:2px; left:6px; font-size:0.55rem; color:${color}; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; pointer-events:none; background: rgba(255,255,255,0.8); padding: 0 2px; border-radius: 2px;`;
+                            n.appendChild(lbl);
+                            n.style.paddingTop = '16px'; // Make room for label
+                        }
+                    }
+
                     container.appendChild(n);
 
                     this.dates.forEach((d, di) => {
@@ -821,11 +1083,455 @@
                 if (t) t.style.display = 'none';
             }
 
-            switchTab(t) { ['calendar', 'summary', 'status', 'admin'].forEach(x => { const v = document.getElementById(x + 'View'); if (v) v.style.display = (x === t ? 'block' : 'none'); }); }
+            formatRange(start, end) {
+                const fmt = d => { const [y, m, day] = d.split('-'); return `${day}.${m}.`; };
+                const datePart = (start.date === end.date) ? fmt(start.date) : `${fmt(start.date)} - ${fmt(end.date)}`;
+                const t = { 'U': 'Urlaub', 'D': 'Dienstreise', 'F': 'Fortbildung', 'S': 'Sonstiges', 'T': 'Sonstiges' }[start.val.type] || 'Abwesend';
+                const txt = start.val.text ? `: ${start.val.text}` : '';
+                return `${datePart} (${t}${txt})`;
+            }
+
+            updateSummary() {
+                const list = [];
+                CONFIG.employees.forEach(emp => {
+                    if (emp.id === 'admin' || emp.id === 'sekretariat' || emp.active === false || !this.state[emp.id]) return;
+                    const entries = Object.keys(this.state[emp.id]).sort().map(d => ({ date: d, val: this.state[emp.id][d] }));
+                    if (entries.length === 0) return;
+
+                    const ranges = [];
+                    let rStart = entries[0], rEnd = entries[0];
+                    for (let i = 1; i < entries.length; i++) {
+                        const curr = entries[i];
+                        const d1 = new Date(rEnd.date); d1.setDate(d1.getDate() + 1);
+                        const isNext = this.formatDate(d1) === curr.date;
+                        const isSame = (rEnd.val.type === curr.val.type) && (rEnd.val.text === curr.val.text);
+                        if (isNext && isSame) { rEnd = curr; }
+                        else { ranges.push(this.formatRange(rStart, rEnd)); rStart = curr; rEnd = curr; }
+                    }
+                    ranges.push(this.formatRange(rStart, rEnd));
+                    list.push(`${emp.name}: ${ranges.join(', ')}`);
+                });
+                const summaryEl = document.getElementById('exportSummary');
+                if (summaryEl) summaryEl.value = list.join('\n');
+            }
+
+            switchTab(tabId) {
+                ['calendar', 'summary', 'status', 'admin', 'skills'].forEach(x => {
+                    const btn = document.getElementById('tab-' + x);
+                    if (btn) {
+                        if (x === tabId) btn.classList.add('active');
+                        else btn.classList.remove('active');
+                    }
+                    const v = document.getElementById(x + 'View');
+                    if (v) v.style.display = (x === tabId ? 'block' : 'none');
+                });
+
+                const bulkPanel = document.getElementById('bulkImportPanel');
+                if (tabId === 'calendar' && (this.currentUser === 'admin' || this.currentUser === 'sekretariat')) bulkPanel.style.display = 'flex';
+                else bulkPanel.style.display = 'none';
+
+                if (tabId === 'calendar') this.render();
+                if (tabId === 'admin') this.renderAdminTable();
+                if (tabId === 'skills') this.renderSkillsAdmin();
+            }
+
+            renderAdminTable() {
+                const tbody = document.getElementById('adminEmployeeTable'); tbody.innerHTML = '';
+                CONFIG.employees.forEach(emp => {
+                    if (emp.id === 'admin' || emp.id === 'sekretariat') return;
+                    this.createEmployeeRow(tbody, emp);
+                });
+            }
+
+            createEmployeeRow(tbody, emp) {
+                const tr = document.createElement('tr'); tr.style.borderBottom = '1px solid #eee';
+
+                // Construct skill checkboxes HTML
+                let skillsHtml = '';
+                CONFIG.skills.forEach(skill => {
+                    const isChecked = (emp.groups || []).includes(skill);
+                    skillsHtml += `
+                        <label style="display: flex; align-items: center; gap: 4px; font-weight: normal; font-size: 0.75rem; white-space: nowrap;">
+                            <input type="checkbox" value="${skill}" ${isChecked ? 'checked' : ''} class="skill-checkbox" data-id="${emp.id}"> ${skill}
+                        </label>`;
+                });
+
+                tr.innerHTML = `
+                    <td style="padding: 5px;"><input type="text" value="${emp.id}" data-field="id" data-id="${emp.id}" style="width: 100px; padding: 4px;"></td>
+                    <td style="padding: 5px;"><input type="text" value="${emp.name}" data-field="name" data-id="${emp.id}" style="width: 100%; padding: 4px;"></td>
+                    <td style="padding: 5px;"><input type="text" value="${emp.email || ''}" data-field="email" data-id="${emp.id}" style="width: 100%; padding: 4px;"></td>
+                    <td style="padding: 5px;"><input type="text" value="${emp.pin || ''}" data-field="pin" data-id="${emp.id}" style="width: 60px; padding: 4px;"></td>
+                    <td style="padding: 5px;"><div style="display: flex; flex-wrap: wrap; gap: 8px; padding: 2px; border: 1px solid #eee; border-radius: 4px; min-width: 200px;">${skillsHtml}</div></td>
+                    <td style="padding: 5px; text-align: center;"><input type="checkbox" ${emp.active !== false ? 'checked' : ''} data-field="active" data-id="${emp.id}"></td>
+                    <td style="padding: 5px; text-align: center;"><button class="primary" style="background: var(--danger-color); padding: 4px 8px; font-size: 0.8rem;" onclick="app.deleteEmployee('${emp.id}')">Löschen</button></td>
+                `;
+
+                // Handle changes for main input fields
+                const inputs = tr.querySelectorAll('input:not(.skill-checkbox)');
+                inputs.forEach(input => {
+                    input.onchange = (e) => {
+                        const field = e.target.getAttribute('data-field'), oldId = e.target.getAttribute('data-id');
+                        const targetEmp = CONFIG.employees.find(x => x.id === oldId);
+                        if (targetEmp) {
+                            if (field === 'active') targetEmp[field] = e.target.checked;
+                            else { targetEmp[field] = e.target.value; if (field === 'id') inputs.forEach(inp => inp.setAttribute('data-id', e.target.value)); }
+                        }
+                    };
+                });
+
+                // Handle changes for skill checkboxes
+                const skillCbs = tr.querySelectorAll('.skill-checkbox');
+                skillCbs.forEach(cb => {
+                    cb.onchange = (e) => {
+                        const skill = e.target.value;
+                        const targetId = e.target.getAttribute('data-id');
+                        const targetEmp = CONFIG.employees.find(x => x.id === targetId);
+                        if (targetEmp) {
+                            if (!targetEmp.groups) targetEmp.groups = [];
+                            if (e.target.checked) {
+                                if (!targetEmp.groups.includes(skill)) targetEmp.groups.push(skill);
+                            } else {
+                                targetEmp.groups = targetEmp.groups.filter(g => g !== skill);
+                            }
+                        }
+                        this.render(); // Update calendar grouping
+                    };
+                });
+
+                tbody.appendChild(tr);
+            }
+
+            deleteEmployee(empId) {
+                if (confirm('Mitarbeiter wirklich löschen? Werden nach dem "Änderungen speichern" wirksam.')) {
+                    CONFIG.employees = CONFIG.employees.filter(e => e.id !== empId);
+                    this.renderAdminTable();
+                }
+            }
+
+            getPrimaryGrp(emp) {
+                const grps = Array.isArray(emp.groups) ? emp.groups : [];
+                if (grps.length === 0) return '';
+                // The priority is determined by the index in CONFIG.skills
+                let best = CONFIG.skills.length, res = '';
+                grps.forEach(g => {
+                    const i = CONFIG.skills.indexOf(g);
+                    if (i !== -1 && i < best) { best = i; res = g; }
+                });
+                return res;
+            }
+
+            getGroupColor(skillName) {
+                if (CONFIG.groupColors[skillName]) return CONFIG.groupColors[skillName];
+                const baseColors = [
+                    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+                    '#06b6d4', '#ec4899', '#6366f1', '#14b8a6', '#f97316'
+                ];
+                const index = CONFIG.skills.indexOf(skillName);
+                return index !== -1 ? baseColors[index % baseColors.length] : '#64748b';
+            }
+
+            moveSkill(index, direction) {
+                if (direction === 'up' && index > 0) {
+                    const temp = CONFIG.skills[index];
+                    CONFIG.skills[index] = CONFIG.skills[index - 1];
+                    CONFIG.skills[index - 1] = temp;
+                } else if (direction === 'down' && index < CONFIG.skills.length - 1) {
+                    const temp = CONFIG.skills[index];
+                    CONFIG.skills[index] = CONFIG.skills[index + 1];
+                    CONFIG.skills[index + 1] = temp;
+                } else {
+                    return;
+                }
+                this.renderSkillsAdmin();
+                this.render(); // Update calendar grouping
+                // Save updated order
+                document.body.style.cursor = 'wait';
+                DataService.save(this.state).finally(() => { document.body.style.cursor = 'default'; });
+            }
+
+            renderSkillsAdmin() {
+                const list = document.getElementById('adminSkillList');
+                if (!list) return;
+                list.innerHTML = '';
+
+                CONFIG.skills.forEach((skill, index) => {
+                    const row = document.createElement('div');
+                    row.style.display = 'flex'; row.style.justifyContent = 'space-between'; row.style.alignItems = 'center'; row.style.padding = '8px'; row.style.borderBottom = '1px solid #eee';
+
+                    const nameSpan = document.createElement('span');
+                    nameSpan.innerText = skill;
+                    nameSpan.style.fontWeight = 'bold';
+
+                    const actionContainer = document.createElement('div');
+                    actionContainer.style.display = 'flex'; actionContainer.style.gap = '8px'; actionContainer.style.alignItems = 'center';
+
+                    const colorPicker = document.createElement('input');
+                    colorPicker.type = 'color';
+                    colorPicker.value = this.getGroupColor(skill);
+                    colorPicker.title = 'Farbe für diese Gruppe ändern';
+                    colorPicker.style.width = '30px'; colorPicker.style.height = '30px'; colorPicker.style.padding = '2px'; colorPicker.style.border = 'none'; colorPicker.style.cursor = 'pointer';
+                    colorPicker.onchange = (e) => {
+                        CONFIG.groupColors[skill] = e.target.value;
+                        this.render(); // Re-render calendar to show new color
+                        document.body.style.cursor = 'wait';
+                        DataService.save(this.state).finally(() => { document.body.style.cursor = 'default'; });
+                    };
+
+                    const upBtn = document.createElement('button');
+                    upBtn.innerText = '↑'; upBtn.style.padding = '4px 10px'; upBtn.className = 'primary';
+                    upBtn.disabled = (index === 0);
+                    upBtn.onclick = () => this.moveSkill(index, 'up');
+
+                    const downBtn = document.createElement('button');
+                    downBtn.innerText = '↓'; downBtn.style.padding = '4px 10px'; downBtn.className = 'primary';
+                    downBtn.disabled = (index === CONFIG.skills.length - 1);
+                    downBtn.onclick = () => this.moveSkill(index, 'down');
+
+                    const delBtn = document.createElement('button');
+                    delBtn.innerText = 'Löschen';
+                    delBtn.style.padding = '4px 8px'; delBtn.style.fontSize = '0.8rem'; delBtn.style.background = 'var(--danger-color)'; delBtn.className = 'primary';
+                    delBtn.onclick = () => this.deleteSkill(skill);
+
+                    actionContainer.appendChild(colorPicker);
+                    actionContainer.appendChild(upBtn);
+                    actionContainer.appendChild(downBtn);
+                    actionContainer.appendChild(delBtn);
+
+                    row.appendChild(nameSpan);
+                    row.appendChild(actionContainer);
+                    list.appendChild(row);
+                });
+            }
+
+            addSkill() {
+                const input = document.getElementById('newSkillName');
+                const val = input.value.trim();
+                if (!val) return alert('Bitte einen Namen für den Skill eingeben.');
+                if (CONFIG.skills.includes(val)) return alert('Dieser Skill existiert bereits.');
+
+                CONFIG.skills.push(val);
+                input.value = '';
+                this.renderSkillsAdmin();
+                this.render(); // Sync calendar
+
+                // Immediately save the updated list of skills
+                document.body.style.cursor = 'wait';
+                DataService.save(this.state).finally(() => { document.body.style.cursor = 'default'; });
+            }
+
+            deleteSkill(skillName) {
+                if (confirm(`Soll der Skill "${skillName}" wirklich entfernt werden? Dies ändert nicht rückwirkend die Skills bereits angelegter Mitarbeiter.`)) {
+                    CONFIG.skills = CONFIG.skills.filter(s => s !== skillName);
+
+                    // Optional: remove skill from all employees instantly to prevent stale data
+                    CONFIG.employees.forEach(emp => {
+                        if (emp.groups && emp.groups.includes(skillName)) {
+                            emp.groups = emp.groups.filter(g => g !== skillName);
+                        }
+                    });
+
+                    this.renderSkillsAdmin();
+                    this.render(); // Sync calendar
+
+                    document.body.style.cursor = 'wait';
+                    DataService.save(this.state).finally(() => { document.body.style.cursor = 'default'; });
+                }
+            }
+
+            openAddEmployeeModal() {
+                document.getElementById('addEmpId').value = '';
+                document.getElementById('addEmpName').value = '';
+                document.getElementById('addEmpEmail').value = '';
+                document.getElementById('addEmpPin').value = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+
+                // Dynamically build checkboxes for skills
+                const groupDiv = document.getElementById('addEmpGroups');
+                groupDiv.innerHTML = '';
+                CONFIG.skills.forEach(skill => {
+                    const label = document.createElement('label');
+                    label.style.display = 'flex'; label.style.alignItems = 'center'; label.style.gap = '4px'; label.style.fontWeight = 'normal';
+
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox'; cb.value = skill;
+
+                    label.appendChild(cb);
+                    label.appendChild(document.createTextNode(' ' + skill));
+                    groupDiv.appendChild(label);
+                });
+
+                document.getElementById('addEmployeeModal').style.display = 'flex';
+            }
+
+            confirmAddEmployee() {
+                let id = document.getElementById('addEmpId').value.trim(), name = document.getElementById('addEmpName').value.trim();
+                const email = document.getElementById('addEmpEmail').value.trim(), pin = document.getElementById('addEmpPin').value.trim();
+                if (!name) return alert('Bitte einen Namen eingeben.');
+                if (!id) {
+                    let maxId = 0;
+                    CONFIG.employees.forEach(e => { if (e.id.startsWith('emp_')) { const num = parseInt(e.id.replace('emp_', ''), 10); if (!isNaN(num) && num > maxId) maxId = num; } });
+                    id = 'emp_' + String(maxId + 1).padStart(5, '0');
+                }
+                if (CONFIG.employees.some(e => e.id === id)) return alert('Ein Mitarbeiter mit dieser ID existiert bereits!');
+
+                const groupCheckboxes = document.querySelectorAll('#addEmpGroups input[type="checkbox"]:checked');
+                const selectedGroups = Array.from(groupCheckboxes).map(cb => cb.value);
+
+                CONFIG.employees.push({ id, name, email, role: 'Assistenzarzt', pin, active: true, groups: selectedGroups });
+                this.renderAdminTable();
+                document.getElementById('addEmployeeModal').style.display = 'none';
+            }
+
+            saveEmployees() {
+                if (confirm('Änderungen an den Mitarbeitern speichern?')) {
+                    const admins = CONFIG.employees.filter(e => e.id === 'admin' || e.id === 'sekretariat');
+                    const others = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat');
+                    others.sort((a, b) => (a.name.split(' ').pop() || '').toLowerCase().localeCompare((b.name.split(' ').pop() || '').toLowerCase()));
+                    CONFIG.employees = [...admins, ...others];
+
+                    document.body.style.cursor = 'wait';
+                    DataService.save(this.state).then(() => {
+                        document.body.style.cursor = 'default';
+                        // Rebuild UI immediately
+                        this.processLogin();
+                        alert('Mitarbeiter wurden gespeichert!');
+                    });
+                }
+            }
+
+            processBulkImport() {
+                const empId = document.getElementById('importEmp').value;
+                const text = document.getElementById('importText').value.trim();
+                if (!text || !empId) return alert('Bitte Mitarbeiter und Text angeben.');
+
+                const lines = text.split('\n');
+                let count = 0;
+
+                if (!this.state[empId]) this.state[empId] = {};
+
+                lines.forEach(line => {
+                    line = line.trim();
+                    if (!line) return;
+
+                    let start, end, descRaw;
+                    let match = line.match(/(\d{1,2})\.(\d{1,2})\.(?:(\d{2,4})?)\s*(?:bis|-)\s*(\d{1,2})\.(\d{1,2})\.(?:(\d{2,4})?)\s*(.*)/i);
+                    if (match) {
+                        const [, d1, m1, y1, d2, m2, y2, desc] = match;
+                        start = this.parseDate(d1, m1, y1); end = this.parseDate(d2, m2, y2); descRaw = desc;
+                    } else {
+                        match = line.match(/(\d{1,2})\.(\d{1,2})\.(?:(\d{2,4})?)\s*(.*)/i);
+                        if (match) {
+                            const [, d1, m1, y1, desc] = match;
+                            start = this.parseDate(d1, m1, y1); end = new Date(start); descRaw = desc;
+                        }
+                    }
+
+                    if (start && end && start <= end) {
+                        let type = 'T', desc = descRaw ? descRaw.trim() : '', vertreter = '';
+                        const vertMatch = desc.match(/(?:Vertreter|Vertr|V):?\s*(.*)/i);
+                        if (vertMatch) { vertreter = vertMatch[1].trim(); desc = desc.replace(/(?:Vertreter|Vertr|V):?\s*.*/i, '').trim(); }
+
+                        const lowerDesc = desc.toLowerCase();
+                        if (lowerDesc.includes('urlaub')) type = 'U';
+                        else if (lowerDesc.includes('dienstreise')) type = 'D';
+                        else if (lowerDesc.includes('fortbildung')) type = 'F';
+
+                        let curr = new Date(start);
+                        const val = { type, text: desc, vertreter };
+
+                        while (curr <= end) {
+                            const dStr = this.formatDate(curr);
+                            if (dStr.startsWith('2026') || dStr.startsWith('2027') || dStr.startsWith('2028')) {
+                                this.setVal(empId, dStr, val);
+                            }
+                            curr.setDate(curr.getDate() + 1);
+                        }
+                        count++;
+                    }
+                });
+                alert(`${count} Einträge verarbeitet.`);
+                document.getElementById('importText').value = '';
+                this.saveState();
+                this.updateSummary();
+            }
+
+            parseDate(d, m, y) {
+                let year = y ? parseInt(y) : this.currentYear;
+                if (isNaN(year)) year = this.currentYear;
+                if (year < 100) year += 2000;
+                return new Date(year, parseInt(m) - 1, parseInt(d));
+            }
+
+            exportICal() {
+                const list = document.getElementById('icalEmpList');
+                list.innerHTML = '';
+                const activeEmps = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false);
+
+                activeEmps.forEach(emp => {
+                    const label = document.createElement('label');
+                    label.style.display = 'block'; label.style.padding = '4px 0'; label.style.fontSize = '0.9rem'; label.style.cursor = 'pointer';
+                    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = emp.id; cb.checked = true; cb.className = 'ical-emp-cb';
+                    label.appendChild(cb); label.appendChild(document.createTextNode(' ' + emp.name));
+                    list.appendChild(label);
+                });
+
+                document.getElementById('icalSelectAll').onchange = (e) => {
+                    document.querySelectorAll('.ical-emp-cb').forEach(c => c.checked = e.target.checked);
+                };
+                document.getElementById('iCalExportModal').style.display = 'flex';
+            }
+
+            executeICalExport() {
+                const selectedIds = Array.from(document.querySelectorAll('.ical-emp-cb:checked')).map(cb => cb.value);
+                if (selectedIds.length === 0) return alert('Bitte mindestens einen Mitarbeiter auswählen!');
+
+                let icalContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Urlaubsplaner Assistenzärzte//DE\nCALSCALE:GREGORIAN\n";
+                const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+                selectedIds.forEach(empId => {
+                    const empName = CONFIG.employees.find(e => e.id === empId)?.name || empId;
+                    if (!this.state[empId]) return;
+
+                    const dates = Object.keys(this.state[empId]).sort();
+                    if (dates.length === 0) return;
+
+                    // Group consecutive blocks just like updateSummary does
+                    let blocks = [], cBlock = null;
+                    dates.forEach(d => {
+                        const val = this.state[empId][d], dDate = new Date(d);
+                        if (!cBlock) cBlock = { start: dDate, end: new Date(dDate), val };
+                        else {
+                            const expectedNext = new Date(cBlock.end); expectedNext.setDate(expectedNext.getDate() + 1);
+                            if (this.formatDate(expectedNext) === d && cBlock.val.type === val.type && cBlock.val.text === val.text) cBlock.end = new Date(dDate);
+                            else { blocks.push(cBlock); cBlock = { start: dDate, end: new Date(dDate), val }; }
+                        }
+                    });
+                    if (cBlock) blocks.push(cBlock);
+
+                    blocks.forEach(b => {
+                        const typeMap = { 'U': 'Urlaub', 'D': 'Dienstreise', 'F': 'Fortbildung', 'S': 'Sonstiges', 'T': 'Sonstiges' };
+                        const summary = `${empName}: ${typeMap[b.val.type] || 'Abwesend'}${b.val.text ? ` (${b.val.text})` : ''}`;
+                        let desc = `Vertreter: ${b.val.vertreter || 'Keiner'}`;
+                        const dtStart = b.start.toISOString().replace(/[-:]/g, '').split('T')[0];
+                        const tempEnd = new Date(b.end); tempEnd.setDate(tempEnd.getDate() + 1);
+                        const dtEnd = tempEnd.toISOString().replace(/[-:]/g, '').split('T')[0];
+                        const uid = `${empId}-${dtStart}-urlaubsplaner@klinik`;
+
+                        icalContent += `BEGIN:VEVENT\nUID:${uid}\nDTSTAMP:${now}\nDTSTART;VALUE=DATE:${dtStart}\nDTEND;VALUE=DATE:${dtEnd}\nSUMMARY:${summary}\nDESCRIPTION:${desc}\nEND:VEVENT\n`;
+                    });
+                });
+
+                icalContent += "END:VCALENDAR";
+                const file = new Blob([icalContent], { type: 'text/calendar;charset=utf-8' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(file); a.download = 'abwesenheiten_assistenz.ics'; a.click();
+                URL.revokeObjectURL(a.href);
+                document.getElementById('iCalExportModal').style.display = 'none';
+            }
+
             setMode(m) { this.currentMode = m; }
             setCustomText(t) { this.currentText = t; }
             setVertreterText(t) { this.currentVertreterText = t; }
-            saveState() { DataService.save(this.state); }
+            saveState() { DataService.save(this.state); this.updateSummary(); }
             exportData() { const d = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.state)); const a = document.createElement('a'); a.href = d; a.download = "assistenz_planer.json"; a.click(); }
         }
         const app = new App();

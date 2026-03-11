@@ -330,6 +330,13 @@
             border-radius: var(--radius-md);
         }
 
+        .form-group input[type="checkbox"],
+        .form-group input[type="radio"] {
+            width: auto;
+            padding: 0;
+            margin: 0;
+        }
+
         body.pre-login header,
         body.pre-login .month-nav,
         body.pre-login #calendarView,
@@ -441,6 +448,64 @@
                 grid-column: span 2;
             }
         }
+
+        /* Bulk Import Panel inside Header */
+        .bulk-import-panel {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .summary-section {
+            margin-top: 20px;
+            background: var(--surface-color);
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+        }
+
+        .summary-section h2 {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: var(--text-main);
+        }
+
+        #exportSummary,
+        #statusSummary {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-family: inherit;
+            font-size: 0.85rem;
+            resize: vertical;
+            background: #f8fafc;
+            color: var(--text-main);
+        }
+
+        /* Admin Table Input Styling */
+        #adminEmployeeTable input[type="text"] {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+
+        #adminEmployeeTable input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background: #fff;
+        }
+
+        #adminEmployeeTable tr:hover {
+            background: #f8fafc;
+        }
     </style>
 </head>
 
@@ -466,6 +531,21 @@
                 style="display:none;">Eingabestatus</button>
             <button id="tab-admin" class="tab-button" onclick="app.switchTab('admin')"
                 style="display:none;">Mitarbeiterverwaltung</button>
+        </div>
+
+        <div id="bulkImportPanel" class="bulk-import-panel" style="display:none;">
+            <div class="form-group" style="max-width: 200px;">
+                <label>Import für:</label>
+                <select id="importEmp"></select>
+            </div>
+            <div class="form-group" style="flex: 2;">
+                <label>Format: TT.MM.YY [bis TT.MM.YY] Art [Vertreter: Name]</label>
+                <textarea id="importText" class="bulk-input" style="height: 60px"
+                    placeholder="z.B.: 01.01.26 bis 05.01.26 Urlaub Vertreter: Max Mustermann"></textarea>
+            </div>
+            <div style="display:flex; align-items:flex-end;">
+                <button class="primary" onclick="app.processBulkImport()">Importieren</button>
+            </div>
         </div>
     </header>
 
@@ -496,11 +576,58 @@
         <div id="calendar" class="calendar-container"></div>
     </div>
 
-    <div id="adminView" style="display:none; padding: 20px;"></div>
-    <div id="summaryView" style="display:none; padding: 20px;"><textarea id="exportSummary" readonly
-            style="width:100%; height:400px;"></textarea></div>
-    <div id="statusView" style="display:none; padding: 20px;"><textarea id="statusSummary" readonly
-            style="width:100%; height:400px;"></textarea></div>
+    <div id="adminView" style="display:none; padding: 20px;">
+        <div class="summary-section" style="margin-top: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="margin: 0;">Mitarbeiterverwaltung</h2>
+                <div>
+                    <button class="primary" onclick="app.openAddEmployeeModal()">+ Neuer Mitarbeiter</button>
+                    <button class="primary" onclick="app.saveEmployees()"
+                        style="background: var(--success-color);">Änderungen speichern</button>
+                </div>
+            </div>
+            <div
+                style="overflow-x: auto; max-height: 600px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #ccc; background: #f8fafc;">
+                            <th style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                ID (emp_xxx)</th>
+                            <th style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                Name</th>
+                            <th style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                E-Mail</th>
+                            <th style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                PIN</th>
+                            <th style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                Gruppe</th>
+                            <th
+                                style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10; text-align: center;">
+                                Aktiv</th>
+                            <th
+                                style="padding: 12px 8px; position: sticky; top: 0; background: #f8fafc; z-index: 10; text-align: center;">
+                                Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminEmployeeTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div id="summaryView" style="display:none; padding: 20px;">
+        <div class="summary-section" style="margin-top: 0;">
+            <h2>Zusammenfassung (Abwesenheiten)</h2>
+            <textarea id="exportSummary" readonly placeholder="Automatische Zusammenfassung..."
+                style="height: 400px;"></textarea>
+        </div>
+    </div>
+    <div id="statusView" style="display:none; padding: 20px;">
+        <div class="summary-section" style="margin-top: 0;">
+            <h2>Eingabestatus</h2>
+            <textarea id="statusSummary" readonly placeholder="Noch niemand fertig..."
+                style="height: 400px; color: var(--success-color); font-weight: bold;"></textarea>
+        </div>
+    </div>
 
     <div id="loginModal" class="modal-overlay" style="display:flex;">
         <div class="modal">
@@ -539,6 +666,83 @@
             <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
                 <button onclick="document.getElementById('addModal').style.display='none'">Abbrechen</button>
                 <button class="primary" onclick="app.addRange()">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="addEmployeeModal" class="modal-overlay">
+        <div class="modal">
+            <h2>Neuer Mitarbeiter</h2>
+            <div class="form-group">
+                <label>Employee ID (z.B. emp_00099)</label>
+                <input type="text" id="addEmpId" placeholder="Wird autogeneriert falls leer">
+            </div>
+            <div class="form-group">
+                <label>Vollständiger Name</label>
+                <input type="text" id="addEmpName" placeholder="Vorname Nachname">
+            </div>
+            <div class="form-group">
+                <label>E-Mail Adresse</label>
+                <input type="email" id="addEmpEmail" placeholder="email@klinik.uni-regensburg.de">
+            </div>
+            <div class="form-group">
+                <label>PIN (für Login)</label>
+                <input type="text" id="addEmpPin" placeholder="4-stellige Nummer">
+            </div>
+            <div class="form-group">
+                <label>Mitarbeitergruppen</label>
+                <div id="addEmpGroups"
+                    style="display: flex; flex-wrap: wrap; gap: 10px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
+                            type="checkbox" value="Chef"> Chef</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
+                            type="checkbox" value="Privat"> Privat</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
+                            type="checkbox" value="TAVI"> TAVI</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
+                            type="checkbox" value="TEER"> TEER</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
+                            type="checkbox" value="Herzkatheter"> Herzkatheter</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
+                            type="checkbox" value="Echo"> Echo</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
+                            type="checkbox" value="EPU"> EPU</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
+                            type="checkbox" value="Intensiv"> Intensiv</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
+                            type="checkbox" value="Pneumo"> Pneumo</label>
+                    <label style="display: flex; align-items: center; gap: 4px; font-weight: normal;"><input
+                            type="checkbox" value="Ambulanz"> Ambulanz</label>
+                </div>
+            </div>
+            <div style="display:flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button onclick="document.getElementById('addEmployeeModal').style.display='none'">Abbrechen</button>
+                <button class="primary" onclick="app.confirmAddEmployee()">Hinzufügen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- iCal Export Modal -->
+    <div id="iCalExportModal" class="modal-overlay">
+        <div class="modal">
+            <h2>iCal Exportieren</h2>
+            <div class="form-group">
+                <label>Zeitraum (Von - Bis)</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="date" id="icalStart" value="2026-01-01" style="flex: 1;">
+                    <input type="date" id="icalEnd" value="2026-12-31" style="flex: 1;">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Mitarbeiter auswählen</label>
+                <div id="icalEmpCheckboxes"
+                    style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); padding: 5px; border-radius: var(--radius-md);">
+                    <!-- Checkboxes generated by JS -->
+                </div>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 20px;">
+                <button onclick="document.getElementById('iCalExportModal').style.display='none'">Abbrechen</button>
+                <button class="primary" onclick="app.executeICalExport()">Exportieren</button>
             </div>
         </div>
     </div>
@@ -651,7 +855,7 @@
             }
 
             showLoginModal() {
-                this._loginOptions = [{ id: 'admin', name: 'Admin' }, { id: 'sekretariat', name: 'Sekretariat' }, ...CONFIG.employees.filter(e => e.id !== 'admin' && e.active !== false).map(e => ({ id: e.id, name: e.name }))];
+                this._loginOptions = [{ id: 'admin', name: 'Admin' }, { id: 'sekretariat', name: 'Sekretariat' }, ...CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false).map(e => ({ id: e.id, name: e.name }))];
                 document.getElementById('loginSearch').onfocus = () => this.filterLoginEmployees();
             }
 
@@ -690,9 +894,25 @@
 
                 document.getElementById('btnAddAbsence').style.display = (id === 'sekretariat' ? 'none' : 'inline-block');
 
+                const adminInlineStyle = isAdmin ? 'inline-block' : 'none';
+                const tabAdmin = document.getElementById('tab-admin');
+                if (tabAdmin) tabAdmin.style.display = isRealAdmin ? 'inline-block' : 'none';
+                const tabSummary = document.getElementById('tab-summary');
+                if (tabSummary) tabSummary.style.display = adminInlineStyle;
+                const tabStatus = document.getElementById('tab-status');
+                if (tabStatus) tabStatus.style.display = adminInlineStyle;
+
                 const mSel = document.getElementById('modalEmp'); mSel.innerHTML = '';
                 const allowed = (isAdmin ? CONFIG.employees.filter(e => e.active !== false && e.id !== 'admin' && e.id !== 'sekretariat') : CONFIG.employees.filter(e => e.id === id));
-                allowed.forEach(e => { const o = document.createElement('option'); o.value = e.id; o.innerText = e.name; mSel.appendChild(o); });
+                allowed.forEach(e => {
+                    const o = document.createElement('option'); o.value = e.id; o.innerText = e.name; mSel.appendChild(o);
+                    const o2 = document.createElement('option'); o2.value = e.id; o2.innerText = e.name;
+                    const importEmp = document.getElementById('importEmp');
+                    if (importEmp) importEmp.appendChild(o2);
+                });
+
+                this.updateSummary();
+                this.switchTab('calendar');
                 this.render();
                 setTimeout(() => this.scrollToMonth(new Date().getMonth(), true), 500);
             }
@@ -913,12 +1133,284 @@
                 if (t) t.style.display = 'none';
             }
 
-            switchTab(t) { ['calendar', 'summary', 'status', 'admin'].forEach(x => { const v = document.getElementById(x + 'View'); if (v) v.style.display = (x === t ? 'block' : 'none'); }); }
+            switchTab(tabId) {
+                const tabs = ['calendar', 'summary', 'status', 'admin'];
+                tabs.forEach(t => { const btn = document.getElementById('tab-' + t); if (btn) btn.classList.remove('active'); });
+                const activeBtn = document.getElementById('tab-' + tabId);
+                if (activeBtn) activeBtn.classList.add('active');
+
+                const bulkPanel = document.getElementById('bulkImportPanel');
+                document.getElementById('calendarView').style.display = (tabId === 'calendar') ? 'block' : 'none';
+                document.getElementById('summaryView').style.display = (tabId === 'summary') ? 'block' : 'none';
+                document.getElementById('statusView').style.display = (tabId === 'status') ? 'block' : 'none';
+                document.getElementById('adminView').style.display = (tabId === 'admin') ? 'block' : 'none';
+
+                if (tabId === 'calendar' && this.currentUser === 'admin') { bulkPanel.style.display = 'flex'; } else { bulkPanel.style.display = 'none'; }
+                if (tabId === 'admin') this.renderAdminTable();
+            }
+
             setMode(m) { this.currentMode = m; }
             setCustomText(t) { this.currentText = t; }
             setVertreterText(t) { this.currentVertreterText = t; }
-            saveState() { DataService.save(this.state); }
+            saveState() { DataService.save(this.state); this.updateSummary(); }
             exportData() { const d = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.state)); const a = document.createElement('a'); a.href = d; a.download = "oa_planer.json"; a.click(); }
+
+            // --- ADMIN & SEKRETARIAT FEATURES ---
+
+            getEmpName(id) {
+                if (id === 'admin') return 'Administrator';
+                if (id === 'sekretariat') return 'Sekretariat';
+                const emp = CONFIG.employees.find(e => e.id === id);
+                return emp ? emp.name : id;
+            }
+
+            processBulkImport() {
+                const empId = document.getElementById('importEmp').value;
+                const text = document.getElementById('importText').value;
+                if (this.currentUser !== 'admin' && empId !== this.currentUser) { alert('Bulk-Import ist nur für den eigenen Nutzer möglich.'); return; }
+                if (!text) return;
+
+                const lines = text.split('\n');
+                let count = 0;
+                lines.forEach(line => {
+                    line = line.trim();
+                    if (!line) return;
+                    let match = line.match(/(\d{1,2})\.(\d{1,2})\.(?:(\d{2,4})?)\s*(?:bis|-)\s*(\d{1,2})\.(\d{1,2})\.(?:(\d{2,4})?)\s*(.*)/i);
+                    let start, end, descRaw;
+                    if (match) {
+                        const [, d1, m1, y1, d2, m2, y2, desc] = match;
+                        start = this.parseDate(d1, m1, y1); end = this.parseDate(d2, m2, y2); descRaw = desc;
+                    } else {
+                        match = line.match(/(\d{1,2})\.(\d{1,2})\.(?:(\d{2,4})?)\s*(.*)/i);
+                        if (match) { const [, d1, m1, y1, desc] = match; start = this.parseDate(d1, m1, y1); end = new Date(start); descRaw = desc; }
+                    }
+                    if (start && end && start <= end) {
+                        let type = 'T', desc = descRaw ? descRaw.trim() : '', vertreter = '';
+                        const vertMatch = desc.match(/(?:Vertreter|Vertr|V):?\s*(.*)/i);
+                        if (vertMatch) { vertreter = vertMatch[1].trim(); desc = desc.replace(/(?:Vertreter|Vertr|V):?\s*.*/i, '').trim(); }
+                        const lowerDesc = desc.toLowerCase();
+                        if (lowerDesc.includes('urlaub')) type = 'U'; else if (lowerDesc.includes('dienstreise')) type = 'D'; else if (lowerDesc.includes('fortbildung')) type = 'F';
+                        let curr = new Date(start);
+                        const val = { type, text: desc, vertreter };
+                        if (!this.state[empId]) this.state[empId] = {};
+                        while (curr <= end) {
+                            const dStr = this.formatDate(curr);
+                            if (dStr.startsWith('2026') || dStr.startsWith('2027') || (dStr.startsWith('2028') && parseInt(dStr.split('-')[1]) === 1)) {
+                                this.state[empId][dStr] = val;
+                            }
+                            curr.setDate(curr.getDate() + 1);
+                        }
+                        count++;
+                    }
+                });
+                alert(`${count} Einträge verarbeitet.`);
+                document.getElementById('importText').value = '';
+                this.saveState(); this.render();
+            }
+
+            parseDate(d, m, y) {
+                let year = y ? parseInt(y) : this.currentYear;
+                if (isNaN(year)) year = this.currentYear;
+                if (year < 100) year += 2000;
+                return new Date(year, parseInt(m) - 1, parseInt(d));
+            }
+
+            exportICal() {
+                if (this.currentUser !== 'admin' && this.currentUser !== 'sekretariat') { alert('Nur Admin und Sekretariat können iCal exportieren.'); return; }
+                const container = document.getElementById('icalEmpCheckboxes');
+                container.innerHTML = `<div style="margin-bottom:5px; border-bottom:1px solid #eee; padding-bottom:5px;">
+                    <label style="display:flex; align-items:center; gap:8px; font-weight:bold; cursor:pointer;">
+                        <input type="checkbox" id="icalSelectAll" style="width:auto;" onchange="document.querySelectorAll('.ical-emp-checkbox').forEach(cb => cb.checked = this.checked);">
+                        <span>Alle auswählen</span>
+                    </label></div>`;
+                CONFIG.employees.forEach(emp => {
+                    if (emp.id === 'admin' || emp.id === 'sekretariat' || emp.active === false) return;
+                    const div = document.createElement('div'); div.style.padding = '3px 0';
+                    div.innerHTML = `<label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:normal; color:#333;">
+                        <input type="checkbox" class="ical-emp-checkbox" value="${emp.id}" style="width:auto;">
+                        <span>${this.getEmpName(emp.id)}</span></label>`;
+                    container.appendChild(div);
+                });
+                document.querySelectorAll('.ical-emp-checkbox').forEach(cb => {
+                    cb.addEventListener('change', () => { document.getElementById('icalSelectAll').checked = Array.from(document.querySelectorAll('.ical-emp-checkbox')).every(c => c.checked); });
+                });
+                document.getElementById('iCalExportModal').style.display = 'flex';
+            }
+
+            executeICalExport() {
+                const startDateStr = document.getElementById('icalStart').value, endDateStr = document.getElementById('icalEnd').value;
+                if (!startDateStr || !endDateStr || startDateStr > endDateStr) return alert('Bitte einen gültigen Zeitraum auswählen.');
+                const startDate = new Date(startDateStr), endDate = new Date(endDateStr); endDate.setHours(23, 59, 59, 999);
+                const selectedEmps = Array.from(document.querySelectorAll('.ical-emp-checkbox:checked')).map(cb => cb.value);
+                if (selectedEmps.length === 0) return alert('Bitte mindestens einen Mitarbeiter auswählen.');
+
+                let icsContent = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Urlaubsplaner//DE\r\nCALSCALE:GREGORIAN\r\n";
+                const events = [];
+                for (const empId of selectedEmps) {
+                    if (!this.state[empId]) continue;
+                    const empName = this.getEmpName(empId), dates = Object.keys(this.state[empId]).sort();
+                    if (dates.length === 0) continue;
+                    let currentEvent = null;
+                    for (const dateStr of dates) {
+                        const eventDate = new Date(dateStr);
+                        if (eventDate < startDate || eventDate > endDate) continue;
+                        const val = this.state[empId][dateStr];
+                        if (!currentEvent) {
+                            currentEvent = { empName, type: val.type, text: val.text, vertreter: val.vertreter, start: new Date(dateStr), end: new Date(dateStr) };
+                        } else {
+                            const expectedNextDay = new Date(currentEvent.end); expectedNextDay.setDate(expectedNextDay.getDate() + 1);
+                            if (this.formatDate(expectedNextDay) === dateStr && currentEvent.type === val.type && currentEvent.text === val.text && currentEvent.vertreter === val.vertreter) {
+                                currentEvent.end = new Date(dateStr);
+                            } else {
+                                events.push(currentEvent); currentEvent = { empName, type: val.type, text: val.text, vertreter: val.vertreter, start: new Date(dateStr), end: new Date(dateStr) };
+                            }
+                        }
+                    }
+                    if (currentEvent) events.push(currentEvent);
+                }
+                if (events.length === 0) return alert('Keine Abwesenheiten gefunden.');
+
+                const formatDateICal = (d) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+                const timestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                const typeLabels = { 'U': 'Urlaub', 'D': 'Dienstreise', 'F': 'Fortbildung', 'T': 'Sonstiges', 'S': 'Sonstiges' };
+
+                events.forEach(ev => {
+                    icsContent += "BEGIN:VEVENT\r\n";
+                    icsContent += `UID:${ev.empName.replace(/\s+/g, '')}-${formatDateICal(ev.start)}@urlaubsplaner\r\n`;
+                    icsContent += `DTSTAMP:${timestamp}\r\n`;
+                    icsContent += `DTSTART;VALUE=DATE:${formatDateICal(ev.start)}\r\n`;
+                    const endExclusive = new Date(ev.end); endExclusive.setDate(endExclusive.getDate() + 1);
+                    icsContent += `DTEND;VALUE=DATE:${formatDateICal(endExclusive)}\r\n`;
+                    let summary = `${typeLabels[ev.type] || 'Abwesenheit'} - ${ev.empName}`; if (ev.text) summary += ` (${ev.text})`;
+                    icsContent += `SUMMARY:${summary}\r\n`;
+                    let description = `Mitarbeiter: ${ev.empName}\\nArt: ${typeLabels[ev.type] || 'Abwesenheit'}`;
+                    if (ev.text) description += `\\nBeschreibung: ${ev.text}`; if (ev.vertreter) description += `\\nVertreter: ${ev.vertreter}`;
+                    icsContent += `DESCRIPTION:${description}\r\n`;
+                    icsContent += "END:VEVENT\r\n";
+                });
+                icsContent += "END:VCALENDAR";
+
+                const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+                const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `abwesenheiten_${startDateStr}_bis_${endDateStr}.ics`;
+                document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+                document.getElementById('iCalExportModal').style.display = 'none';
+            }
+
+            renderAdminTable() {
+                const tbody = document.getElementById('adminEmployeeTable'); tbody.innerHTML = '';
+                CONFIG.employees.forEach(emp => { if (emp.id !== 'sekretariat') this.createEmployeeRow(tbody, emp); });
+            }
+
+            createEmployeeRow(tbody, emp) {
+                const tr = document.createElement('tr'); tr.style.borderBottom = '1px solid #eee'; const isReadOnly = (emp.id === 'admin');
+                tr.innerHTML = `<td style="padding: 10px;"><input type="text" value="${emp.id}" ${isReadOnly ? 'readonly style="background:#f1f5f9; border:none;"' : ''} data-field="id" data-id="${emp.id}"></td>
+                <td style="padding: 10px;"><input type="text" value="${emp.name || ''}" data-field="name" data-id="${emp.id}"></td>
+                <td style="padding: 10px;"><input type="text" value="${emp.email || ''}" data-field="email" data-id="${emp.id}"></td>
+                <td style="padding: 10px;"><input type="text" value="${emp.pin || ''}" data-field="pin" data-id="${emp.id}" style="width:80px;"></td>
+                <td style="padding: 10px;">
+                    <div class="group-checkboxes" data-id="${emp.id}" style="display: flex; flex-wrap: wrap; gap: 5px; font-size: 0.75rem; max-width: 250px;">
+                        ${['Chef', 'Privat', 'TAVI', 'TEER', 'Herzkatheter', 'Echo', 'EPU', 'Intensiv', 'Pneumo', 'Ambulanz'].map(g => `<label style="display: flex; align-items: center; gap: 2px; font-weight: normal; margin-right: 5px; white-space: nowrap;"><input type="checkbox" value="${g}" ${emp.groups && emp.groups.includes(g) ? 'checked' : (emp.group === g ? 'checked' : '')} ${isReadOnly ? 'disabled' : ''}> ${g}</label>`).join('')}
+                    </div>
+                </td>
+                <td style="padding: 10px; text-align: center;"><input type="checkbox" ${emp.active !== false ? 'checked' : ''} data-field="active" data-id="${emp.id}"></td>
+                <td style="padding: 10px; text-align: center;">${!isReadOnly ? `<button class="primary" onclick="app.deleteEmployee('${emp.id}')" style="background:var(--danger-color); padding: 5px 10px; font-size: 0.8rem;">Löschen</button>` : ''}</td>`;
+                const inputs = tr.querySelectorAll('input, select');
+                inputs.forEach(input => {
+                    input.onchange = (e) => {
+                        const oldId = e.target.closest('tr').querySelector('input[data-field="id"]').getAttribute('data-id');
+                        const targetEmp = CONFIG.employees.find(x => x.id === oldId); if (!targetEmp) return;
+                        if (e.target.type === 'checkbox') {
+                            if (e.target.closest('.group-checkboxes')) {
+                                const groupDiv = e.target.closest('.group-checkboxes');
+                                targetEmp.groups = Array.from(groupDiv.querySelectorAll('input:checked')).map(cb => cb.value);
+                            } else { targetEmp[e.target.getAttribute('data-field')] = e.target.checked; }
+                        } else {
+                            const field = e.target.getAttribute('data-field'); targetEmp[field] = e.target.value;
+                            if (field === 'id') {
+                                tr.querySelectorAll('[data-id]').forEach(el => el.setAttribute('data-id', e.target.value));
+                                if (targetEmp.id !== 'admin') { const delBtn = tr.querySelector('button'); if (delBtn) delBtn.setAttribute('onclick', `app.deleteEmployee('${e.target.value}')`); }
+                            }
+                        }
+                    };
+                });
+                tbody.appendChild(tr);
+            }
+
+            openAddEmployeeModal() {
+                const maxId = CONFIG.employees.reduce((max, e) => { if (e.id.startsWith('emp_')) { const num = parseInt(e.id.replace('emp_', ''), 10); return !isNaN(num) && num > max ? num : max; } return max; }, 0);
+                document.getElementById('addEmpId').value = 'emp_' + String(maxId + 1).padStart(5, '0');
+                document.getElementById('addEmpName').value = ''; document.getElementById('addEmpEmail').value = '';
+                document.querySelectorAll('#addEmpGroups input').forEach(cb => cb.checked = false);
+                document.getElementById('addEmpPin').value = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+                document.getElementById('addEmployeeModal').style.display = 'flex';
+            }
+
+            confirmAddEmployee() {
+                let id = document.getElementById('addEmpId').value.trim(), name = document.getElementById('addEmpName').value.trim(), email = document.getElementById('addEmpEmail').value.trim(), pin = document.getElementById('addEmpPin').value.trim();
+                if (!name) return alert('Bitte Name eingeben');
+                if (CONFIG.employees.some(e => e.id === id)) return alert('Ein Mitarbeiter mit dieser ID existiert bereits!');
+                const groups = Array.from(document.querySelectorAll('#addEmpGroups input:checked')).map(cb => cb.value);
+                CONFIG.employees.push({ id, name, email, pin, groups, active: true, role: 'User' });
+                this.sortEmployees(); document.getElementById('addEmployeeModal').style.display = 'none'; this.renderAdminTable();
+            }
+
+            deleteEmployee(empId) {
+                if (confirm('Mitarbeiter wirklich löschen? Alle Daten werden entfernt.')) { CONFIG.employees = CONFIG.employees.filter(e => e.id !== empId); this.renderAdminTable(); }
+            }
+
+            saveEmployees() {
+                if (!confirm('Änderungen an der Mitarbeiterliste speichern?')) return;
+                this.sortEmployees(); document.body.style.cursor = 'wait';
+                DataService.save(this.state).then(() => {
+                    document.body.style.cursor = 'default';
+                    const select = document.getElementById('modalEmp'), importSelect = document.getElementById('importEmp');
+                    if (select) select.innerHTML = ''; if (importSelect) importSelect.innerHTML = '';
+                    CONFIG.employees.forEach(emp => {
+                        if (emp.id === 'admin' || emp.id === 'sekretariat' || emp.active === false) return;
+                        if (select) { const opt = document.createElement('option'); opt.value = emp.id; opt.innerText = emp.name; select.appendChild(opt); }
+                        if (importSelect) { const opt2 = document.createElement('option'); opt2.value = emp.id; opt2.innerText = emp.name; importSelect.appendChild(opt2); }
+                    });
+                    alert('Mitarbeiterliste gespeichert!'); this.renderAdminTable(); this.render();
+                });
+            }
+
+            updateSummary() {
+                const list = [];
+                CONFIG.employees.forEach(emp => {
+                    if (emp.id === 'admin' || emp.id === 'sekretariat' || emp.active === false) return;
+                    if (!this.state[emp.id]) return;
+                    const entries = Object.keys(this.state[emp.id]).sort().map(d => ({ date: d, val: this.state[emp.id][d] }));
+                    if (entries.length === 0) return;
+                    const ranges = []; let rStart = entries[0], rEnd = entries[0];
+                    for (let i = 1; i < entries.length; i++) {
+                        const curr = entries[i], d1 = new Date(rEnd.date); d1.setDate(d1.getDate() + 1);
+                        if (this.formatDate(d1) === curr.date && rEnd.val.type === curr.val.type && rEnd.val.text === curr.val.text) { rEnd = curr; }
+                        else { ranges.push(this.formatRange(rStart, rEnd)); rStart = curr; rEnd = curr; }
+                    }
+                    ranges.push(this.formatRange(rStart, rEnd));
+                    list.push(`${emp.name}: ${ranges.join(', ')}`);
+                });
+                const summaryEl = document.getElementById('exportSummary');
+                if (summaryEl) summaryEl.value = list.join('\n');
+
+                const statusList = [];
+                if (this.state.__STATUS__) {
+                    CONFIG.employees.forEach(emp => {
+                        if (emp.id === 'admin' || emp.id === 'sekretariat' || emp.active === false) return;
+                        if (this.state.__STATUS__[emp.id]) statusList.push(`Mitarbeiter ${emp.name} fertig`);
+                    });
+                }
+                const statusEl = document.getElementById('statusSummary');
+                if (statusEl) statusEl.value = statusList.join('\n');
+            }
+
+            formatRange(start, end) {
+                const fmt = d => { const [y, m, day] = d.split('-'); return `${day}.${m}.`; };
+                const datePart = (start.date === end.date) ? fmt(start.date) : `${fmt(start.date)} - ${fmt(end.date)}`;
+                const typeMap = { 'U': 'Urlaub', 'D': 'Dienstreise', 'F': 'Fortbildung', 'T': 'Sonstiges', 'S': 'Sonstiges' };
+                const t = typeMap[start.val.type] || 'Abwesend';
+                return `${datePart} (${t}${start.val.text ? `: ${start.val.text}` : ''})`;
+            }
         }
         const app = new App();
     </script>
