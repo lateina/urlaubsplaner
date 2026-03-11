@@ -752,7 +752,11 @@
         class App {
             constructor() {
                 this.currentUser = null; this.state = {}; this.isDragging = false; this.dragLock = false; this.currentMode = 'U';
-                this.currentText = ''; this.currentVertreterText = '';
+                this.currentText = ''; this.currentVertreterText = ''; this._hasChanged = false;
+                this._pendingValUpdates = new Map();
+                this._affectedDates = new Set();
+                this._updateScheduled = false;
+                this._validationTimeout = null;
                 this.dates = this.generateDates();
                 this.initApp();
                 document.getElementById('calendar').addEventListener('scroll', () => this.updateNavHighlighting(), { passive: true });
@@ -760,6 +764,16 @@
                 document.addEventListener('mouseup', this.stopDrag);
                 document.addEventListener('touchend', this.stopDrag);
                 document.addEventListener('touchcancel', this.stopDrag);
+
+                const cal = document.getElementById('calendar');
+                cal.addEventListener('mousedown', (e) => this.handleCalEvent(e, 'mousedown'));
+                cal.addEventListener('mouseover', (e) => this.handleCalEvent(e, 'mouseover'));
+                cal.addEventListener('dblclick', (e) => this.handleCalEvent(e, 'dblclick'));
+                cal.addEventListener('mouseenter', (e) => this.handleCalEvent(e, 'mouseenter'), true);
+                cal.addEventListener('mouseleave', (e) => this.handleCalEvent(e, 'mouseleave'), true);
+                cal.addEventListener('touchstart', (e) => this.handleCalEvent(e, 'touchstart'), { passive: false });
+                cal.addEventListener('touchend', (e) => this.handleCalEvent(e, 'touchend'), { passive: false });
+
                 document.addEventListener('touchmove', (ev) => {
                     if (this._longPressTimer) { clearTimeout(this._longPressTimer); this._longPressTimer = null; }
                     if (this.isDragging) {
@@ -769,12 +783,37 @@
                         if (el && el.classList.contains('day-cell')) {
                             const eid = el.dataset.eid, dStr = el.dataset.date;
                             if (eid && dStr) {
-                                // Only paint if moved into an empty cell OR starting value was dragging out
+                                if (this._lastTouchCellId === el.id) return;
+                                this._lastTouchCellId = el.id;
                                 this.setVal(eid, dStr, this._dragVal, el);
                             }
                         }
                     }
                 }, { passive: false });
+            }
+
+            processPendingUpdates() {
+                this._pendingValUpdates.forEach((v, key) => {
+                    const [eid, d, cellId] = key.split('|');
+                    const cellEl = document.getElementById(cellId);
+                    if (cellEl) {
+                        const typeMap = { 'U': 'status-vacation', 'D': 'status-trip', 'F': 'status-training', 'S': 'status-custom' };
+                        cellEl.classList.remove('status-vacation', 'status-trip', 'status-training', 'status-custom');
+                        cellEl.textContent = '';
+                        if (v) {
+                            const t = v.type || v;
+                            cellEl.classList.add(typeMap[t] || 'status-custom');
+                            if (v.text) {
+                                const span = document.createElement('span');
+                                span.className = 'cell-text';
+                                span.textContent = v.text;
+                                cellEl.appendChild(span);
+                            }
+                        }
+                    }
+                });
+                this._pendingValUpdates.clear();
+                this._updateScheduled = false;
             }
 
             stopDrag() {
@@ -783,8 +822,12 @@
                     this.isDragging = false;
                     this.dragLock = true;
                     setTimeout(() => this.dragLock = false, 200);
-                    this.saveState();
-                    this.render();
+                    if (this._hasChanged) {
+                        this.saveState();
+                        this._affectedDates.forEach(d => this.updateSummaryRow(d));
+                        this._hasChanged = false;
+                        this._affectedDates.clear();
+                    }
                 }
             }
 
@@ -901,28 +944,26 @@
                 const container = document.getElementById('calendar'); container.innerHTML = '';
                 const isMobile = window.innerWidth <= 768;
                 let lastM = -1, lastY = -1;
+                const frag = document.createDocumentFragment();
 
                 this.dates.forEach((d, i) => {
                     if (d.month !== lastM || d.year !== lastY) {
                         const m = document.createElement('div'); m.className = 'cell header-cell sticky-header month-header'; m.innerText = new Date(d.year, d.month, 1).toLocaleString('de-DE', { month: 'long', year: 'numeric' });
                         m.id = `month-header-${d.year}-${d.month}`; m.style.gridColumnStart = i + 2;
                         let s = 1, j = i + 1; while (j < this.dates.length && this.dates[j].month === d.month && this.dates[j].year === d.year) { s++; j++; }
-                        m.style.gridColumnEnd = `span ${s}`; container.appendChild(m); lastM = d.month; lastY = d.year;
+                        m.style.gridColumnEnd = `span ${s}`; frag.appendChild(m); lastM = d.month; lastY = d.year;
                     }
                 });
 
-                const corner = document.createElement('div'); corner.className = 'cell header-cell sticky-col sticky-corner sticky-header'; corner.style.gridRow = '1 / span 3'; corner.style.gridColumn = '1'; corner.innerText = isMobile ? 'Name' : 'Mitarbeiter'; container.appendChild(corner);
+                const corner = document.createElement('div'); corner.className = 'cell header-cell sticky-col sticky-corner sticky-header'; corner.style.gridRow = '1 / span 3'; corner.style.gridColumn = '1'; corner.innerText = isMobile ? 'Name' : 'Mitarbeiter'; frag.appendChild(corner);
 
                 this.dates.forEach((d, i) => {
                     const h = document.createElement('div'); h.className = `cell header-cell sticky-header day-header ${d.isWeekend ? 'weekend' : ''} ${d.holiday ? 'holiday' : ''} ${d.isSchoolHoliday ? 'school-holiday' : ''}`;
                     h.innerHTML = `<span>${d.day}</span>`; h.style.gridRow = 3; h.style.gridColumn = i + 2;
-                    h.onmouseenter = (ev) => this.showTip(ev, null, d.dateStr); h.onmouseleave = () => this.hideTip();
-                    container.appendChild(h);
+                    h.dataset.date = d.dateStr; frag.appendChild(h);
                 });
 
                 const emps = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false);
-
-                // Sort employees by primary group priority (index in CONFIG.skills)
                 emps.sort((a, b) => {
                     const gA = this.getPrimaryGrp(a), gB = this.getPrimaryGrp(b);
                     if (gA === gB) return a.name.localeCompare(b.name);
@@ -933,28 +974,21 @@
 
                 emps.forEach((e, ei) => {
                     const n = document.createElement('div'); n.className = 'cell employee-row-header sticky-col'; n.style.gridRow = ei + 4; n.style.gridColumn = '1';
-                    n.style.position = 'relative'; // For absolute labels
-
-                    if (isMobile) { const p = e.name.split(' '); n.innerText = p[p.length - 1]; } else n.innerText = e.name;
+                    n.style.position = 'relative'; if (isMobile) { const p = e.name.split(' '); n.innerText = p[p.length - 1]; } else n.innerText = e.name;
                     if (this.currentUser === e.id) n.style.backgroundColor = '#e0f2fe';
 
-                    // Visual Grouping
                     const grp = this.getPrimaryGrp(e);
                     if (grp) {
                         const color = this.getGroupColor(grp);
                         n.style.borderLeft = `4px solid ${color}`;
-
                         const prev = emps[ei - 1];
                         if (!prev || this.getPrimaryGrp(prev) !== grp) {
-                            const lbl = document.createElement('span');
-                            lbl.innerText = grp;
+                            const lbl = document.createElement('span'); lbl.innerText = grp;
                             lbl.style.cssText = `position:absolute; top:2px; left:6px; font-size:0.55rem; color:${color}; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; pointer-events:none; background: rgba(255,255,255,0.8); padding: 0 2px; border-radius: 2px;`;
-                            n.appendChild(lbl);
-                            n.style.paddingTop = '16px'; // Make room for label
+                            n.appendChild(lbl); n.style.paddingTop = '16px';
                         }
                     }
-
-                    container.appendChild(n);
+                    frag.appendChild(n);
 
                     this.dates.forEach((d, di) => {
                         const c = document.createElement('div'); c.className = `cell day-cell ${d.isWeekend ? 'weekend' : ''} ${d.holiday ? 'holiday' : ''} ${d.isSchoolHoliday ? 'school-holiday' : ''}`;
@@ -964,65 +998,74 @@
                             const t = s.type || s; c.classList.add(t === 'U' || t === 'V' ? 'status-vacation' : t === 'D' ? 'status-trip' : t === 'F' ? 'status-training' : (t === 'S' || t === 'T' ? 'status-custom' : ''));
                             if (s.text) c.innerHTML = `<span class="cell-text">${s.text}</span>`;
                         }
-                        c.dataset.eid = e.id; c.dataset.date = d.dateStr;
-                        c.onmousedown = (ev) => {
-                            if (ev.button === 0) {
-                                ev.preventDefault();
-                                if (!this.checkPermission(e.id)) return;
-                                this.isDragging = true;
-                                const currentS = this.state[e.id]?.[d.dateStr];
-                                this._dragVal = currentS ? null : { type: this.currentMode, text: this.currentText, vertreter: this.currentVertreterText };
-                                this.setVal(e.id, d.dateStr, this._dragVal, c);
-                            }
-                        };
-                        c.onmouseover = () => { if (this.isDragging) this.setVal(e.id, d.dateStr, this._dragVal, c); };
-                        c.ondblclick = () => { if (!this.dragLock) this.editAbsence(e.id, d.dateStr); };
-                        c.onmouseenter = (ev) => this.showTip(ev, e.id, d.dateStr); c.onmouseleave = () => this.hideTip();
-                        c.ontouchstart = (ev) => {
-                            const now = Date.now();
-                            if (this._lastTapCell === c && now - this._lastTapTime < 300) {
-                                if (ev.cancelable) ev.preventDefault();
-                                clearTimeout(this._longPressTimer); this._longPressTimer = null;
-                                if (!this.dragLock) this.editAbsence(e.id, d.dateStr);
-                                this._lastTapTime = 0; return;
-                            }
-                            this._lastTapTime = now; this._lastTapCell = c;
-                            this._longPressTimer = setTimeout(() => {
-                                if (!this.checkPermission(e.id)) return;
-                                this.isDragging = true;
-                                const currentS = this.state[e.id]?.[d.dateStr];
-                                this._dragVal = currentS ? null : { type: this.currentMode, text: this.currentText, vertreter: this.currentVertreterText };
-                                this.setVal(e.id, d.dateStr, this._dragVal, c);
-                                if (navigator.vibrate) navigator.vibrate(50);
-                            }, 400);
-                        };
-                        c.ontouchend = (ev) => {
-                            if (this._longPressTimer) {
-                                clearTimeout(this._longPressTimer); this._longPressTimer = null;
-                                if (ev.cancelable) ev.preventDefault();
-                                if (!this.checkPermission(e.id)) return;
-                                this.isDragging = true;
-                                const currentS = this.state[e.id]?.[d.dateStr];
-                                this._dragVal = currentS ? null : { type: this.currentMode, text: this.currentText, vertreter: this.currentVertreterText };
-                                this.setVal(e.id, d.dateStr, this._dragVal, c);
-                            }
-                        };
-                        container.appendChild(c);
+                        c.dataset.eid = e.id; c.dataset.date = d.dateStr; frag.appendChild(c);
                     });
                 });
+                container.appendChild(frag);
                 this.updateNavHighlighting();
+            }
+
+            handleCalEvent(ev, type) {
+                const c = ev.target.closest('.cell'); if (!c) return;
+                const eid = c.dataset.eid, dStr = c.dataset.date;
+                if (!eid || !dStr) {
+                    if (type === 'mouseenter' && c.classList.contains('day-header')) this.showTip(ev, null, dStr);
+                    else if (type === 'mouseleave') this.hideTip();
+                    return;
+                }
+
+                if (type === 'mousedown') {
+                    if (ev.button === 0) {
+                        ev.preventDefault(); if (!this.checkPermission(eid)) return;
+                        this.isDragging = true; const currentS = this.state[eid]?.[dStr];
+                        this._dragVal = currentS ? null : { type: this.currentMode, text: this.currentText, vertreter: this.currentVertreterText };
+                        this.setVal(eid, dStr, this._dragVal, c);
+                    }
+                } else if (type === 'mouseover') {
+                    if (this.isDragging) this.setVal(eid, dStr, this._dragVal, c);
+                } else if (type === 'dblclick') {
+                    if (!this.dragLock) this.editAbsence(eid, dStr);
+                } else if (type === 'mouseenter') {
+                    this.showTip(ev, eid, dStr);
+                } else if (type === 'mouseleave') {
+                    this.hideTip();
+                } else if (type === 'touchstart') {
+                    const now = Date.now();
+                    if (this._lastTapCell === c && now - this._lastTapTime < 300) {
+                        if (ev.cancelable) ev.preventDefault(); clearTimeout(this._longPressTimer); this._longPressTimer = null;
+                        if (!this.dragLock) this.editAbsence(eid, dStr); this._lastTapTime = 0; return;
+                    }
+                    this._lastTapTime = now; this._lastTapCell = c;
+                    this._longPressTimer = setTimeout(() => {
+                        if (!this.checkPermission(eid)) return;
+                        this.isDragging = true; const currentS = this.state[eid]?.[dStr];
+                        this._dragVal = currentS ? null : { type: this.currentMode, text: this.currentText, vertreter: this.currentVertreterText };
+                        this.setVal(eid, dStr, this._dragVal, c); if (navigator.vibrate) navigator.vibrate(50);
+                    }, 400);
+                }
             }
 
             setVal(eid, d, v, cellEl = null) {
                 if (!this.checkPermission(eid)) return;
+                const oldVal = this.state[eid]?.[d];
+                if (v === oldVal) return;
+                if (v && oldVal && v.type === oldVal.type && v.text === oldVal.text && v.vertreter === oldVal.vertreter) return;
+
                 if (!this.state[eid]) this.state[eid] = {};
                 if (v) this.state[eid][d] = v; else delete this.state[eid][d];
+                this._hasChanged = true;
+                if (this.isDragging) this._affectedDates.add(d);
+
                 if (cellEl) {
-                    const typeMap = { 'U': 'status-vacation', 'D': 'status-trip', 'F': 'status-training', 'S': 'status-custom', 'V': 'status-vacation', 'T': 'status-custom' };
-                    cellEl.classList.remove('status-vacation', 'status-trip', 'status-training', 'status-custom');
-                    cellEl.innerHTML = ''; if (v) { cellEl.classList.add(typeMap[v.type] || 'status-custom'); if (v.text) cellEl.innerHTML = `<span class="cell-text">${v.text}</span>`; }
+                    const key = `${eid}|${d}|${cellEl.id}`;
+                    this._pendingValUpdates.set(key, v);
+                    if (!this._updateScheduled) {
+                        this._updateScheduled = true;
+                        requestAnimationFrame(() => this.processPendingUpdates());
+                    }
                 } else { this.render(); }
             }
+
 
             scrollToMonth(m, cur) {
                 const y = cur ? this.currentYear || 2026 : 2026, el = document.getElementById(`month-header-${y}-${m}`), c = document.getElementById('calendar');
@@ -1033,7 +1076,8 @@
 
             updateNavHighlighting() {
                 const c = document.getElementById('calendar'); if (!c) return;
-                const d = this.dates[Math.min(Math.floor(c.scrollLeft / 40), this.dates.length - 1)];
+                const dIdx = Math.min(Math.floor(c.scrollLeft / 40), this.dates.length - 1);
+                const d = this.dates[dIdx < 0 ? 0 : dIdx];
                 if (d) {
                     this.currentYear = d.year;
                     CONFIG.years.forEach(y => { const b = document.getElementById(`btn-year-${y}`); if (b) b.classList.toggle('primary', y === d.year); });
@@ -1151,20 +1195,20 @@
                 CONFIG.skills.forEach(skill => {
                     const isChecked = (emp.groups || []).includes(skill);
                     skillsHtml += `
-                        <label style="display: flex; align-items: center; gap: 4px; font-weight: normal; font-size: 0.75rem; white-space: nowrap;">
-                            <input type="checkbox" value="${skill}" ${isChecked ? 'checked' : ''} class="skill-checkbox" data-id="${emp.id}"> ${skill}
-                        </label>`;
+                            <label style="display: flex; align-items: center; gap: 4px; font-weight: normal; font-size: 0.75rem; white-space: nowrap;">
+                                <input type="checkbox" value="${skill}" ${isChecked ? 'checked' : ''} class="skill-checkbox" data-id="${emp.id}"> ${skill}
+                            </label>`;
                 });
 
                 tr.innerHTML = `
-                    <td style="padding: 5px;"><input type="text" value="${emp.id}" data-field="id" data-id="${emp.id}" style="width: 100px; padding: 4px;"></td>
-                    <td style="padding: 5px;"><input type="text" value="${emp.name}" data-field="name" data-id="${emp.id}" style="width: 100%; padding: 4px;"></td>
-                    <td style="padding: 5px;"><input type="text" value="${emp.email || ''}" data-field="email" data-id="${emp.id}" style="width: 100%; padding: 4px;"></td>
-                    <td style="padding: 5px;"><input type="text" value="${emp.pin || ''}" data-field="pin" data-id="${emp.id}" style="width: 60px; padding: 4px;"></td>
-                    <td style="padding: 5px;"><div style="display: flex; flex-wrap: wrap; gap: 8px; padding: 2px; border: 1px solid #eee; border-radius: 4px; min-width: 200px;">${skillsHtml}</div></td>
-                    <td style="padding: 5px; text-align: center;"><input type="checkbox" ${emp.active !== false ? 'checked' : ''} data-field="active" data-id="${emp.id}"></td>
-                    <td style="padding: 5px; text-align: center;"><button class="primary" style="background: var(--danger-color); padding: 4px 8px; font-size: 0.8rem;" onclick="app.deleteEmployee('${emp.id}')">Löschen</button></td>
-                `;
+                        <td style="padding: 5px;"><input type="text" value="${emp.id}" data-field="id" data-id="${emp.id}" style="width: 100px; padding: 4px;"></td>
+                        <td style="padding: 5px;"><input type="text" value="${emp.name}" data-field="name" data-id="${emp.id}" style="width: 100%; padding: 4px;"></td>
+                        <td style="padding: 5px;"><input type="text" value="${emp.email || ''}" data-field="email" data-id="${emp.id}" style="width: 100%; padding: 4px;"></td>
+                        <td style="padding: 5px;"><input type="text" value="${emp.pin || ''}" data-field="pin" data-id="${emp.id}" style="width: 60px; padding: 4px;"></td>
+                        <td style="padding: 5px;"><div style="display: flex; flex-wrap: wrap; gap: 8px; padding: 2px; border: 1px solid #eee; border-radius: 4px; min-width: 200px;">${skillsHtml}</div></td>
+                        <td style="padding: 5px; text-align: center;"><input type="checkbox" ${emp.active !== false ? 'checked' : ''} data-field="active" data-id="${emp.id}"></td>
+                        <td style="padding: 5px; text-align: center;"><button class="primary" style="background: var(--danger-color); padding: 4px 8px; font-size: 0.8rem;" onclick="app.deleteEmployee('${emp.id}')">Löschen</button></td>
+                    `;
 
                 // Handle changes for main input fields
                 const inputs = tr.querySelectorAll('input:not(.skill-checkbox)');
@@ -1532,7 +1576,6 @@
             setCustomText(t) { this.currentText = t; }
             setVertreterText(t) { this.currentVertreterText = t; }
             saveState() { DataService.save(this.state); this.updateSummary(); }
-            exportData() { const d = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.state)); const a = document.createElement('a'); a.href = d; a.download = "assistenz_planer.json"; a.click(); }
         }
         const app = new App();
     </script>

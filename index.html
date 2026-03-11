@@ -787,10 +787,25 @@
         class App {
             constructor() {
                 this.currentUser = null; this.state = {}; this.isDragging = false; this.dragLock = false; this.currentMode = 'U';
-                this.currentText = ''; this.currentVertreterText = '';
+                this.currentText = ''; this.currentVertreterText = ''; this._hasChanged = false;
+                this._pendingValUpdates = new Map();
+                this._affectedDates = new Set();
+                this._updateScheduled = false;
+                this._validationTimeout = null;
                 this.dates = this.generateDates();
                 this.initApp();
-                document.getElementById('calendar').addEventListener('scroll', () => this.updateNavHighlighting(), { passive: true });
+
+                const calendar = document.getElementById('calendar');
+                calendar.addEventListener('scroll', () => this.updateNavHighlighting(), { passive: true });
+
+                const handle = (e) => this.handleCalEvent(e);
+                calendar.addEventListener('mousedown', handle);
+                calendar.addEventListener('mouseover', handle);
+                calendar.addEventListener('mouseout', handle);
+                calendar.addEventListener('touchstart', handle, { passive: false });
+                calendar.addEventListener('touchend', handle, { passive: false });
+                calendar.addEventListener('dblclick', handle);
+
                 this.stopDrag = this.stopDrag.bind(this);
                 document.addEventListener('mouseup', this.stopDrag);
                 document.addEventListener('touchend', this.stopDrag);
@@ -803,13 +818,94 @@
                         const el = document.elementFromPoint(touch.clientX, touch.clientY);
                         if (el && el.classList.contains('day-cell')) {
                             const eid = el.dataset.eid, dStr = el.dataset.date;
-                            if (eid && dStr) {
-                                // Only paint if moved into an empty cell OR starting value was dragging out
+                            if (eid && dStr && (this._lastTouchCellId !== el.id)) {
+                                this._lastTouchCellId = el.id;
                                 this.setVal(eid, dStr, this._dragVal, el);
                             }
                         }
                     }
                 }, { passive: false });
+            }
+
+            processPendingUpdates() {
+                this._pendingValUpdates.forEach((v, key) => {
+                    const [eid, d, cellId] = key.split('|');
+                    const cellEl = document.getElementById(cellId);
+                    if (cellEl) {
+                        const typeMap = { 'U': 'status-vacation', 'D': 'status-trip', 'F': 'status-training', 'S': 'status-custom' };
+                        cellEl.classList.remove('status-vacation', 'status-trip', 'status-training', 'status-custom');
+                        cellEl.textContent = '';
+                        if (v) {
+                            const t = v.type || v;
+                            cellEl.classList.add(typeMap[t] || 'status-custom');
+                            if (v.text) {
+                                const span = document.createElement('span');
+                                span.className = 'cell-text';
+                                span.textContent = v.text;
+                                cellEl.appendChild(span);
+                            }
+                        }
+                    }
+                });
+                this._pendingValUpdates.clear();
+                this._updateScheduled = false;
+            }
+
+            handleCalEvent(ev) {
+                const cell = ev.target.closest('.day-cell');
+                const header = ev.target.closest('.day-header');
+
+                if (header) {
+                    if (ev.type === 'mouseover') this.showTip(ev, null, header.dataset.date);
+                    if (ev.type === 'mouseout') this.hideTip();
+                    return;
+                }
+                if (!cell) return;
+                const eid = cell.dataset.eid, d = cell.dataset.date;
+
+                if (ev.type === 'mousedown' && ev.button === 0) {
+                    ev.preventDefault(); if (!this.checkPermission(eid)) return;
+                    this.isDragging = true;
+                    const currentS = this.state[eid]?.[d];
+                    this._dragVal = currentS ? null : { type: this.currentMode, text: this.currentText, vertreter: this.currentVertreterText };
+                    this.setVal(eid, d, this._dragVal, cell);
+                } else if (ev.type === 'mouseover') {
+                    if (this.isDragging) this.setVal(eid, d, this._dragVal, cell);
+                    this.showTip(ev, eid, d);
+                } else if (ev.type === 'mouseout') {
+                    this.hideTip();
+                } else if (ev.type === 'dblclick') {
+                    if (!this.dragLock) this.editAbsence(eid, d);
+                } else if (ev.type === 'mouseenter') {
+                    this.showTip(ev, eid, d);
+                } else if (ev.type === 'mouseleave') {
+                    this.hideTip();
+                } else if (ev.type === 'touchstart') {
+                    const now = Date.now();
+                    if (this._lastTapCell === cell && now - this._lastTapTime < 300) {
+                        ev.preventDefault(); clearTimeout(this._longPressTimer); this._longPressTimer = null;
+                        if (!this.dragLock) this.editAbsence(eid, d);
+                        this._lastTapTime = 0; return;
+                    }
+                    this._lastTapTime = now; this._lastTapCell = cell;
+                    this._longPressTimer = setTimeout(() => {
+                        if (!this.checkPermission(eid)) return;
+                        this.isDragging = true;
+                        const currentS = this.state[eid]?.[d];
+                        this._dragVal = currentS ? null : { type: this.currentMode, text: this.currentText, vertreter: this.currentVertreterText };
+                        this.setVal(eid, d, this._dragVal, cell);
+                        if (navigator.vibrate) navigator.vibrate(50);
+                    }, 400);
+                } else if (ev.type === 'touchend') {
+                    if (this._longPressTimer) {
+                        clearTimeout(this._longPressTimer); this._longPressTimer = null;
+                        ev.preventDefault(); if (!this.checkPermission(eid)) return;
+                        this.isDragging = true;
+                        const currentS = this.state[eid]?.[d];
+                        this._dragVal = currentS ? null : { type: this.currentMode, text: this.currentText, vertreter: this.currentVertreterText };
+                        this.setVal(eid, d, this._dragVal, cell);
+                    }
+                }
             }
 
             stopDrag() {
@@ -818,8 +914,12 @@
                     this.isDragging = false;
                     this.dragLock = true;
                     setTimeout(() => this.dragLock = false, 200);
-                    this.saveState();
-                    this.render();
+                    if (this._hasChanged) {
+                        this.saveState();
+                        this._affectedDates.forEach(d => this.updateSummaryRow(d));
+                        this._hasChanged = false;
+                        this._affectedDates.clear();
+                    }
                 }
             }
 
@@ -924,105 +1024,113 @@
             }
 
             render() {
-                const container = document.getElementById('calendar'); container.innerHTML = '';
+                const container = document.getElementById('calendar');
+                container.innerHTML = '';
+                const frag = document.createDocumentFragment();
                 const isMobile = window.innerWidth <= 768;
                 let lastM = -1, lastY = -1;
 
                 this.dates.forEach((d, i) => {
                     if (d.month !== lastM || d.year !== lastY) {
-                        const m = document.createElement('div'); m.className = 'cell header-cell sticky-header month-header'; m.innerText = new Date(d.year, d.month, 1).toLocaleString('de-DE', { month: 'long', year: 'numeric' });
-                        m.id = `month-header-${d.year}-${d.month}`; m.style.gridColumnStart = i + 2;
-                        let s = 1, j = i + 1; while (j < this.dates.length && this.dates[j].month === d.month && this.dates[j].year === d.year) { s++; j++; }
-                        m.style.gridColumnEnd = `span ${s}`; container.appendChild(m); lastM = d.month; lastY = d.year;
+                        const m = document.createElement('div');
+                        m.className = 'cell header-cell sticky-header month-header';
+                        m.innerText = new Date(d.year, d.month, 1).toLocaleString('de-DE', { month: 'long', year: 'numeric' });
+                        m.id = `month-header-${d.year}-${d.month}`;
+                        m.style.gridColumnStart = i + 2;
+                        let s = 1, j = i + 1;
+                        while (j < this.dates.length && this.dates[j].month === d.month && this.dates[j].year === d.year) { s++; j++; }
+                        m.style.gridColumnEnd = `span ${s}`;
+                        frag.appendChild(m);
+                        lastM = d.month; lastY = d.year;
                     }
                 });
 
-                const corner = document.createElement('div'); corner.className = 'cell header-cell sticky-col sticky-corner sticky-header'; corner.style.gridRow = '1 / span 3'; corner.style.gridColumn = '1'; corner.innerText = isMobile ? 'Name' : 'Mitarbeiter'; container.appendChild(corner);
+                const corner = document.createElement('div');
+                corner.className = 'cell header-cell sticky-col sticky-corner sticky-header';
+                corner.style.gridRow = '1 / span 3';
+                corner.style.gridColumn = '1';
+                corner.innerText = isMobile ? 'Name' : 'Mitarbeiter';
+                frag.appendChild(corner);
 
                 this.dates.forEach((d, i) => {
-                    const h = document.createElement('div'); h.className = `cell header-cell sticky-header day-header ${d.isWeekend ? 'weekend' : ''} ${d.holiday ? 'holiday' : ''} ${d.isSchoolHoliday ? 'school-holiday' : ''}`;
-                    h.innerHTML = `<span>${d.day}</span>`; h.style.gridRow = 3; h.style.gridColumn = i + 2;
-                    h.onmouseenter = (ev) => this.showTip(ev, null, d.dateStr); h.onmouseleave = () => this.hideTip();
-                    container.appendChild(h);
+                    const h = document.createElement('div');
+                    h.className = `cell header-cell sticky-header day-header ${d.isWeekend ? 'weekend' : ''} ${d.holiday ? 'holiday' : ''} ${d.isSchoolHoliday ? 'school-holiday' : ''}`;
+                    h.innerHTML = `<span>${d.day}</span>`;
+                    h.style.gridRow = 3;
+                    h.style.gridColumn = i + 2;
+                    h.dataset.date = d.dateStr;
+                    frag.appendChild(h);
                 });
 
-                const valH = document.createElement('div'); valH.className = 'cell sticky-col validation-row'; valH.style.gridColumn = '1'; valH.innerText = '⚠ Abdeckung'; container.appendChild(valH);
+                const valH = document.createElement('div');
+                valH.className = 'cell sticky-col validation-row';
+                valH.style.gridColumn = '1';
+                valH.innerText = '⚠ Abdeckung';
+                frag.appendChild(valH);
+
                 this.dates.forEach((d, i) => {
-                    const issues = this.validateCoverage(d), c = document.createElement('div'); c.className = `cell validation-cell ${d.holiday ? 'holiday' : ''}`; c.id = `val-${d.dateStr}`;
-                    c.style.gridColumn = i + 2; if (issues) { c.innerHTML = `<span class="warning-text">${issues.join('<br>')}</span>`; c.title = 'Fehlend: ' + issues.join(', '); }
-                    container.appendChild(c);
+                    const issues = this.validateCoverage(d);
+                    const c = document.createElement('div');
+                    c.className = `cell validation-cell ${d.holiday ? 'holiday' : ''}`;
+                    c.id = `val-${d.dateStr}`;
+                    c.style.gridColumn = i + 2;
+                    if (issues) {
+                        c.innerHTML = `<span class="warning-text">${issues.join('<br>')}</span>`;
+                        c.title = 'Fehlend: ' + issues.join(', ');
+                    }
+                    frag.appendChild(c);
                 });
 
                 const emps = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false);
                 emps.forEach((e, ei) => {
-                    const n = document.createElement('div'); n.className = 'cell employee-row-header sticky-col'; n.style.gridRow = ei + 5; n.style.gridColumn = '1';
-                    if (isMobile) { const p = e.name.split(' '); n.innerText = p[p.length - 1]; } else n.innerText = e.name;
+                    const n = document.createElement('div');
+                    n.className = 'cell employee-row-header sticky-col';
+                    n.style.gridRow = ei + 5;
+                    n.style.gridColumn = '1';
+                    if (isMobile) {
+                        const p = e.name.split(' ');
+                        n.innerText = p[p.length - 1];
+                    } else n.innerText = e.name;
+
                     if (this.currentUser === e.id) n.style.backgroundColor = '#e0f2fe';
+
                     const grp = this.getPrimaryGrp(e);
                     if (grp) {
-                        const color = CONFIG.groupColors[grp] || '#ccc'; n.style.borderLeft = `4px solid ${color}`;
-                        const prev = emps[ei - 1]; if (!prev || this.getPrimaryGrp(prev) !== grp) {
-                            const lbl = document.createElement('span'); lbl.innerText = grp; lbl.style.cssText = `position:absolute; top:1px; left:4px; font-size:0.5rem; color:${color}; font-weight:bold;`;
-                            n.appendChild(lbl); n.style.borderTop = `1px solid ${color}`;
+                        const color = CONFIG.groupColors[grp] || '#ccc';
+                        n.style.borderLeft = `4px solid ${color}`;
+                        const prev = emps[ei - 1];
+                        if (!prev || this.getPrimaryGrp(prev) !== grp) {
+                            const lbl = document.createElement('span');
+                            lbl.innerText = grp;
+                            lbl.style.cssText = `position:absolute; top:1px; left:4px; font-size:0.5rem; color:${color}; font-weight:bold;`;
+                            n.appendChild(lbl);
+                            n.style.borderTop = `1px solid ${color}`;
                         }
-                        const next = emps[ei + 1]; if (!next || this.getPrimaryGrp(next) !== grp) n.style.borderBottom = `1px solid ${color}`;
+                        const next = emps[ei + 1];
+                        if (!next || this.getPrimaryGrp(next) !== grp) n.style.borderBottom = `1px solid ${color}`;
                     }
-                    container.appendChild(n);
+                    frag.appendChild(n);
 
                     this.dates.forEach((d, di) => {
-                        const c = document.createElement('div'); c.className = `cell day-cell ${d.isWeekend ? 'weekend' : ''} ${d.holiday ? 'holiday' : ''} ${d.isSchoolHoliday ? 'school-holiday' : ''}`;
-                        c.style.gridRow = ei + 5; c.style.gridColumn = di + 2; c.id = `cell-${e.id}-${d.dateStr}`;
+                        const c = document.createElement('div');
+                        c.className = `cell day-cell ${d.isWeekend ? 'weekend' : ''} ${d.holiday ? 'holiday' : ''} ${d.isSchoolHoliday ? 'school-holiday' : ''}`;
+                        c.style.gridRow = ei + 5;
+                        c.style.gridColumn = di + 2;
+                        c.id = `cell-${e.id}-${d.dateStr}`;
+                        c.dataset.eid = e.id;
+                        c.dataset.date = d.dateStr;
+
                         const s = this.state[e.id]?.[d.dateStr];
                         if (s) {
-                            const t = s.type || s; c.classList.add(t === 'U' || t === 'V' ? 'status-vacation' : t === 'D' ? 'status-trip' : t === 'F' ? 'status-training' : 'status-custom');
+                            const t = s.type || s;
+                            c.classList.add(t === 'U' || t === 'V' ? 'status-vacation' : t === 'D' ? 'status-trip' : t === 'F' ? 'status-training' : 'status-custom');
                             if (s.text) c.innerHTML = `<span class="cell-text">${s.text}</span>`;
                         }
-                        c.dataset.eid = e.id; c.dataset.date = d.dateStr;
-                        c.onmousedown = (ev) => {
-                            if (ev.button === 0) {
-                                ev.preventDefault();
-                                if (!this.checkPermission(e.id)) return;
-                                this.isDragging = true;
-                                const currentS = this.state[e.id]?.[d.dateStr];
-                                this._dragVal = currentS ? null : { type: this.currentMode, text: this.currentText, vertreter: this.currentVertreterText };
-                                this.setVal(e.id, d.dateStr, this._dragVal, c);
-                            }
-                        };
-                        c.onmouseover = () => { if (this.isDragging) this.setVal(e.id, d.dateStr, this._dragVal, c); };
-                        c.ondblclick = () => { if (!this.dragLock) this.editAbsence(e.id, d.dateStr); };
-                        c.onmouseenter = (ev) => this.showTip(ev, e.id, d.dateStr); c.onmouseleave = () => this.hideTip();
-                        c.ontouchstart = (ev) => {
-                            const now = Date.now();
-                            if (this._lastTapCell === c && now - this._lastTapTime < 300) {
-                                if (ev.cancelable) ev.preventDefault();
-                                clearTimeout(this._longPressTimer); this._longPressTimer = null;
-                                if (!this.dragLock) this.editAbsence(e.id, d.dateStr);
-                                this._lastTapTime = 0; return;
-                            }
-                            this._lastTapTime = now; this._lastTapCell = c;
-                            this._longPressTimer = setTimeout(() => {
-                                if (!this.checkPermission(e.id)) return;
-                                this.isDragging = true;
-                                const currentS = this.state[e.id]?.[d.dateStr];
-                                this._dragVal = currentS ? null : { type: this.currentMode, text: this.currentText, vertreter: this.currentVertreterText };
-                                this.setVal(e.id, d.dateStr, this._dragVal, c);
-                                if (navigator.vibrate) navigator.vibrate(50);
-                            }, 400);
-                        };
-                        c.ontouchend = (ev) => {
-                            if (this._longPressTimer) {
-                                clearTimeout(this._longPressTimer); this._longPressTimer = null;
-                                if (ev.cancelable) ev.preventDefault();
-                                if (!this.checkPermission(e.id)) return;
-                                this.isDragging = true;
-                                const currentS = this.state[e.id]?.[d.dateStr];
-                                this._dragVal = currentS ? null : { type: this.currentMode, text: this.currentText, vertreter: this.currentVertreterText };
-                                this.setVal(e.id, d.dateStr, this._dragVal, c);
-                            }
-                        };
-                        container.appendChild(c);
+                        frag.appendChild(c);
                     });
                 });
+
+                container.appendChild(frag);
                 this.updateNavHighlighting();
             }
 
@@ -1067,13 +1175,37 @@
 
             setVal(eid, d, v, cellEl = null) {
                 if (!this.checkPermission(eid)) return;
+                const oldVal = this.state[eid]?.[d];
+                if (v === oldVal) return;
+                if (v && oldVal && v.type === oldVal.type && v.text === oldVal.text && v.vertreter === oldVal.vertreter) return;
+
                 if (!this.state[eid]) this.state[eid] = {};
                 if (v) this.state[eid][d] = v; else delete this.state[eid][d];
+                this._hasChanged = true;
+                if (this.isDragging) this._affectedDates.add(d);
+
                 if (cellEl) {
-                    const typeMap = { 'U': 'status-vacation', 'D': 'status-trip', 'F': 'status-training', 'S': 'status-custom' };
-                    cellEl.classList.remove('status-vacation', 'status-trip', 'status-training', 'status-custom');
-                    cellEl.innerHTML = ''; if (v) { cellEl.classList.add(typeMap[v.type] || 'status-custom'); if (v.text) cellEl.innerHTML = `<span class="cell-text">${v.text}</span>`; }
+                    const key = `${eid}|${d}|${cellEl.id}`;
+                    this._pendingValUpdates.set(key, v);
+                    if (!this._updateScheduled) {
+                        this._updateScheduled = true;
+                        requestAnimationFrame(() => this.processPendingUpdates());
+                    }
                 } else { this.render(); }
+            }
+
+            updateSummaryRow(dateStr) {
+                const valCell = document.getElementById(`val-${dateStr}`);
+                if (!valCell) return;
+                const dObj = this.dates.find(x => x.dateStr === dateStr);
+                const issues = this.validateCoverage(dObj);
+                valCell.innerHTML = '';
+                if (issues) {
+                    valCell.innerHTML = `<span class="warning-text">${issues.join('<br>')}</span>`;
+                    valCell.title = 'Fehlend: ' + issues.join(', ');
+                } else {
+                    valCell.title = '';
+                }
             }
 
             scrollToMonth(m, cur) {
