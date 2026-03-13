@@ -1856,7 +1856,8 @@
                 if (!dObj) return;
                 const info = [dObj.holiday, dObj.schoolHoliday].filter(x => x).join(' & ');
                 if (!s && !info) return;
-                let tip = `<strong>${s ? (s.text || s.type) : ''}</strong>`;
+                const TYPE_NAMES = {U:'Urlaub', D:'Dienstreise', F:'Fortbildung', T:'Sonstiges', S:'Sonstiges'};
+                let tip = `<strong>${s ? (s.text || TYPE_NAMES[s.type] || s.type) : ''}</strong>`;
                 if (s && s.vertreter) tip += `<br>Vertreter: ${s.vertreter}`;
                 if (info) tip += `<br>${info}`;
                 this.showSimpleTip(ev, tip, true);

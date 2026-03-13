@@ -1765,7 +1765,8 @@
                 const s = customTxt ? null : (eid ? this.state[eid]?.[d] : null), dObj = this._datesMap.get(d);
                 const info = customTxt || [dObj?.holiday, dObj?.schoolHoliday].filter(x => x).join(' & ');
                 if (!s && !info) return;
-                let tip = customTxt ? `<strong>${customTxt}</strong>` : `<strong>${s ? (s.text || s.type) : ''}</strong>`; 
+                const TYPE_NAMES = {U:'Urlaub', D:'Dienstreise', F:'Fortbildung', T:'Sonstiges', S:'Sonstiges'};
+                let tip = customTxt ? `<strong>${customTxt}</strong>` : `<strong>${s ? (s.text || TYPE_NAMES[s.type] || s.type) : ''}</strong>`;
                 if (s && s.vertreter) tip += `<br>Vertreter: ${s.vertreter}`; 
                 if (info && !customTxt) tip += `<br>${info}`;
                 this.showSimpleTip(ev, tip, true);
