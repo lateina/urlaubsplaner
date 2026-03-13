@@ -1480,7 +1480,8 @@
                     empId: eid, type, text, vertreter, vertreterId, dates,
                     status: this.needsVertreter(eid) ? 'pending_vertreter' : 'pending_admin',
                     createdAt: this.formatDate(new Date()),
-                    rejectedBy: null, rejectionNote: null
+                    rejectedBy: null, rejectionNote: null,
+                    stamps: { submitted: this.makeStamp() }
                 };
                 if (!this.state.__REQUESTS__) this.state.__REQUESTS__ = [];
                 this.state.__REQUESTS__.push(req);
@@ -1514,6 +1515,8 @@
                     if (!proceed) return;
                 }
                 req.status = 'pending_admin';
+                if (!req.stamps) req.stamps = {};
+                req.stamps.vertreter = this.makeStamp();
                 this.saveState();
                 this.render();
                 this.renderRequestsTab();
@@ -1530,6 +1533,8 @@
                     if (!proceed) return;
                 }
                 req.status = 'approved';
+                if (!req.stamps) req.stamps = {};
+                req.stamps.admin = this.makeStamp();
                 if (!this.state[req.empId]) this.state[req.empId] = {};
                 req.dates.forEach(ds => {
                     this.state[req.empId][ds] = {
@@ -1552,6 +1557,8 @@
                 req.status = 'rejected';
                 req.rejectedBy = by;
                 req.rejectionNote = note || null;
+                if (!req.stamps) req.stamps = {};
+                req.stamps.rejected = this.makeStamp();
                 this.saveState();
                 this.render();
                 this.renderRequestsTab();
@@ -1573,6 +1580,22 @@
                     if (count === 0) count = ownPending;
                 }
                 badge.textContent = count > 0 ? String(count) : '';
+            }
+
+            makeStamp() {
+                const ua = navigator.userAgent;
+                let os = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? 'Android' : /Macintosh/.test(ua) ? 'macOS' : /Windows/.test(ua) ? 'Windows' : /Linux/.test(ua) ? 'Linux' : 'Unbekannt';
+                let br = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
+                const emp = CONFIG.employees.find(e => e.id === this.currentUser);
+                return { by: this.currentUser, name: emp?.name || this.currentUser, at: new Date().toISOString(), device: `${br} / ${os}` };
+            }
+
+            _fmtStamp(stamp, label) {
+                if (!stamp) return '';
+                const d = new Date(stamp.at);
+                const ds = d.toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric' });
+                const ts = d.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' });
+                return `<div style="font-size:0.72rem;color:#6b7280;margin-top:3px;padding:3px 8px;background:#f9fafb;border-radius:3px;border-left:3px solid #d1d5db"><strong>${label}</strong>: ${stamp.name} · ${ds}, ${ts} Uhr · ${stamp.device}</div>`;
             }
 
             renderRequestsTab() {
@@ -1604,6 +1627,8 @@
                                 <strong>${emp?.name || req.empId}</strong> — ${from}${from !== to ? ' bis ' + to : ''} — ${typeLabel[req.type] || req.type}
                                 ${req.text ? `<br><em>${req.text}</em>` : ''}
                                 <br>Vertreter: ${req.vertreter} ✓
+                                ${this._fmtStamp(req.stamps?.submitted, 'Antrag')}
+                                ${this._fmtStamp(req.stamps?.vertreter, 'Vertreter-Zustimmung')}
                                 ${isAdmin ? `
                                 <br><div id="reject-area-${req.id}" style="display:none;margin-top:8px">
                                     <input type="text" id="reject-note-${req.id}" placeholder="Ablehnungsgrund (optional)" style="width:100%;padding:4px;margin-bottom:4px">
@@ -1623,10 +1648,14 @@
                             const emp = CONFIG.employees.find(e => e.id === req.empId);
                             const from = req.dates[0], to = req.dates[req.dates.length-1];
                             const statusColor = req.status === 'approved' ? '#22c55e' : '#ef4444';
+                            const rejectedBy = req.rejectedBy === 'vertreter' ? 'Vertreter' : 'Admin';
                             html += `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:8px;background:#f9fafb;opacity:0.8">
                                 <strong>${emp?.name || req.empId}</strong> — ${from}${from !== to ? ' bis ' + to : ''} — ${typeLabel[req.type] || req.type}
                                 <span style="float:right;color:${statusColor}">${statusLabel[req.status]}</span>
                                 ${req.rejectionNote ? `<br><small>Grund: ${req.rejectionNote}</small>` : ''}
+                                ${this._fmtStamp(req.stamps?.submitted, 'Antrag')}
+                                ${this._fmtStamp(req.stamps?.vertreter, 'Vertreter-Zustimmung')}
+                                ${req.status === 'approved' ? this._fmtStamp(req.stamps?.admin, 'Genehmigung Admin') : this._fmtStamp(req.stamps?.rejected, `Ablehnung (${rejectedBy})`)}
                             </div>`;
                         });
                     }
@@ -1640,6 +1669,7 @@
                             html += `<div style="border:1px solid #bfdbfe;border-radius:8px;padding:16px;margin-bottom:12px;background:#eff6ff">
                                 <strong>${emp?.name || req.empId}</strong> möchte vom <strong>${from}</strong>${from !== to ? ' bis <strong>' + to + '</strong>' : ''} ${typeLabel[req.type] || req.type} nehmen.
                                 ${req.text ? `<br>Beschreibung: <em>${req.text}</em>` : ''}
+                                ${this._fmtStamp(req.stamps?.submitted, 'Antrag')}
                                 <br><div id="reject-area-v-${req.id}" style="display:none;margin-top:8px">
                                     <input type="text" id="reject-note-v-${req.id}" placeholder="Ablehnungsgrund (optional)" style="width:100%;padding:4px;margin-bottom:4px">
                                 </div>
@@ -1657,11 +1687,16 @@
                         ownReqs.forEach(req => {
                             const from = req.dates[0], to = req.dates[req.dates.length-1];
                             const statusColor = { pending_vertreter: '#3b82f6', pending_admin: '#f59e0b', approved: '#22c55e', rejected: '#ef4444' }[req.status] || '#6b7280';
+                            const rejectedBy = req.rejectedBy === 'vertreter' ? 'Vertreter' : 'Admin';
                             html += `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:8px;background:#fff">
                                 <strong>${typeLabel[req.type] || req.type}</strong>: ${from}${from !== to ? ' – ' + to : ''}
                                 | Vertreter: ${req.vertreter}
                                 <span style="float:right;color:${statusColor}">${statusLabel[req.status] || req.status}</span>
                                 ${req.rejectionNote ? `<br><small style="color:#ef4444">Ablehnungsgrund: ${req.rejectionNote}</small>` : ''}
+                                ${this._fmtStamp(req.stamps?.submitted, 'Antrag')}
+                                ${this._fmtStamp(req.stamps?.vertreter, 'Vertreter-Zustimmung')}
+                                ${req.status === 'approved' ? this._fmtStamp(req.stamps?.admin, 'Genehmigung Admin') : ''}
+                                ${req.status === 'rejected' ? this._fmtStamp(req.stamps?.rejected, `Ablehnung (${rejectedBy})`) : ''}
                             </div>`;
                         });
                     }
@@ -1747,7 +1782,7 @@
                         html += `<td style="padding:6px 10px;border:1px solid #e5e7eb">${to}</td>`;
                         html += `<td style="padding:6px 10px;border:1px solid #e5e7eb">${typeLabel[req.type] || req.type}</td>`;
                         html += `<td style="padding:6px 10px;border:1px solid #e5e7eb">${req.vertreter || '—'}</td>`;
-                        html += `<td style="padding:6px 10px;border:1px solid #e5e7eb;color:#22c55e">&#10003; Eingetragen</td>`;
+                        html += `<td style="padding:6px 10px;border:1px solid #e5e7eb;color:#22c55e">&#10003; Eingetragen${req.stamps?.po ? '<br>' + this._fmtStamp(req.stamps.po, 'PO-Eintragung') : ''}</td>`;
                         html += '</tr>';
                     });
                     html += '</tbody></table></details>';
@@ -1758,10 +1793,13 @@
 
             markPODone(reqId, checked) {
                 if (!this.state.__PO_DONE__) this.state.__PO_DONE__ = {};
+                const req = (this.state.__REQUESTS__ || []).find(r => r.id === reqId);
                 if (checked) {
                     this.state.__PO_DONE__[reqId] = true;
+                    if (req) { if (!req.stamps) req.stamps = {}; req.stamps.po = this.makeStamp(); }
                 } else {
                     delete this.state.__PO_DONE__[reqId];
+                    if (req && req.stamps) delete req.stamps.po;
                 }
                 this.saveState();
                 this.renderPOView();
