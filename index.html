@@ -512,6 +512,32 @@
         #adminEmployeeTable tr:hover {
             background: #f8fafc;
         }
+
+        /* Wunsch wartet auf Vertreter-Zustimmung — blau gestreift */
+        .status-pending-vertreter {
+            background: repeating-linear-gradient(
+                45deg, #bfdbfe, #bfdbfe 4px, #fff 4px, #fff 10px) !important;
+            color: #1e40af !important;
+            cursor: default !important;
+        }
+        /* Wunsch wartet auf Admin-Freigabe — gelb gestreift */
+        .status-pending-admin {
+            background: repeating-linear-gradient(
+                45deg, #fde68a, #fde68a 4px, #fff 4px, #fff 10px) !important;
+            color: #92400e !important;
+            cursor: default !important;
+        }
+        #requests-badge {
+            display: inline-block;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            padding: 1px 6px;
+            font-size: 0.7rem;
+            margin-left: 4px;
+            vertical-align: middle;
+        }
+        #requests-badge:empty { display: none; }
     </style>
 </head>
 
@@ -537,6 +563,10 @@
                 style="display:none;">Eingabestatus</button>
             <button id="tab-admin" class="tab-button" onclick="app.switchTab('admin')"
                 style="display:none;">Mitarbeiterverwaltung</button>
+            <button id="tab-requests" class="tab-button" onclick="app.switchTab('requests')" style="display:none;">
+                Anfragen <span id="requests-badge"></span>
+            </button>
+            <button id="tab-po" class="tab-button" onclick="app.switchTab('po')" style="display:none;">PO-Übersicht</button>
         </div>
 
         <div id="bulkImportPanel" class="bulk-import-panel" style="display:none;">
@@ -635,6 +665,12 @@
         </div>
     </div>
 
+    <div id="requestsView" style="display:none; padding:20px;">
+        <div id="requestsList"></div>
+    </div>
+
+    <div id="poView" style="display:none; padding:20px;"><div id="poList"></div></div>
+
     <div id="loginModal" class="modal-overlay" style="display:flex;">
         <div class="modal">
             <h2>Anmelden</h2>
@@ -666,9 +702,16 @@
                     <option value="S">Sonstiges</option>
                 </select></div>
             <div class="form-group"><label>Beschreibung:</label><input type="text" id="modalText"></div>
-            <div class="form-group"><label>Vertreter:</label><input type="text" id="modalVertreter"></div>
-            <div class="form-group"><label>Von:</label><input type="date" id="modalStart"></div>
-            <div class="form-group"><label>Bis:</label><input type="date" id="modalEnd"></div>
+            <div class="form-group"><label>Vertreter:</label>
+                <div style="position:relative">
+                    <input type="text" id="modalVertreterInput" placeholder="Vertreter suchen...">
+                    <input type="hidden" id="modalVertreterId">
+                    <div id="vertreterResults" style="position:absolute;background:#fff;border:1px solid #ccc;max-height:150px;overflow-y:auto;width:100%;z-index:1000;"></div>
+                </div>
+            </div>
+            <div class="form-group"><label>Von:</label><input type="date" id="modalStart" oninput="app.onModalDateChange()"></div>
+            <div class="form-group"><label>Bis:</label><input type="date" id="modalEnd" oninput="app.onModalDateChange()"></div>
+            <div id="coverageWarning" style="display:none;margin:8px 0;padding:10px 14px;background:#fef3c7;border:1px solid #fbbf24;border-radius:6px;font-size:0.88rem;color:#92400e;"></div>
             <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
                 <button onclick="document.getElementById('addModal').style.display='none'">Abbrechen</button>
                 <button class="primary" onclick="app.addRange()">Speichern</button>
@@ -848,6 +891,10 @@
             handleMouseDown(empId, dateStr) {
                 if (this.currentUser === 'sekretariat') { alert('Du bist als Sekretariat angemeldet und kannst keine Bearbeitungen machen'); return; }
                 if (!this.checkPermission(empId)) return;
+                if (this.currentUser !== 'admin') {
+                    this.openRequestModal(empId, dateStr);
+                    return;
+                }
                 this.isDragging = true;
                 const current = this.state[empId]?.[dateStr];
                 this.dragStartVal = current ? null : { type: this.currentMode, text: this.currentText, vertreter: this.currentVertreterText };
@@ -930,7 +977,7 @@
                 const isAdmin = (id === 'admin' || id === 'sekretariat');
                 const isRealAdmin = (id === 'admin');
 
-                document.querySelector('.tab-container').style.display = isAdmin ? 'flex' : 'none';
+                document.querySelector('.tab-container').style.display = 'flex';
 
                 // Control Export/Import button visibility
                 const btnExport = document.getElementById('btnExport');
@@ -951,6 +998,10 @@
                 if (tabSummary) tabSummary.style.display = adminInlineStyle;
                 const tabStatus = document.getElementById('tab-status');
                 if (tabStatus) tabStatus.style.display = adminInlineStyle;
+                const tabRequests = document.getElementById('tab-requests');
+                if (tabRequests) tabRequests.style.display = (id === 'sekretariat' ? 'none' : 'inline-block');
+                const tabPO = document.getElementById('tab-po');
+                if (tabPO) tabPO.style.display = (id === 'sekretariat' ? 'inline-block' : 'none');
 
                 const mSel = document.getElementById('modalEmp'); mSel.innerHTML = '';
                 const allowed = (isAdmin ? CONFIG.employees.filter(e => e.active !== false && e.id !== 'admin' && e.id !== 'sekretariat') : CONFIG.employees.filter(e => e.id === id));
@@ -962,8 +1013,9 @@
                 });
 
                 this.updateSummary();
-                this.switchTab('calendar');
+                this.switchTab(id === 'sekretariat' ? 'po' : 'calendar');
                 this.render();
+                this.updateRequestsBadge();
                 setTimeout(() => this.scrollToMonth(new Date().getMonth(), true), 500);
             }
 
@@ -1107,6 +1159,19 @@
                             const t = s.type || s;
                             cell.classList.add(t === 'U' || t === 'V' ? 'status-vacation' : t === 'D' ? 'status-trip' : t === 'F' ? 'status-training' : 'status-custom');
                             if (s.text) { const span = document.createElement('span'); span.className = 'cell-text'; span.textContent = s.text; cell.appendChild(span); }
+                        } else {
+                            const req = (this.state.__REQUESTS__ || []).find(r =>
+                                r.empId === e.id &&
+                                r.dates.includes(d.dateStr) &&
+                                (r.status === 'pending_vertreter' || r.status === 'pending_admin')
+                            );
+                            if (req) {
+                                cell.classList.add(req.status === 'pending_vertreter' ? 'status-pending-vertreter' : 'status-pending-admin');
+                                cell.dataset.reqId = req.id;
+                                cell.title = req.status === 'pending_vertreter'
+                                    ? 'Wunsch eingereicht — wartet auf Vertreter-Zustimmung'
+                                    : 'Wunsch eingereicht — wartet auf Admin-Freigabe';
+                            }
                         }
                         cell.onmouseenter = (ev) => this.showTip(ev, e.id, d.dateStr);
                         cell.onmouseleave = () => this.hideTip();
@@ -1168,7 +1233,12 @@
 
             openModal() {
                 document.getElementById('modalType').value = this.currentMode;
-                document.getElementById('modalText').value = ''; document.getElementById('modalVertreter').value = '';
+                document.getElementById('modalText').value = '';
+                document.getElementById('modalVertreterInput').value = '';
+                document.getElementById('modalVertreterId').value = '';
+                document.getElementById('vertreterResults').innerHTML = '';
+                const titleEl = document.querySelector('#addModal h2');
+                if (titleEl) titleEl.textContent = 'Abwesenheit eintragen';
                 document.getElementById('addModal').style.display = 'flex';
             }
 
@@ -1240,16 +1310,462 @@
                 if (!this.checkPermission(eid)) return;
                 const s = this.state[eid]?.[d]; if (!s) return;
                 document.getElementById('modalEmp').value = eid; document.getElementById('modalType').value = (s.type === 'T' ? 'S' : s.type) || 'U';
-                document.getElementById('modalText').value = s.text || ''; document.getElementById('modalVertreter').value = s.vertreter || '';
+                document.getElementById('modalText').value = s.text || '';
+                document.getElementById('modalVertreterInput').value = s.vertreter || '';
+                document.getElementById('modalVertreterId').value = s.vertreterId || '';
+                document.getElementById('vertreterResults').innerHTML = '';
+                const titleEl = document.querySelector('#addModal h2');
+                if (titleEl) titleEl.textContent = 'Abwesenheit eintragen';
                 document.getElementById('modalStart').value = document.getElementById('modalEnd').value = d; document.getElementById('addModal').style.display = 'flex';
             }
 
             addRange() {
-                const eid = document.getElementById('modalEmp').value, t = document.getElementById('modalType').value, txt = document.getElementById('modalText').value, v = document.getElementById('modalVertreter').value, s = document.getElementById('modalStart').value, e = document.getElementById('modalEnd').value;
+                const isAdmin = (this.currentUser === 'admin');
+                if (isAdmin) {
+                    this._addRangeDirect();
+                } else {
+                    this.submitRequest();
+                }
+            }
+
+            _addRangeDirect() {
+                const eid = document.getElementById('modalEmp').value;
+                const type = document.getElementById('modalType').value;
+                const text = document.getElementById('modalText').value;
+                const vertreter = document.getElementById('modalVertreterInput').value;
+                const vertreterId = document.getElementById('modalVertreterId').value;
+                const start = document.getElementById('modalStart').value;
+                const end = document.getElementById('modalEnd').value;
+                if (!eid || !start || !end) return;
                 if (!this.checkPermission(eid)) return;
-                let curr = new Date(s), end = new Date(e); if (!this.state[eid]) this.state[eid] = {};
-                while (curr <= end) { this.state[eid][this.formatDate(curr)] = { type: t, text: txt, vertreter: v }; curr.setDate(curr.getDate() + 1); }
-                this.saveState(); this.render(); document.getElementById('addModal').style.display = 'none';
+                let curr = new Date(start), endD = new Date(end);
+                while (curr <= endD) {
+                    const ds = this.formatDate(curr);
+                    if (!this.state[eid]) this.state[eid] = {};
+                    this.state[eid][ds] = { type, text, vertreter, vertreterId, status: 'confirmed' };
+                    curr.setDate(curr.getDate() + 1);
+                }
+                this.saveState();
+                this.render();
+                document.getElementById('addModal').style.display = 'none';
+            }
+
+            openRequestModal(empId, dateStr) {
+                const modal = document.getElementById('addModal');
+                document.getElementById('modalEmp').value = empId;
+                document.getElementById('modalStart').value = dateStr;
+                document.getElementById('modalEnd').value = dateStr;
+                document.getElementById('modalType').value = 'U';
+                document.getElementById('modalText').value = '';
+                document.getElementById('modalVertreterInput').value = '';
+                document.getElementById('modalVertreterId').value = '';
+                document.getElementById('vertreterResults').innerHTML = '';
+                const titleEl = modal.querySelector('h2');
+                if (titleEl) titleEl.textContent = 'Abwesenheitswunsch einreichen';
+                const vertreterInput = document.getElementById('modalVertreterInput');
+                const vertreterResults = document.getElementById('vertreterResults');
+                const showVertreterList = () => {
+                    const q = vertreterInput.value.toLowerCase().trim();
+                    const reqEmp = CONFIG.employees.find(e => e.id === empId);
+                    const reqGrps = Array.isArray(reqEmp?.groups) ? reqEmp.groups : (reqEmp?.group ? [reqEmp.group] : []);
+                    // Build list of requested dates
+                    const startVal = document.getElementById('modalStart').value;
+                    const endVal = document.getElementById('modalEnd').value;
+                    const reqDates = [];
+                    if (startVal) {
+                        let cur = new Date(startVal), endD = new Date(endVal || startVal);
+                        while (cur <= endD) { reqDates.push(this.formatDate(cur)); cur.setDate(cur.getDate() + 1); }
+                    }
+                    // Classify each candidate: fully available, partially available, or fully absent
+                    const candidates = CONFIG.employees.map(e => {
+                        if (e.id === empId || e.id === 'admin' || e.id === 'sekretariat' || e.active === false) return null;
+                        if (q && !e.name.toLowerCase().includes(q)) return null;
+                        const eGrps = Array.isArray(e.groups) ? e.groups : (e.group ? [e.group] : []);
+                        if (reqGrps.length > 0 && !eGrps.some(g => reqGrps.includes(g))) return null;
+                        const absentDates = reqDates.filter(d => this.state[e.id]?.[d]);
+                        if (absentDates.length === reqDates.length && reqDates.length > 0) return null; // fully absent
+                        return { e, partial: absentDates.length > 0, absentDates };
+                    }).filter(Boolean);
+                    vertreterResults.innerHTML = candidates.slice(0, 10).map(({ e, partial, absentDates }) => {
+                        const warning = partial
+                            ? ` <span style="color:#f59e0b;font-size:0.8rem">⚠ abwesend: ${absentDates.join(', ')}</span>`
+                            : '';
+                        return `<div style="padding:6px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0;${partial ? 'background:#fffbeb' : ''}"
+                              onmousedown="document.getElementById('modalVertreterInput').value='${e.name.replace(/'/g,"\\'")}';document.getElementById('modalVertreterId').value='${e.id}';document.getElementById('vertreterResults').innerHTML=''">${e.name}${warning}</div>`;
+                    }).join('') || '<div style="padding:6px 10px;color:#9ca3af;font-size:0.85rem">Keine verfügbaren Kollegen aus gleicher Gruppe</div>';
+                };
+                vertreterInput.oninput = showVertreterList;
+                vertreterInput.onfocus = showVertreterList;
+                vertreterInput.onblur = () => setTimeout(() => { vertreterResults.innerHTML = ''; }, 200);
+                this._showVertreterListFn = showVertreterList;
+                this._requestModalEmpId = empId;
+                this.onModalDateChange();
+                modal.style.display = 'flex';
+            }
+
+            onModalDateChange() {
+                if (typeof this._showVertreterListFn === 'function') this._showVertreterListFn();
+                const empId = this._requestModalEmpId;
+                if (!empId || this.currentUser === 'admin') return;
+                const startVal = document.getElementById('modalStart').value;
+                const endVal = document.getElementById('modalEnd').value;
+                if (!startVal) return;
+                const dates = [];
+                let cur = new Date(startVal), endD = new Date(endVal || startVal);
+                while (cur <= endD) { dates.push(this.formatDate(cur)); cur.setDate(cur.getDate() + 1); }
+                const issues = this.checkCoverageForRequest(empId, dates);
+                const box = document.getElementById('coverageWarning');
+                if (!box) return;
+                if (issues.length > 0) {
+                    const lines = issues.map(({ date, missing }) => `${date}: fehlend ${missing.join(', ')}`).join('<br>');
+                    box.innerHTML = `⚠ <strong>Abdeckungsproblem:</strong> Deine Abwesenheit würde an folgenden Tagen die Mindestbesetzung verletzen:<br>${lines}<br><small>Du kannst den Antrag trotzdem einreichen.</small>`;
+                    box.style.display = 'block';
+                } else {
+                    box.style.display = 'none';
+                }
+            }
+
+            checkCoverageForRequest(empId, dates) {
+                const issues = [];
+                for (const dateStr of dates) {
+                    const dObj = this._datesMap?.get(dateStr);
+                    if (!dObj || dObj.isWeekend || dObj.holiday) continue;
+                    // Simulate this employee absent: temporarily add to state
+                    if (!this.state[empId]) this.state[empId] = {};
+                    const prev = this.state[empId][dateStr];
+                    this.state[empId][dateStr] = { type: 'U', status: 'confirmed' };
+                    const result = this.validateCoverage(dObj);
+                    // Restore
+                    if (prev === undefined) delete this.state[empId][dateStr];
+                    else this.state[empId][dateStr] = prev;
+                    if (result) issues.push({ date: dateStr, missing: result });
+                }
+                return issues;
+            }
+
+            submitRequest() {
+                const eid = document.getElementById('modalEmp').value;
+                const type = document.getElementById('modalType').value;
+                const text = document.getElementById('modalText').value;
+                const vertreter = document.getElementById('modalVertreterInput').value;
+                const vertreterId = document.getElementById('modalVertreterId').value;
+                const start = document.getElementById('modalStart').value;
+                const end = document.getElementById('modalEnd').value;
+
+                if (!vertreterId) { alert('Bitte einen Vertreter aus der Liste auswählen.'); return; }
+
+                const dates = [];
+                let curr = new Date(start), endD = new Date(end);
+                while (curr <= endD) { dates.push(this.formatDate(curr)); curr.setDate(curr.getDate()+1); }
+
+                // Check if selected vertreter is absent on some (but not all) days
+                const vertreterAbsentDates = dates.filter(d => this.state[vertreterId]?.[d]);
+                if (vertreterAbsentDates.length > 0) {
+                    alert(`${vertreter} ist an folgenden Tagen selbst abwesend: ${vertreterAbsentDates.join(', ')}.\n\nBitte teile den Antrag auf und wähle für diese Tage einen anderen Vertreter.`);
+                    return;
+                }
+
+                const conflict = this.checkVertretungConflict(eid, dates);
+                if (conflict) {
+                    alert(`Achtung: Du bist an ${conflict.date} bereits als Vertreter für ${conflict.who} eingetragen. Wunsch kann nicht eingereicht werden.`);
+                    return;
+                }
+
+                const coverageIssues = this.checkCoverageForRequest(eid, dates);
+                if (coverageIssues.length > 0) {
+                    const lines = coverageIssues.map(({ date, missing }) => `${date}: fehlend ${missing.join(', ')}`).join('\n');
+                    const proceed = confirm(`⚠ Abdeckungsproblem:\nDeine Abwesenheit würde an folgenden Tagen die Mindestbesetzung verletzen:\n\n${lines}\n\nTrotzdem einreichen?`);
+                    if (!proceed) return;
+                }
+
+                const req = {
+                    id: 'req_' + Date.now(),
+                    empId: eid, type, text, vertreter, vertreterId, dates,
+                    status: 'pending_vertreter',
+                    createdAt: this.formatDate(new Date()),
+                    rejectedBy: null, rejectionNote: null
+                };
+                if (!this.state.__REQUESTS__) this.state.__REQUESTS__ = [];
+                this.state.__REQUESTS__.push(req);
+                this.saveState();
+                this.render();
+                this.updateRequestsBadge();
+                document.getElementById('addModal').style.display = 'none';
+            }
+
+            checkVertretungConflict(empId, dates) {
+                for (const dateStr of dates) {
+                    for (const otherId of Object.keys(this.state)) {
+                        if (otherId.startsWith('__') || otherId === empId) continue;
+                        const entry = this.state[otherId]?.[dateStr];
+                        if (entry && entry.vertreterId === empId && entry.status === 'confirmed') {
+                            const other = CONFIG.employees.find(e => e.id === otherId);
+                            return { date: dateStr, who: other?.name || otherId };
+                        }
+                    }
+                }
+                return null;
+            }
+
+            approveAsVertreter(reqId) {
+                const req = (this.state.__REQUESTS__ || []).find(r => r.id === reqId);
+                if (!req) return;
+                const coverageIssues = this.checkCoverageForRequest(req.empId, req.dates);
+                if (coverageIssues.length > 0) {
+                    const lines = coverageIssues.map(({ date, missing }) => `${date}: fehlend ${missing.join(', ')}`).join('\n');
+                    const proceed = confirm(`⚠ Abdeckungsproblem:\nDiese Abwesenheit würde an folgenden Tagen die Mindestbesetzung verletzen:\n\n${lines}\n\nTrotzdem zustimmen?`);
+                    if (!proceed) return;
+                }
+                req.status = 'pending_admin';
+                this.saveState();
+                this.render();
+                this.renderRequestsTab();
+                this.updateRequestsBadge();
+            }
+
+            approveAsAdmin(reqId) {
+                const req = (this.state.__REQUESTS__ || []).find(r => r.id === reqId);
+                if (!req) return;
+                const coverageIssues = this.checkCoverageForRequest(req.empId, req.dates);
+                if (coverageIssues.length > 0) {
+                    const lines = coverageIssues.map(({ date, missing }) => `${date}: fehlend ${missing.join(', ')}`).join('\n');
+                    const proceed = confirm(`⚠ Abdeckungsproblem:\nDiese Abwesenheit würde an folgenden Tagen die Mindestbesetzung verletzen:\n\n${lines}\n\nTrotzdem genehmigen?`);
+                    if (!proceed) return;
+                }
+                req.status = 'approved';
+                if (!this.state[req.empId]) this.state[req.empId] = {};
+                req.dates.forEach(ds => {
+                    this.state[req.empId][ds] = {
+                        type: req.type,
+                        text: req.text,
+                        vertreter: req.vertreter,
+                        vertreterId: req.vertreterId,
+                        status: 'confirmed'
+                    };
+                });
+                this.saveState();
+                this.render();
+                this.renderRequestsTab();
+                this.updateRequestsBadge();
+            }
+
+            rejectRequest(reqId, by, note) {
+                const req = (this.state.__REQUESTS__ || []).find(r => r.id === reqId);
+                if (!req) return;
+                req.status = 'rejected';
+                req.rejectedBy = by;
+                req.rejectionNote = note || null;
+                this.saveState();
+                this.render();
+                this.renderRequestsTab();
+                this.updateRequestsBadge();
+            }
+
+            updateRequestsBadge() {
+                const badge = document.getElementById('requests-badge');
+                if (!badge) return;
+                const requests = this.state.__REQUESTS__ || [];
+                const cu = this.currentUser;
+                const isAdmin = cu === 'admin';
+                let count = 0;
+                if (isAdmin) {
+                    count = requests.filter(r => r.status === 'pending_admin').length;
+                } else {
+                    count = requests.filter(r => r.vertreterId === cu && r.status === 'pending_vertreter').length;
+                    const ownPending = requests.filter(r => r.empId === cu && (r.status === 'pending_vertreter' || r.status === 'pending_admin')).length;
+                    if (count === 0) count = ownPending;
+                }
+                badge.textContent = count > 0 ? String(count) : '';
+            }
+
+            renderRequestsTab() {
+                const container = document.getElementById('requestsList');
+                if (!container) return;
+                const requests = this.state.__REQUESTS__ || [];
+                const cu = this.currentUser;
+                const isAdmin = cu === 'admin';
+                let html = '';
+
+                const typeLabel = { U: 'Urlaub', D: 'Dienstreise', F: 'Fortbildung', T: 'Sonstiges', S: 'Sonstiges' };
+                const statusLabel = {
+                    pending_vertreter: '⏳ Wartet auf Vertreter-Zustimmung',
+                    pending_admin: '⏳ Wartet auf Admin-Freigabe',
+                    approved: '✓ Genehmigt',
+                    rejected: '✗ Abgelehnt'
+                };
+
+                if (isAdmin) {
+                    const adminReqs = requests.filter(r => r.status === 'pending_admin');
+                    if (adminReqs.length === 0) {
+                        html += '<p style="color:#6b7280">Keine offenen Admin-Anfragen.</p>';
+                    } else {
+                        adminReqs.forEach(req => {
+                            const emp = CONFIG.employees.find(e => e.id === req.empId);
+                            const from = req.dates[0], to = req.dates[req.dates.length-1];
+                            html += `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:12px;background:#fff">
+                                <strong>${emp?.name || req.empId}</strong> — ${from}${from !== to ? ' bis ' + to : ''} — ${typeLabel[req.type] || req.type}
+                                ${req.text ? `<br><em>${req.text}</em>` : ''}
+                                <br>Vertreter: ${req.vertreter} ✓
+                                <br><div id="reject-area-${req.id}" style="display:none;margin-top:8px">
+                                    <input type="text" id="reject-note-${req.id}" placeholder="Ablehnungsgrund (optional)" style="width:100%;padding:4px;margin-bottom:4px">
+                                </div>
+                                <div style="margin-top:8px;display:flex;gap:8px">
+                                    <button onclick="app.approveAsAdmin('${req.id}')" style="background:#22c55e;color:white;border:none;padding:6px 14px;border-radius:4px;cursor:pointer">Genehmigen</button>
+                                    <button onclick="document.getElementById('reject-area-${req.id}').style.display='block';this.style.display='none';document.getElementById('confirm-reject-${req.id}').style.display='inline'" style="background:#f3f4f6;border:1px solid #d1d5db;padding:6px 14px;border-radius:4px;cursor:pointer">Ablehnen...</button>
+                                    <button onclick="app.rejectRequest('${req.id}','admin',document.getElementById('reject-note-${req.id}').value)" style="display:none;background:#ef4444;color:white;border:none;padding:6px 14px;border-radius:4px;cursor:pointer" id="confirm-reject-${req.id}">Ablehnen bestätigen</button>
+                                </div>
+                            </div>`;
+                        });
+                    }
+                    const history = requests.filter(r => r.status === 'approved' || r.status === 'rejected');
+                    if (history.length > 0) {
+                        html += '<h4 style="margin-top:20px;color:#374151">Verlauf</h4>';
+                        history.forEach(req => {
+                            const emp = CONFIG.employees.find(e => e.id === req.empId);
+                            const from = req.dates[0], to = req.dates[req.dates.length-1];
+                            const statusColor = req.status === 'approved' ? '#22c55e' : '#ef4444';
+                            html += `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:8px;background:#f9fafb;opacity:0.8">
+                                <strong>${emp?.name || req.empId}</strong> — ${from}${from !== to ? ' bis ' + to : ''} — ${typeLabel[req.type] || req.type}
+                                <span style="float:right;color:${statusColor}">${statusLabel[req.status]}</span>
+                                ${req.rejectionNote ? `<br><small>Grund: ${req.rejectionNote}</small>` : ''}
+                            </div>`;
+                        });
+                    }
+                } else {
+                    const vertretenReqs = requests.filter(r => r.vertreterId === cu && r.status === 'pending_vertreter');
+                    if (vertretenReqs.length > 0) {
+                        html += '<h4 style="color:#374151;margin-bottom:12px">Vertretungsanfragen</h4>';
+                        vertretenReqs.forEach(req => {
+                            const emp = CONFIG.employees.find(e => e.id === req.empId);
+                            const from = req.dates[0], to = req.dates[req.dates.length-1];
+                            html += `<div style="border:1px solid #bfdbfe;border-radius:8px;padding:16px;margin-bottom:12px;background:#eff6ff">
+                                <strong>${emp?.name || req.empId}</strong> möchte vom <strong>${from}</strong>${from !== to ? ' bis <strong>' + to + '</strong>' : ''} ${typeLabel[req.type] || req.type} nehmen.
+                                ${req.text ? `<br>Beschreibung: <em>${req.text}</em>` : ''}
+                                <br><div id="reject-area-v-${req.id}" style="display:none;margin-top:8px">
+                                    <input type="text" id="reject-note-v-${req.id}" placeholder="Ablehnungsgrund (optional)" style="width:100%;padding:4px;margin-bottom:4px">
+                                </div>
+                                <div style="margin-top:10px;display:flex;gap:8px">
+                                    <button onclick="app.approveAsVertreter('${req.id}')" style="background:#22c55e;color:white;border:none;padding:6px 14px;border-radius:4px;cursor:pointer">Zustimmen</button>
+                                    <button onclick="document.getElementById('reject-area-v-${req.id}').style.display='block';document.getElementById('confirm-reject-v-${req.id}').style.display='inline'" style="background:#f3f4f6;border:1px solid #d1d5db;padding:6px 14px;border-radius:4px;cursor:pointer">Ablehnen...</button>
+                                    <button onclick="app.rejectRequest('${req.id}','vertreter',document.getElementById('reject-note-v-${req.id}').value)" style="display:none;background:#ef4444;color:white;border:none;padding:6px 14px;border-radius:4px;cursor:pointer" id="confirm-reject-v-${req.id}">Ablehnen bestätigen</button>
+                                </div>
+                            </div>`;
+                        });
+                    }
+                    const ownReqs = requests.filter(r => r.empId === cu);
+                    if (ownReqs.length > 0) {
+                        html += '<h4 style="color:#374151;margin-bottom:12px;margin-top:20px">Meine Anfragen</h4>';
+                        ownReqs.forEach(req => {
+                            const from = req.dates[0], to = req.dates[req.dates.length-1];
+                            const statusColor = { pending_vertreter: '#3b82f6', pending_admin: '#f59e0b', approved: '#22c55e', rejected: '#ef4444' }[req.status] || '#6b7280';
+                            html += `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:8px;background:#fff">
+                                <strong>${typeLabel[req.type] || req.type}</strong>: ${from}${from !== to ? ' – ' + to : ''}
+                                | Vertreter: ${req.vertreter}
+                                <span style="float:right;color:${statusColor}">${statusLabel[req.status] || req.status}</span>
+                                ${req.rejectionNote ? `<br><small style="color:#ef4444">Ablehnungsgrund: ${req.rejectionNote}</small>` : ''}
+                            </div>`;
+                        });
+                    }
+                    if (vertretenReqs.length === 0 && ownReqs.length === 0) {
+                        html += '<p style="color:#6b7280">Keine Anfragen vorhanden.</p>';
+                    }
+                }
+
+                container.innerHTML = html;
+            }
+
+            renderPOView() {
+                const container = document.getElementById('poList');
+                if (!container) return;
+                const requests = this.state.__REQUESTS__ || [];
+                const poDone = this.state.__PO_DONE__ || {};
+
+                const approved = requests.filter(r => r.status === 'approved');
+
+                if (approved.length === 0) {
+                    container.innerHTML = '<p style="color:#6b7280">Keine genehmigten Abwesenheiten vorhanden.</p>';
+                    return;
+                }
+
+                const typeLabel = { U: 'Urlaub', D: 'Dienstreise', F: 'Fortbildung', T: 'Sonstiges', S: 'Sonstiges' };
+
+                approved.sort((a, b) => (a.dates[0] || '').localeCompare(b.dates[0] || ''));
+
+                const pending = approved.filter(r => !poDone[r.id]);
+                const done = approved.filter(r => poDone[r.id]);
+
+                let html = '<h3 style="margin-bottom:16px;color:#111827">Genehmigte Abwesenheiten — Übertragung in PO</h3>';
+
+                if (pending.length > 0) {
+                    html += '<table style="width:100%;border-collapse:collapse;margin-bottom:24px">';
+                    html += '<thead><tr style="background:#f3f4f6;text-align:left">';
+                    html += '<th style="padding:8px 12px;border:1px solid #e5e7eb">Person</th>';
+                    html += '<th style="padding:8px 12px;border:1px solid #e5e7eb">Von</th>';
+                    html += '<th style="padding:8px 12px;border:1px solid #e5e7eb">Bis</th>';
+                    html += '<th style="padding:8px 12px;border:1px solid #e5e7eb">Art</th>';
+                    html += '<th style="padding:8px 12px;border:1px solid #e5e7eb">Vertreter</th>';
+                    html += '<th style="padding:8px 12px;border:1px solid #e5e7eb">In PO eingetragen</th>';
+                    html += '</tr></thead><tbody>';
+
+                    pending.forEach(req => {
+                        const emp = CONFIG.employees.find(e => e.id === req.empId);
+                        const from = req.dates[0];
+                        const to = req.dates[req.dates.length - 1];
+                        html += `<tr style="background:#fff">`;
+                        html += `<td style="padding:8px 12px;border:1px solid #e5e7eb;font-weight:500">${emp?.name || req.empId}</td>`;
+                        html += `<td style="padding:8px 12px;border:1px solid #e5e7eb">${from}</td>`;
+                        html += `<td style="padding:8px 12px;border:1px solid #e5e7eb">${to}</td>`;
+                        html += `<td style="padding:8px 12px;border:1px solid #e5e7eb">${typeLabel[req.type] || req.type}</td>`;
+                        html += `<td style="padding:8px 12px;border:1px solid #e5e7eb">${req.vertreter || '—'}</td>`;
+                        html += `<td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center">
+                <input type="checkbox" onchange="app.markPODone('${req.id}', this.checked)" style="width:18px;height:18px;cursor:pointer">
+            </td>`;
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table>';
+                } else {
+                    html += '<p style="color:#22c55e;margin-bottom:24px">&#10003; Alle genehmigten Abwesenheiten wurden in PO eingetragen.</p>';
+                }
+
+                if (done.length > 0) {
+                    html += `<details style="margin-top:16px"><summary style="cursor:pointer;color:#6b7280;font-size:0.9rem">Bereits eingetragen (${done.length})</summary>`;
+                    html += '<table style="width:100%;border-collapse:collapse;margin-top:8px;opacity:0.6">';
+                    html += '<thead><tr style="background:#f3f4f6;text-align:left">';
+                    html += '<th style="padding:6px 10px;border:1px solid #e5e7eb">Person</th>';
+                    html += '<th style="padding:6px 10px;border:1px solid #e5e7eb">Von</th>';
+                    html += '<th style="padding:6px 10px;border:1px solid #e5e7eb">Bis</th>';
+                    html += '<th style="padding:6px 10px;border:1px solid #e5e7eb">Art</th>';
+                    html += '<th style="padding:6px 10px;border:1px solid #e5e7eb">Vertreter</th>';
+                    html += '<th style="padding:6px 10px;border:1px solid #e5e7eb">Status</th>';
+                    html += '</tr></thead><tbody>';
+                    done.forEach(req => {
+                        const emp = CONFIG.employees.find(e => e.id === req.empId);
+                        const from = req.dates[0];
+                        const to = req.dates[req.dates.length - 1];
+                        html += `<tr style="background:#f9fafb">`;
+                        html += `<td style="padding:6px 10px;border:1px solid #e5e7eb">${emp?.name || req.empId}</td>`;
+                        html += `<td style="padding:6px 10px;border:1px solid #e5e7eb">${from}</td>`;
+                        html += `<td style="padding:6px 10px;border:1px solid #e5e7eb">${to}</td>`;
+                        html += `<td style="padding:6px 10px;border:1px solid #e5e7eb">${typeLabel[req.type] || req.type}</td>`;
+                        html += `<td style="padding:6px 10px;border:1px solid #e5e7eb">${req.vertreter || '—'}</td>`;
+                        html += `<td style="padding:6px 10px;border:1px solid #e5e7eb;color:#22c55e">&#10003; Eingetragen</td>`;
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table></details>';
+                }
+
+                container.innerHTML = html;
+            }
+
+            markPODone(reqId, checked) {
+                if (!this.state.__PO_DONE__) this.state.__PO_DONE__ = {};
+                if (checked) {
+                    this.state.__PO_DONE__[reqId] = true;
+                } else {
+                    delete this.state.__PO_DONE__[reqId];
+                }
+                this.saveState();
+                this.renderPOView();
             }
 
             showTip(ev, eid, d) {
@@ -1280,7 +1796,7 @@
             }
 
             switchTab(tabId) {
-                const tabs = ['calendar', 'summary', 'status', 'admin'];
+                const tabs = ['calendar', 'summary', 'status', 'admin', 'requests', 'po'];
                 tabs.forEach(t => { const btn = document.getElementById('tab-' + t); if (btn) btn.classList.remove('active'); });
                 const activeBtn = document.getElementById('tab-' + tabId);
                 if (activeBtn) activeBtn.classList.add('active');
@@ -1290,9 +1806,13 @@
                 document.getElementById('summaryView').style.display = (tabId === 'summary') ? 'block' : 'none';
                 document.getElementById('statusView').style.display = (tabId === 'status') ? 'block' : 'none';
                 document.getElementById('adminView').style.display = (tabId === 'admin') ? 'block' : 'none';
+                document.getElementById('requestsView').style.display = (tabId === 'requests') ? 'block' : 'none';
+                document.getElementById('poView').style.display = (tabId === 'po') ? 'block' : 'none';
 
                 if (tabId === 'calendar' && this.currentUser === 'admin') { bulkPanel.style.display = 'flex'; } else { bulkPanel.style.display = 'none'; }
                 if (tabId === 'admin') this.renderAdminTable();
+                if (tabId === 'requests') this.renderRequestsTab();
+                if (tabId === 'po') this.renderPOView();
             }
 
             setMode(m) { this.currentMode = m; }
