@@ -99,6 +99,12 @@
             background-color: #ffffff;
         }
 
+        .employee-data-wrapper {
+            grid-column: 2 / 764;
+            position: relative;
+            box-sizing: border-box;
+        }
+
         .sticky-col {
             position: -webkit-sticky !important;
             position: sticky !important;
@@ -791,15 +797,48 @@
                 this._affectedDates = new Set();
                 this._updateScheduled = false;
                 this._validationTimeout = null;
+                this._visStart = -1; this._visEnd = -1; this._rafPending = false;
                 this.dates = this.generateDates();
                 this._datesMap = new Map();
                 this.dates.forEach(d => this._datesMap.set(d.dateStr, d));
                 this.initApp();
-                document.getElementById('calendar').addEventListener('scroll', () => this.updateNavHighlighting(), { passive: true });
+                document.getElementById('calendar').addEventListener('scroll', () => this._scheduleVirtualUpdate(), { passive: true });
                 this.stopDrag = this.stopDrag.bind(this);
                 document.addEventListener('mouseup', this.stopDrag);
                 document.addEventListener('touchend', this.stopDrag);
                 document.addEventListener('touchcancel', this.stopDrag);
+
+                const cal = document.getElementById('calendar');
+                cal.addEventListener('mousedown', ev => {
+                    if (ev.button !== 0) return;
+                    const cell = ev.target.closest('.day-cell[data-eid]');
+                    if (!cell) return;
+                    ev.preventDefault();
+                    this.handleMouseDown(cell.dataset.eid, cell.dataset.date);
+                }, { passive: false });
+                cal.addEventListener('mouseover', ev => {
+                    const cell = ev.target.closest('.day-cell[data-eid]');
+                    if (cell) this.handleMouseOver(cell.dataset.eid, cell.dataset.date);
+                });
+                cal.addEventListener('dblclick', ev => {
+                    const cell = ev.target.closest('.day-cell[data-eid]');
+                    if (cell) this.editAbsence(cell.dataset.eid, cell.dataset.date);
+                });
+                cal.addEventListener('contextmenu', ev => {
+                    const cell = ev.target.closest('.day-cell[data-eid]');
+                    if (!cell) return;
+                    ev.preventDefault();
+                    this.editAbsence(cell.dataset.eid, cell.dataset.date);
+                });
+                cal.addEventListener('touchstart', ev => {
+                    const cell = ev.target.closest('.day-cell[data-eid]');
+                    if (cell) this.handleMouseDown(cell.dataset.eid, cell.dataset.date);
+                }, { passive: true });
+                cal.addEventListener('touchmove', ev => {
+                    const touch = ev.touches[0];
+                    const el = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.day-cell[data-eid]');
+                    if (el) this.handleMouseOver(el.dataset.eid, el.dataset.date);
+                }, { passive: true });
             }
 
             handleMouseDown(empId, dateStr) {
@@ -1001,38 +1040,69 @@
                     }
                     frag.appendChild(n);
 
-                    this.dates.forEach((d, di) => {
-                        const c = document.createElement('div'); c.className = `cell day-cell ${d.isWeekend ? 'weekend' : ''} ${d.holiday ? 'holiday' : ''} ${d.isSchoolHoliday ? 'school-holiday' : ''}`;
-                        c.style.gridRow = ei + 4; c.style.gridColumn = di + 2; c.id = `cell-${e.id}-${d.dateStr}`;
-                        const s = this.state[e.id]?.[d.dateStr];
-                        if (s) {
-                            const t = s.type || s; c.classList.add(t === 'U' || t === 'V' ? 'status-vacation' : t === 'D' ? 'status-trip' : t === 'F' ? 'status-training' : (t === 'S' || t === 'T' ? 'status-custom' : ''));
-                            if (s.text) c.innerHTML = `<span class="cell-text">${s.text}</span>`;
-                        }
-
-                        c.onmousedown = (ev) => {
-                            if (ev.button === 0) {
-                                ev.preventDefault();
-                                this.handleMouseDown(e.id, d.dateStr);
-                            }
-                        };
-                        c.onmouseover = () => this.handleMouseOver(e.id, d.dateStr);
-                        c.onmouseenter = (ev) => this.showTip(ev, e.id, d.dateStr);
-                        c.onmouseleave = () => this.hideTip();
-                        c.oncontextmenu = (ev) => {
-                            ev.preventDefault();
-                            this.editAbsence(e.id, d.dateStr);
-                        };
-                        c.ondblclick = () => this.editAbsence(e.id, d.dateStr);
-
-                        c.dataset.eid = e.id; c.dataset.date = d.dateStr; frag.appendChild(c);
-                    });
+                    const wrapper = document.createElement('div');
+                    wrapper.id = `dw-${e.id}`;
+                    wrapper.className = 'employee-data-wrapper';
+                    wrapper.style.gridRow = ei + 4;
+                    frag.appendChild(wrapper);
                 });
                 container.appendChild(frag);
                 this.updateNavHighlighting();
+                this._visStart = -1; this._visEnd = -1;
+                const initialEnd = Math.max(30, Math.min(this.dates.length, Math.ceil((container.clientWidth - 200) / 40) + 10));
+                this.renderVisibleCells(0, initialEnd);
             }
 
+            renderVisibleCells(startCol, endCol) {
+                const emps = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false);
+                emps.forEach(e => {
+                    const wrapper = document.getElementById(`dw-${e.id}`);
+                    if (!wrapper) return;
+                    Array.from(wrapper.children).forEach(cell => {
+                        const ci = parseInt(cell.dataset.ci);
+                        if (ci < startCol || ci >= endCol) cell.remove();
+                    });
+                    for (let ci = startCol; ci < endCol; ci++) {
+                        const d = this.dates[ci];
+                        if (!d) continue;
+                        if (document.getElementById(`cell-${e.id}-${d.dateStr}`)) continue;
+                        const s = this.state[e.id]?.[d.dateStr];
+                        const cell = document.createElement('div');
+                        cell.className = `cell day-cell${d.isWeekend ? ' weekend' : ''}${d.holiday ? ' holiday' : ''}${d.isSchoolHoliday ? ' school-holiday' : ''}`;
+                        cell.id = `cell-${e.id}-${d.dateStr}`;
+                        cell.dataset.eid = e.id;
+                        cell.dataset.date = d.dateStr;
+                        cell.dataset.ci = ci;
+                        cell.style.cssText = `position:absolute;left:${ci * 40}px;width:40px;top:0;bottom:0`;
+                        if (s) {
+                            const t = s.type || s;
+                            cell.classList.add(t === 'U' || t === 'V' ? 'status-vacation' : t === 'D' ? 'status-trip' : t === 'F' ? 'status-training' : (t === 'S' || t === 'T' ? 'status-custom' : ''));
+                            if (s.text) { const span = document.createElement('span'); span.className = 'cell-text'; span.textContent = s.text; cell.appendChild(span); }
+                        }
+                        cell.onmouseenter = (ev) => this.showTip(ev, e.id, d.dateStr);
+                        cell.onmouseleave = () => this.hideTip();
+                        wrapper.appendChild(cell);
+                    }
+                });
+                this._visStart = startCol;
+                this._visEnd = endCol;
+            }
 
+            _scheduleVirtualUpdate() {
+                if (this._rafPending) return;
+                this._rafPending = true;
+                requestAnimationFrame(() => {
+                    this._rafPending = false;
+                    const c = document.getElementById('calendar');
+                    if (!c) return;
+                    const start = Math.max(0, Math.floor(c.scrollLeft / 40) - 10);
+                    const end = Math.min(this.dates.length, Math.ceil((c.scrollLeft + c.clientWidth - 200) / 40) + 10);
+                    if (start !== this._visStart || end !== this._visEnd) {
+                        this.renderVisibleCells(start, end);
+                    }
+                    this.updateNavHighlighting();
+                });
+            }
 
             setVacation(empId, dateStr, valObj, isDrag = false, immediateDOM = false) {
                 if (!this.state[empId]) this.state[empId] = {};
