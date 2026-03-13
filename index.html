@@ -1257,11 +1257,16 @@
                 CONFIG.employees = [...admins, ...others];
             }
 
+            isWorkday(dateStr) {
+                const dow = new Date(dateStr).getDay();
+                return dow !== 0 && dow !== 6 && !CONFIG.holidays[dateStr];
+            }
+
             countVacationDays(empId) {
                 const year = this.currentYear || CONFIG.years[0];
                 const entries = this.state[empId] || {};
                 return Object.entries(entries).filter(([d, v]) =>
-                    d.startsWith(String(year)) && v && v.type === 'U'
+                    d.startsWith(String(year)) && v && v.type === 'U' && this.isWorkday(d)
                 ).length;
             }
 
@@ -1542,9 +1547,9 @@
                     const quota = (this.state.__VACATION_QUOTA__ || {})[eid] ?? 30;
                     const entries = this.state[eid] || {};
                     const alreadyUsed = Object.entries(entries).filter(([d, v]) =>
-                        d.startsWith(String(reqYear)) && v && v.type === 'U'
+                        d.startsWith(String(reqYear)) && v && v.type === 'U' && this.isWorkday(d)
                     ).length;
-                    const newDays = dates.filter(d => d.startsWith(String(reqYear))).length;
+                    const newDays = dates.filter(d => d.startsWith(String(reqYear)) && this.isWorkday(d)).length;
                     const total = alreadyUsed + newDays;
                     if (total > quota) {
                         alert(`Urlaubskontingent überschritten!\n\nBereits genommen: ${alreadyUsed} Tage\nNeu beantragt:    ${newDays} Tage\nGesamt:           ${total} Tage\nKontingent:       ${quota} Tage\n\nDer Antrag kann nicht eingereicht werden.`);
