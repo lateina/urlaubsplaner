@@ -2165,7 +2165,7 @@
 
             renderAdminTable() {
                 const tbody = document.getElementById('adminEmployeeTable'); tbody.innerHTML = '';
-                const sorted = [...CONFIG.employees].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de'));
+                const sorted = [...CONFIG.employees].sort((a, b) => (a.name || '').split(' ').pop().localeCompare((b.name || '').split(' ').pop(), 'de'));
                 sorted.forEach(emp => { if (emp.id !== 'sekretariat') this.createEmployeeRow(tbody, emp); });
             }
 
