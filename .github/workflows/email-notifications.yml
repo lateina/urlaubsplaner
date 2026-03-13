@@ -17,7 +17,7 @@ jobs:
           SEKRETARIAT_EMAIL: ${{ secrets.SEKRETARIAT_EMAIL }}
         run: |
           python3 << 'EOF'
-          import json, smtplib, urllib.request, os
+          import json, smtplib, urllib.request, os, datetime
           from email.mime.text import MIMEText
           from email.mime.multipart import MIMEMultipart
 
@@ -32,6 +32,15 @@ jobs:
               '699ffb53ae596e708f4b3de5': 'https://lateina.github.io/urlaubsplaner/assistenz.html',
           }
           TYPE_LABELS = {'U': 'Urlaub', 'D': 'Dienstreise', 'F': 'Fortbildung', 'T': 'Sonstiges', 'S': 'Sonstiges'}
+
+          # Quartals-Erinnerung: 1. April / 1. Juli / 1. Oktober
+          today = datetime.date.today()
+          QUARTERLY_TRIGGER = {
+              (4,  1): ('Q1', 0.25),
+              (7,  1): ('Q2', 0.50),
+              (10, 1): ('Q3', 0.75),
+          }
+          quarterly = QUARTERLY_TRIGGER.get((today.month, today.day))
 
           def fetch_bin(bin_id):
               req = urllib.request.Request(
@@ -182,6 +191,58 @@ jobs:
                       data['state'] = state
                       save_bin(bin_id, data)
                       print(f'  Bin {bin_id} aktualisiert.')
+
+                  # Quartals-Erinnerung
+                  if quarterly:
+                      quarter_name, fraction = quarterly
+                      year = today.year
+                      quotas = state.get('__VACATION_QUOTA__', {})
+                      print(f'  Quartals-Erinnerung {quarter_name} {year} für Bin {bin_id}...')
+                      for emp in employees:
+                          if not emp.get('email'): continue
+                          if emp.get('active') == False and not emp.get('pin'): continue
+                          eid   = emp['id']
+                          quota = quotas.get(eid, 30)
+                          expected = round(quota * fraction)
+                          # Genehmigte Urlaubstage zählen (in state als confirmed)
+                          emp_state = state.get(eid, {})
+                          confirmed = sum(
+                              1 for d, v in emp_state.items()
+                              if d.startswith(str(year))
+                              and isinstance(v, dict)
+                              and v.get('type') == 'U'
+                          )
+                          # Noch offene (pending) Anträge dazuzählen
+                          pending = sum(
+                              len([d for d in r.get('dates', []) if d.startswith(str(year))])
+                              for r in requests
+                              if r.get('empId') == eid
+                              and r.get('type') == 'U'
+                              and r.get('status') in ('pending_vertreter', 'pending_admin')
+                          )
+                          used = confirmed + pending
+                          remaining = quota - confirmed
+                          # Nur erinnern, wenn deutlich hinter dem Soll (Puffer: 3 Tage)
+                          if used < expected - 2:
+                              try:
+                                  send_email(
+                                      to_email=emp['email'],
+                                      subject=f'Urlaubsplanung: Erinnerung Jahresurlaub {year} ({quarter_name})',
+                                      body_text=(
+                                          f"Hallo {emp['name']},\n\n"
+                                          f"nach Ende von {quarter_name} {year} empfehlen wir, "
+                                          f"ca. {expected} von {quota} Urlaubstagen geplant zu haben.\n\n"
+                                          f"Bisher genommen / beantragt: {used} Tage\n"
+                                          f"Empfohlen bis jetzt:         {expected} Tage\n"
+                                          f"Noch verbleibend im Jahr:    {remaining} Tage\n\n"
+                                          f"Um einen großen Resturlaub am Jahresende zu vermeiden, "
+                                          f"plane deinen verbleibenden Urlaub möglichst frühzeitig.\n\n"
+                                          f"Zum Urlaubsplaner:\n{app_url}\n\n"
+                                          "-- Automatische Benachrichtigung vom Urlaubsplaner"
+                                      )
+                                  )
+                              except Exception as e:
+                                  print(f'  ! Fehler (Quartals-Erinnerung {emp["name"]}): {e}')
 
               except Exception as e:
                   print(f'Fehler bei Bin {bin_id}: {e}')
