@@ -1447,11 +1447,16 @@
 
                 // Quota-Prüfung für Urlaub
                 if (type === 'U') {
+                    const reqYear = new Date(start).getFullYear();
                     const quota = (this.state.__VACATION_QUOTA__ || {})[eid] ?? 30;
-                    const alreadyUsed = this.countVacationDays(eid);
-                    const newDays = dates.filter(d => d.startsWith(String(this.currentYear || CONFIG.years[0]))).length;
-                    if (alreadyUsed + newDays > quota) {
-                        alert(`Urlaubskontingent überschritten!\n\nGenommen: ${alreadyUsed} Tage\nBeantragt: ${newDays} Tage\nKontingent: ${quota} Tage\n\nDer Antrag kann nicht eingereicht werden.`);
+                    const entries = this.state[eid] || {};
+                    const alreadyUsed = Object.entries(entries).filter(([d, v]) =>
+                        d.startsWith(String(reqYear)) && v && (v.type === 'U' || v.type === 'V')
+                    ).length;
+                    const newDays = dates.filter(d => d.startsWith(String(reqYear))).length;
+                    const total = alreadyUsed + newDays;
+                    if (total > quota) {
+                        alert(`Urlaubskontingent überschritten!\n\nBereits genommen: ${alreadyUsed} Tage\nNeu beantragt:    ${newDays} Tage\nGesamt:           ${total} Tage\nKontingent:       ${quota} Tage\n\nDer Antrag kann nicht eingereicht werden.`);
                         return;
                     }
                 }
