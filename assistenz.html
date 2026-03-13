@@ -1922,8 +1922,9 @@
                 if (grps.length === 0) return '';
                 // The priority is determined by the index in CONFIG.skills
                 let best = CONFIG.skills.length, res = '';
-                grps.forEach(g => {
-                    if (g === 'Kein Vertreter nötig') return;
+                const realGrps = grps.filter(g => g !== 'Kein Vertreter nötig');
+                const lookup = realGrps.length > 0 ? realGrps : grps;
+                lookup.forEach(g => {
                     const i = CONFIG.skills.indexOf(g);
                     if (i !== -1 && i < best) { best = i; res = g; }
                 });
