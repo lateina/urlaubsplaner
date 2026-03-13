@@ -14,6 +14,7 @@ jobs:
           JSONBIN_KEY: ${{ secrets.JSONBIN_KEY }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          SEKRETARIAT_EMAIL: ${{ secrets.SEKRETARIAT_EMAIL }}
         run: |
           python3 << 'EOF'
           import json, smtplib, urllib.request, os
@@ -22,8 +23,9 @@ jobs:
 
           JSONBIN_KEY    = os.environ['JSONBIN_KEY']
           GMAIL_PASSWORD = os.environ['GMAIL_APP_PASSWORD']
-          ADMIN_EMAIL    = os.environ['ADMIN_EMAIL']
-          GMAIL_USER     = 'dienstereminder@gmail.com'
+          ADMIN_EMAIL       = os.environ['ADMIN_EMAIL']
+          SEKRETARIAT_EMAIL = os.environ['SEKRETARIAT_EMAIL']
+          GMAIL_USER        = 'dienstereminder@gmail.com'
 
           BINS = {
               '694548d1d0ea881f403427e3': 'https://lateina.github.io/urlaubsplaner/',
@@ -67,8 +69,9 @@ jobs:
           def find_emp(employees, emp_id):
               return next((e for e in employees if e.get('id') == emp_id), None)
 
-          # Admin-Digest über alle Bins sammeln
+          # Digests über alle Bins sammeln
           admin_digest_lines = []
+          sekretariat_digest_lines = []
 
           for bin_id, app_url in BINS.items():
               print(f'Prüfe Bin {bin_id}...')
@@ -123,7 +126,7 @@ jobs:
                           notified['pending_admin'] = True
                           changed = True
 
-                      # 3) approved → individuelle Mail an Antragsteller
+                      # 3) approved → individuelle Mail an Antragsteller + Sekretariat-Digest
                       if status == 'approved' and not notified.get('approved'):
                           if emp and emp.get('email'):
                               try:
@@ -143,6 +146,14 @@ jobs:
                                   changed = True
                               except Exception as e:
                                   print(f'  ! Fehler (Genehmigungs-Mail): {e}')
+                          # Für Sekretariat-Digest sammeln (unabhängig ob emp eine E-Mail hat)
+                          if not notified.get('sekretariat'):
+                              sekretariat_digest_lines.append(
+                                  f"• {emp_name} | {type_label} | {dates_str} | Vertreter: {req.get('vertreter', '—')}"
+                                  + (f"\n  Hinweis: {req.get('text')}" if req.get('text') else '')
+                              )
+                              notified['sekretariat'] = True
+                              changed = True
 
                       # 4) rejected → individuelle Mail an Antragsteller
                       if status == 'rejected' and not notified.get('rejected'):
@@ -193,6 +204,26 @@ jobs:
                   print(f'  ! Fehler (Admin-Digest): {e}')
           else:
               print('  Keine offenen Admin-Anfragen.')
+
+          # Sekretariat-Digest versenden
+          if sekretariat_digest_lines:
+              try:
+                  count = len(sekretariat_digest_lines)
+                  send_email(
+                      to_email=SEKRETARIAT_EMAIL,
+                      subject=f'Urlaubsplaner: {count} genehmigte Abwesenheit{"" if count == 1 else "en"} zur PO-Eintragung',
+                      body_text=(
+                          f"Guten Morgen,\n\n"
+                          f"folgende {count} Abwesenheit{'wurde' if count == 1 else 'en wurden'} genehmigt und "
+                          f"{'muss' if count == 1 else 'müssen'} noch in PO eingetragen werden:\n\n"
+                          + "\n\n".join(sekretariat_digest_lines)
+                          + "\n\n-- Automatische Benachrichtigung vom Urlaubsplaner"
+                      )
+                  )
+              except Exception as e:
+                  print(f'  ! Fehler (Sekretariat-Digest): {e}')
+          else:
+              print('  Keine neuen genehmigten Abwesenheiten für Sekretariat.')
 
           print('Fertig.')
           EOF
