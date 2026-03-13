@@ -1002,8 +1002,8 @@
                 ['admin', 'summary', 'status', 'skills'].forEach(t => {
                     const el = document.getElementById('tab-' + t);
                     if (el) {
-                        if (t === 'skills') el.style.display = (adminOnly || isSprecher) ? 'inline-block' : 'none';
-                        else el.style.display = (isAdmin && t !== 'admin') ? 'inline-block' : (t === 'admin' && adminOnly ? 'inline-block' : 'none');
+                        if (t === 'admin' || t === 'skills') el.style.display = (adminOnly || isSprecher) ? 'inline-block' : 'none';
+                        else el.style.display = (isAdmin && !isSprecher) ? 'inline-block' : 'none';
                     }
                 });
                 const tabRequests = document.getElementById('tab-requests');
