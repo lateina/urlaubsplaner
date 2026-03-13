@@ -958,7 +958,9 @@
                 if (data) {
                     CONFIG.employees = data.employees || [];
                     if (data.skills) CONFIG.skills = data.skills;
+                    if (!CONFIG.skills.includes('Kein Vertreter nötig')) CONFIG.skills.push('Kein Vertreter nötig');
                     if (data.groupColors) CONFIG.groupColors = data.groupColors;
+                    if (!CONFIG.groupColors['Kein Vertreter nötig']) CONFIG.groupColors['Kein Vertreter nötig'] = '#6b7280';
                     this.state = data.state || {};
                     this.sortEmployees();
                 }
