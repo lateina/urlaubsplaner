@@ -887,7 +887,7 @@
             handleMouseDown(empId, dateStr) {
                 if (this.currentUser === 'sekretariat') { alert('Du bist als Sekretariat angemeldet und kannst keine Bearbeitungen machen'); return; }
                 if (!this.checkPermission(empId)) return;
-                if (this.currentUser !== 'admin') {
+                if (this.currentUser !== 'admin' && this.currentUser !== 'assistentensprecher') {
                     this.openRequestModal(empId, dateStr);
                     return;
                 }
@@ -954,7 +954,7 @@
             }
 
             showLoginModal() {
-                this._loginOptions = [{ id: 'admin', name: 'Admin' }, { id: 'sekretariat', name: 'Sekretariat' }, ...CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false).map(e => ({ id: e.id, name: e.name }))];
+                this._loginOptions = [{ id: 'admin', name: 'Admin' }, { id: 'assistentensprecher', name: 'Assistentensprecher' }, { id: 'sekretariat', name: 'Sekretariat' }, ...CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.id !== 'assistentensprecher' && e.active !== false).map(e => ({ id: e.id, name: e.name }))];
                 document.getElementById('loginSearch').onfocus = () => this.filterLoginEmployees();
             }
 
@@ -976,8 +976,9 @@
                 localStorage.setItem('jsonbin_key', key); CONFIG.apiKey = key; this.currentUser = id;
                 document.getElementById('loginModal').style.display = 'none'; document.body.classList.remove('pre-login');
 
-                const isAdmin = (id === 'admin' || id === 'sekretariat');
+                const isAdmin = (id === 'admin' || id === 'sekretariat' || id === 'assistentensprecher');
                 const adminOnly = (id === 'admin');
+                const isSprecher = (id === 'assistentensprecher');
 
                 document.querySelector('.tab-container').style.display = 'flex';
 
@@ -996,7 +997,7 @@
                     const el = document.getElementById('tab-' + t);
                     if (el) {
                         if (t === 'skills') el.style.display = adminOnly ? 'inline-block' : 'none';
-                        else el.style.display = isAdmin ? 'inline-block' : 'none';
+                        else el.style.display = (isAdmin && !isSprecher) ? 'inline-block' : (isSprecher && t !== 'admin' ? 'inline-block' : 'none');
                     }
                 });
                 const tabRequests = document.getElementById('tab-requests');
@@ -1026,7 +1027,7 @@
             }
 
             checkPermission(eid) {
-                if (this.currentUser === 'admin' || this.currentUser === 'sekretariat' || eid === this.currentUser) return true;
+                if (this.currentUser === 'admin' || this.currentUser === 'sekretariat' || this.currentUser === 'assistentensprecher' || eid === this.currentUser) return true;
                 alert('Stopp! Du kannst Abwesenheiten nur in deiner eigenen Zeile eintragen oder bearbeiten.');
                 return false;
             }
@@ -1254,7 +1255,7 @@
             }
 
             addRange() {
-                const isAdmin = (this.currentUser === 'admin');
+                const isAdmin = (this.currentUser === 'admin' || this.currentUser === 'assistentensprecher');
                 if (isAdmin) {
                     this._addRangeDirect();
                 } else {
@@ -1351,7 +1352,7 @@
             onModalDateChange() {
                 if (typeof this._showVertreterListFn === 'function') this._showVertreterListFn();
                 const empId = this._requestModalEmpId;
-                if (!empId || this.currentUser === 'admin') return;
+                if (!empId || this.currentUser === 'admin' || this.currentUser === 'assistentensprecher') return;
                 const startVal = document.getElementById('modalStart').value;
                 const endVal = document.getElementById('modalEnd').value;
                 if (!startVal) return;
@@ -1509,7 +1510,7 @@
                 if (!badge) return;
                 const requests = this.state.__REQUESTS__ || [];
                 const cu = this.currentUser;
-                const isAdmin = cu === 'admin';
+                const isAdmin = cu === 'admin' || cu === 'assistentensprecher';
                 let count = 0;
                 if (isAdmin) {
                     count = requests.filter(r => r.status === 'pending_admin').length;
@@ -1527,6 +1528,7 @@
                 const requests = this.state.__REQUESTS__ || [];
                 const cu = this.currentUser;
                 const isAdmin = cu === 'admin';
+                const isSprecher = cu === 'assistentensprecher';
                 let html = '';
 
                 const typeLabel = { U: 'Urlaub', D: 'Dienstreise', F: 'Fortbildung', T: 'Sonstiges', S: 'Sonstiges' };
@@ -1537,10 +1539,10 @@
                     rejected: '✗ Abgelehnt'
                 };
 
-                if (isAdmin) {
+                if (isAdmin || isSprecher) {
                     const adminReqs = requests.filter(r => r.status === 'pending_admin');
                     if (adminReqs.length === 0) {
-                        html += '<p style="color:#6b7280">Keine offenen Admin-Anfragen.</p>';
+                        html += '<p style="color:#6b7280">Keine offenen Anfragen zur Genehmigung.</p>';
                     } else {
                         adminReqs.forEach(req => {
                             const emp = CONFIG.employees.find(e => e.id === req.empId);
@@ -1549,6 +1551,7 @@
                                 <strong>${emp?.name || req.empId}</strong> — ${from}${from !== to ? ' bis ' + to : ''} — ${typeLabel[req.type] || req.type}
                                 ${req.text ? `<br><em>${req.text}</em>` : ''}
                                 <br>Vertreter: ${req.vertreter} ✓
+                                ${isAdmin ? `
                                 <br><div id="reject-area-${req.id}" style="display:none;margin-top:8px">
                                     <input type="text" id="reject-note-${req.id}" placeholder="Ablehnungsgrund (optional)" style="width:100%;padding:4px;margin-bottom:4px">
                                 </div>
@@ -1556,7 +1559,7 @@
                                     <button onclick="app.approveAsAdmin('${req.id}')" style="background:#22c55e;color:white;border:none;padding:6px 14px;border-radius:4px;cursor:pointer">Genehmigen</button>
                                     <button onclick="document.getElementById('reject-area-${req.id}').style.display='block';this.style.display='none';document.getElementById('confirm-reject-${req.id}').style.display='inline'" style="background:#f3f4f6;border:1px solid #d1d5db;padding:6px 14px;border-radius:4px;cursor:pointer">Ablehnen...</button>
                                     <button onclick="app.rejectRequest('${req.id}','admin',document.getElementById('reject-note-${req.id}').value)" style="display:none;background:#ef4444;color:white;border:none;padding:6px 14px;border-radius:4px;cursor:pointer" id="confirm-reject-${req.id}">Ablehnen bestätigen</button>
-                                </div>
+                                </div>` : '<br><span style="color:#6b7280;font-size:0.85rem;margin-top:6px;display:inline-block">⏳ Wartet auf Genehmigung durch Admin</span>'}
                             </div>`;
                         });
                     }
@@ -2052,8 +2055,8 @@
             }
 
             sortEmployees() {
-                const admins = CONFIG.employees.filter(e => e.id === 'admin' || e.id === 'sekretariat');
-                const others = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat');
+                const admins = CONFIG.employees.filter(e => e.id === 'admin' || e.id === 'sekretariat' || e.id === 'assistentensprecher');
+                const others = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.id !== 'assistentensprecher');
                 others.sort((a, b) => {
                     const iA = CONFIG.skills.indexOf(this.getPrimaryGrp(a)), iB = CONFIG.skills.indexOf(this.getPrimaryGrp(b));
                     if (iA !== iB) return iA - iB;
