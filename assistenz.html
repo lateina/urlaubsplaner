@@ -954,7 +954,7 @@
             }
 
             showLoginModal() {
-                this._loginOptions = [{ id: 'admin', name: 'Admin' }, { id: 'assistentensprecher', name: 'Assistentensprecher' }, { id: 'sekretariat', name: 'Sekretariat' }, ...CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.id !== 'assistentensprecher' && e.active !== false).map(e => ({ id: e.id, name: e.name }))];
+                this._loginOptions = [{ id: 'admin', name: 'Admin' }, { id: 'sekretariat', name: 'Sekretariat' }, ...CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && (e.active !== false || e.pin)).map(e => ({ id: e.id, name: e.name }))];
                 document.getElementById('loginSearch').onfocus = () => this.filterLoginEmployees();
             }
 
