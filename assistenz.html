@@ -1451,7 +1451,7 @@
                     const quota = (this.state.__VACATION_QUOTA__ || {})[eid] ?? 30;
                     const entries = this.state[eid] || {};
                     const alreadyUsed = Object.entries(entries).filter(([d, v]) =>
-                        d.startsWith(String(reqYear)) && v && (v.type === 'U' || v.type === 'V')
+                        d.startsWith(String(reqYear)) && v && v.type === 'U'
                     ).length;
                     const newDays = dates.filter(d => d.startsWith(String(reqYear))).length;
                     const total = alreadyUsed + newDays;
@@ -2115,7 +2115,7 @@
                 const year = this.currentYear || CONFIG.years[0];
                 const entries = this.state[empId] || {};
                 return Object.entries(entries).filter(([d, v]) =>
-                    d.startsWith(String(year)) && v && (v.type === 'U' || v.type === 'V')
+                    d.startsWith(String(year)) && v && v.type === 'U'
                 ).length;
             }
 
