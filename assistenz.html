@@ -1869,7 +1869,7 @@
                         <td style="padding: 5px;"><input type="text" value="${emp.name}" data-field="name" data-id="${emp.id}" style="width: 100%; padding: 4px;"></td>
                         <td style="padding: 5px;"><input type="text" value="${emp.email || ''}" data-field="email" data-id="${emp.id}" style="width: 100%; padding: 4px;"></td>
                         <td style="padding: 5px;"><input type="text" value="${emp.pin || ''}" data-field="pin" data-id="${emp.id}" style="width: 60px; padding: 4px;"></td>
-                        <td style="padding: 5px;"><div style="display: flex; flex-wrap: wrap; gap: 8px; padding: 2px; border: 1px solid #eee; border-radius: 4px; min-width: 200px;">${skillsHtml}</div></td>
+                        <td style="padding: 5px;"><div style="display: flex; flex-wrap: wrap; gap: 8px; padding: 2px; border: 1px solid #eee; border-radius: 4px; min-width: 200px;">${skillsHtml}<label style="display:flex;align-items:center;gap:4px;font-weight:normal;font-size:0.75rem;white-space:nowrap;border-top:1px solid #eee;margin-top:4px;padding-top:4px;width:100%;"><input type="checkbox" value="Kein Vertreter nötig" ${(emp.groups||[]).includes('Kein Vertreter nötig') ? 'checked' : ''} class="skill-checkbox" data-id="${emp.id}"> Kein Vertreter nötig</label></div></td>
                         <td style="padding: 5px; text-align: center;"><input type="checkbox" ${emp.active !== false ? 'checked' : ''} data-field="active" data-id="${emp.id}"></td>
                         <td style="padding: 5px; text-align: center;"><button class="primary" style="background: var(--danger-color); padding: 4px 8px; font-size: 0.8rem;" onclick="app.deleteEmployee('${emp.id}')">Löschen</button></td>
                     `;
@@ -2055,9 +2055,10 @@
                 // Dynamically build checkboxes for skills
                 const groupDiv = document.getElementById('addEmpGroups');
                 groupDiv.innerHTML = '';
-                CONFIG.skills.forEach(skill => {
+                [...CONFIG.skills, 'Kein Vertreter nötig'].forEach((skill, i, arr) => {
                     const label = document.createElement('label');
                     label.style.display = 'flex'; label.style.alignItems = 'center'; label.style.gap = '4px'; label.style.fontWeight = 'normal';
+                    if (i === arr.length - 1) { label.style.borderTop = '1px solid #eee'; label.style.marginTop = '4px'; label.style.paddingTop = '4px'; label.style.width = '100%'; }
 
                     const cb = document.createElement('input');
                     cb.type = 'checkbox'; cb.value = skill;
