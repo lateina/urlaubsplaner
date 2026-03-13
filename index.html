@@ -986,7 +986,7 @@
             }
 
             showLoginModal() {
-                this._loginOptions = [{ id: 'admin', name: 'Admin' }, { id: 'sekretariat', name: 'Sekretariat' }, ...CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false).map(e => ({ id: e.id, name: e.name }))];
+                this._loginOptions = CONFIG.employees.filter(e => e.active !== false).map(e => ({ id: e.id, name: e.name }));
                 document.getElementById('loginSearch').onfocus = () => this.filterLoginEmployees();
             }
 
@@ -1943,8 +1943,6 @@
             // --- ADMIN & SEKRETARIAT FEATURES ---
 
             getEmpName(id) {
-                if (id === 'admin') return 'Administrator';
-                if (id === 'sekretariat') return 'Sekretariat';
                 const emp = CONFIG.employees.find(e => e.id === id);
                 return emp ? emp.name : id;
             }
