@@ -2156,7 +2156,10 @@
                 if (!confirm(`Gruppe "${grp}" wirklich löschen?\n\nSie wird auch von allen Mitarbeitern entfernt.`)) return;
                 CONFIG.groupOrder = CONFIG.groupOrder.filter(g => g !== grp);
                 delete CONFIG.groupColors[grp];
-                CONFIG.employees.forEach(emp => { if (emp.groups) emp.groups = emp.groups.filter(g => g !== grp); });
+                CONFIG.employees.forEach(emp => {
+                    if (emp.groups) emp.groups = emp.groups.filter(g => g !== grp);
+                    if (emp.group === grp) delete emp.group;
+                });
                 this.sortEmployees(); this.renderGroupsAdmin(); this.renderAdminTable(); this.render(); DataService.save(this.state);
             }
 
@@ -2173,7 +2176,7 @@
                 <td style="padding: 10px;"><input type="text" value="${emp.pin || ''}" data-field="pin" data-id="${emp.id}" style="width:80px;"></td>
                 <td style="padding: 10px;">
                     <div class="group-checkboxes" data-id="${emp.id}" style="display: flex; flex-wrap: wrap; gap: 5px; font-size: 0.75rem; max-width: 250px;">
-                        ${CONFIG.groupOrder.filter(g => g !== '').map(g => `<label style="display: flex; align-items: center; gap: 2px; font-weight: normal; margin-right: 5px; white-space: nowrap;"><input type="checkbox" value="${g}" ${emp.groups && emp.groups.includes(g) ? 'checked' : (emp.group === g ? 'checked' : '')} ${isReadOnly ? 'disabled' : ''}> ${g}</label>`).join('')}
+                        ${CONFIG.groupOrder.filter(g => g !== '').map(g => `<label style="display: flex; align-items: center; gap: 2px; font-weight: normal; margin-right: 5px; white-space: nowrap;"><input type="checkbox" value="${g}" ${(Array.isArray(emp.groups) ? emp.groups.includes(g) : emp.group === g) ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''}> ${g}</label>`).join('')}
                     </div>
                 </td>
                 <td style="padding: 10px; text-align: center;"><input type="checkbox" ${emp.active !== false ? 'checked' : ''} data-field="active" data-id="${emp.id}"></td>
@@ -2187,6 +2190,7 @@
                             if (e.target.closest('.group-checkboxes')) {
                                 const groupDiv = e.target.closest('.group-checkboxes');
                                 targetEmp.groups = Array.from(groupDiv.querySelectorAll('input:checked')).map(cb => cb.value);
+                                delete targetEmp.group;
                             } else { targetEmp[e.target.getAttribute('data-field')] = e.target.checked; }
                         } else {
                             const field = e.target.getAttribute('data-field'); targetEmp[field] = e.target.value;
