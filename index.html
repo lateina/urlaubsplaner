@@ -721,7 +721,7 @@
                 ℹ️ Für Dienstreisen und Fortbildungen ist zusätzlich ein Antrag an das <strong>Referat KIII/1</strong> erforderlich.
             </div>
             <div class="form-group"><label>Beschreibung:</label><input type="text" id="modalText"></div>
-            <div class="form-group"><label>Vertreter:</label>
+            <div class="form-group" id="vertreterGroup"><label>Vertreter:</label>
                 <div style="position:relative">
                     <input type="text" id="modalVertreterInput" placeholder="Vertreter suchen...">
                     <input type="hidden" id="modalVertreterId">
@@ -1259,6 +1259,12 @@
                 CONFIG.employees = [...admins, ...others];
             }
 
+            needsVertreter(empId) {
+                const emp = CONFIG.employees.find(e => e.id === empId);
+                const grps = Array.isArray(emp?.groups) ? emp.groups : (emp?.group ? [emp.group] : []);
+                return !grps.includes('Kein Vertreter nötig');
+            }
+
             isWorkday(dateStr) {
                 const dow = new Date(dateStr).getDay();
                 return dow !== 0 && dow !== 6 && !CONFIG.holidays[dateStr];
@@ -1432,6 +1438,7 @@
                 document.getElementById('modalVertreterInput').value = '';
                 document.getElementById('modalVertreterId').value = '';
                 document.getElementById('vertreterResults').innerHTML = '';
+                document.getElementById('vertreterGroup').style.display = this.needsVertreter(empId) ? '' : 'none';
                 const titleEl = modal.querySelector('h2');
                 if (titleEl) titleEl.textContent = 'Abwesenheitswunsch einreichen';
                 const vertreterInput = document.getElementById('modalVertreterInput');
@@ -1524,17 +1531,19 @@
                 const start = document.getElementById('modalStart').value;
                 const end = document.getElementById('modalEnd').value;
 
-                if (!vertreterId) { alert('Bitte einen Vertreter aus der Liste auswählen.'); return; }
+                if (this.needsVertreter(eid) && !vertreterId) { alert('Bitte einen Vertreter aus der Liste auswählen.'); return; }
 
                 const dates = [];
                 let curr = new Date(start), endD = new Date(end);
                 while (curr <= endD) { dates.push(this.formatDate(curr)); curr.setDate(curr.getDate()+1); }
 
                 // Check if selected vertreter is absent on some (but not all) days
-                const vertreterAbsentDates = dates.filter(d => this.state[vertreterId]?.[d]);
-                if (vertreterAbsentDates.length > 0) {
-                    alert(`${vertreter} ist an folgenden Tagen selbst abwesend: ${vertreterAbsentDates.join(', ')}.\n\nBitte teile den Antrag auf und wähle für diese Tage einen anderen Vertreter.`);
-                    return;
+                if (this.needsVertreter(eid)) {
+                    const vertreterAbsentDates = dates.filter(d => this.state[vertreterId]?.[d]);
+                    if (vertreterAbsentDates.length > 0) {
+                        alert(`${vertreter} ist an folgenden Tagen selbst abwesend: ${vertreterAbsentDates.join(', ')}.\n\nBitte teile den Antrag auf und wähle für diese Tage einen anderen Vertreter.`);
+                        return;
+                    }
                 }
 
                 const conflict = this.checkVertretungConflict(eid, dates);
@@ -1569,7 +1578,7 @@
                 const req = {
                     id: 'req_' + Date.now(),
                     empId: eid, type, text, vertreter, vertreterId, dates,
-                    status: 'pending_vertreter',
+                    status: this.needsVertreter(eid) ? 'pending_vertreter' : 'pending_admin',
                     createdAt: this.formatDate(new Date()),
                     rejectedBy: null, rejectionNote: null
                 };
