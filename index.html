@@ -1536,6 +1536,17 @@
                     return;
                 }
 
+                // Quota-Prüfung für Urlaub
+                if (type === 'U') {
+                    const quota = (this.state.__VACATION_QUOTA__ || {})[eid] ?? 30;
+                    const alreadyUsed = this.countVacationDays(eid);
+                    const newDays = dates.filter(d => d.startsWith(String(this.currentYear || CONFIG.years[0]))).length;
+                    if (alreadyUsed + newDays > quota) {
+                        alert(`Urlaubskontingent überschritten!\n\nGenommen: ${alreadyUsed} Tage\nBeantragt: ${newDays} Tage\nKontingent: ${quota} Tage\n\nDer Antrag kann nicht eingereicht werden.`);
+                        return;
+                    }
+                }
+
                 const coverageIssues = this.checkCoverageForRequest(eid, dates);
                 if (coverageIssues.length > 0) {
                     const lines = coverageIssues.map(({ date, missing }) => `${date}: fehlend ${missing.join(', ')}`).join('\n');
