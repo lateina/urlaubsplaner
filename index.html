@@ -583,6 +583,7 @@
                 Anfragen <span id="requests-badge"></span>
             </button>
             <button id="tab-po" class="tab-button" onclick="app.switchTab('po')" style="display:none;">PO-Übersicht</button>
+            <button id="tab-groups" class="tab-button" onclick="app.switchTab('groups')" style="display:none;">Gruppenverwaltung</button>
         </div>
 
         <div id="bulkImportPanel" class="bulk-import-panel" style="display:none;">
@@ -686,6 +687,18 @@
     </div>
 
     <div id="poView" style="display:none; padding:20px;"><div id="poList"></div></div>
+    <div id="groupsView" style="display:none; padding:20px;">
+        <div class="summary-section" style="margin-top:0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h2 style="margin:0;">Gruppenverwaltung</h2>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <input type="text" id="newGroupName" placeholder="Neue Gruppe..." style="padding:6px; border-radius:4px; border:1px solid #ccc;">
+                    <button class="primary" onclick="app.addGroup()">Hinzufügen</button>
+                </div>
+            </div>
+            <div id="adminGroupList" style="display:flex; flex-direction:column; gap:0; max-height:600px; overflow-y:auto; border:1px solid #ddd; border-radius:4px; background:#fff;"></div>
+        </div>
+    </div>
 
     <div id="loginModal" class="modal-overlay" style="display:flex;">
         <div class="modal">
@@ -837,8 +850,8 @@
         const CONFIG = {
             years: [2026, 2027, 2028], binId: '694548d1d0ea881f403427e3', apiKey: localStorage.getItem('jsonbin_key') || '',
             employees: [], holidays: {},
-            groupOrder: ['Chef', 'Privat', 'TAVI', 'TEER', 'Herzkatheter', 'Echo', 'EPU', 'Intensiv', 'Pneumo', 'Ambulanz', ''],
-            groupColors: { 'Chef': '#ef4444', 'Privat': '#3b82f6', 'TAVI': '#10b981', 'TEER': '#f59e0b', 'Herzkatheter': '#8b5cf6', 'Echo': '#06b6d4', 'EPU': '#ec4899', 'Intensiv': '#6366f1', 'Pneumo': '#14b8a6', 'Ambulanz': '#84cc16' },
+            groupOrder: ['Chef', 'Privat', 'TAVI', 'TEER', 'Herzkatheter', 'Echo', 'EPU', 'Intensiv', 'Pneumo', 'Ambulanz', 'Kein Vertreter nötig', ''],
+            groupColors: { 'Chef': '#ef4444', 'Privat': '#3b82f6', 'TAVI': '#10b981', 'TEER': '#f59e0b', 'Herzkatheter': '#8b5cf6', 'Echo': '#06b6d4', 'EPU': '#ec4899', 'Intensiv': '#6366f1', 'Pneumo': '#14b8a6', 'Ambulanz': '#84cc16', 'Kein Vertreter nötig': '#6b7280' },
             schoolHolidays: [
                 { start: '2026-01-01', end: '2026-01-05', name: 'Weihnachtsferien' }, { start: '2026-02-16', end: '2026-02-20', name: 'Winterferien' }, { start: '2026-03-30', end: '2026-04-10', name: 'Osterferien' }, { start: '2026-05-26', end: '2026-06-05', name: 'Pfingstferien' }, { start: '2026-08-03', end: '2026-09-14', name: 'Sommerferien' }, { start: '2026-11-02', end: '2026-11-06', name: 'Herbstferien' }, { start: '2026-12-24', end: '2027-01-08', name: 'Weihnachtsferien' }, { start: '2027-02-08', end: '2027-02-12', name: 'Winterferien' }, { start: '2027-03-22', end: '2027-04-02', name: 'Osterferien' }, { start: '2027-05-18', end: '2027-05-28', name: 'Pfingstferien' }, { start: '2027-08-02', end: '2027-09-13', name: 'Sommerferien' }, { start: '2027-11-02', end: '2027-11-05', name: 'Herbstferien' }, { start: '2027-12-24', end: '2028-01-07', name: 'Weihnachtsferien' }
             ]
@@ -1029,6 +1042,8 @@
                 if (tabRequests) tabRequests.style.display = (id === 'sekretariat' ? 'none' : 'inline-block');
                 const tabPO = document.getElementById('tab-po');
                 if (tabPO) tabPO.style.display = (id === 'sekretariat' ? 'inline-block' : 'none');
+                const tabGroups = document.getElementById('tab-groups');
+                if (tabGroups) tabGroups.style.display = isRealAdmin ? 'inline-block' : 'none';
 
                 const mSel = document.getElementById('modalEmp'); mSel.innerHTML = '';
                 const allowed = (isAdmin ? CONFIG.employees.filter(e => e.active !== false && e.id !== 'admin' && e.id !== 'sekretariat') : CONFIG.employees.filter(e => e.id === id));
@@ -1135,7 +1150,7 @@
 
                     const grp = this.getPrimaryGrp(e);
                     if (grp) {
-                        const color = CONFIG.groupColors[grp] || '#ccc';
+                        const color = this.getGroupColor(grp);
                         n.style.borderLeft = `4px solid ${color}`;
                         const prev = emps[ei - 1];
                         if (!prev || this.getPrimaryGrp(prev) !== grp) {
@@ -1896,7 +1911,7 @@
             }
 
             switchTab(tabId) {
-                const tabs = ['calendar', 'summary', 'status', 'admin', 'requests', 'po'];
+                const tabs = ['calendar', 'summary', 'status', 'admin', 'requests', 'po', 'groups'];
                 tabs.forEach(t => { const btn = document.getElementById('tab-' + t); if (btn) btn.classList.remove('active'); });
                 const activeBtn = document.getElementById('tab-' + tabId);
                 if (activeBtn) activeBtn.classList.add('active');
@@ -1908,11 +1923,13 @@
                 document.getElementById('adminView').style.display = (tabId === 'admin') ? 'block' : 'none';
                 document.getElementById('requestsView').style.display = (tabId === 'requests') ? 'block' : 'none';
                 document.getElementById('poView').style.display = (tabId === 'po') ? 'block' : 'none';
+                document.getElementById('groupsView').style.display = (tabId === 'groups') ? 'block' : 'none';
 
                 if (tabId === 'calendar' && this.currentUser === 'admin') { bulkPanel.style.display = 'flex'; } else { bulkPanel.style.display = 'none'; }
                 if (tabId === 'admin') this.renderAdminTable();
                 if (tabId === 'requests') this.renderRequestsTab();
                 if (tabId === 'po') this.renderPOView();
+                if (tabId === 'groups') this.renderGroupsAdmin();
             }
 
             setMode(m) { this.currentMode = m; }
@@ -2062,6 +2079,87 @@
                 document.getElementById('iCalExportModal').style.display = 'none';
             }
 
+            getGroupColor(grp) {
+                if (CONFIG.groupColors[grp]) return CONFIG.groupColors[grp];
+                const palette = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#6366f1','#14b8a6','#f97316'];
+                const i = CONFIG.groupOrder.indexOf(grp);
+                return i !== -1 ? palette[i % palette.length] : '#64748b';
+            }
+
+            renderGroupsAdmin() {
+                const list = document.getElementById('adminGroupList');
+                if (!list) return;
+                list.innerHTML = '';
+                const groups = CONFIG.groupOrder.filter(g => g !== '');
+                groups.forEach((grp, index) => {
+                    const row = document.createElement('div');
+                    row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px 15px; border-bottom:1px solid #eee;';
+
+                    const left = document.createElement('div');
+                    left.style.cssText = 'display:flex; align-items:center; gap:10px;';
+                    const swatch = document.createElement('span');
+                    swatch.style.cssText = `display:inline-block; width:12px; height:12px; border-radius:50%; background:${this.getGroupColor(grp)};`;
+                    const nameSpan = document.createElement('span');
+                    nameSpan.textContent = grp; nameSpan.style.fontWeight = 'bold';
+                    left.appendChild(swatch); left.appendChild(nameSpan);
+
+                    const actions = document.createElement('div');
+                    actions.style.cssText = 'display:flex; gap:8px; align-items:center;';
+
+                    const colorPicker = document.createElement('input');
+                    colorPicker.type = 'color'; colorPicker.value = this.getGroupColor(grp);
+                    colorPicker.title = 'Farbe ändern';
+                    colorPicker.style.cssText = 'width:30px; height:30px; padding:2px; border:none; cursor:pointer;';
+                    colorPicker.onchange = e => { CONFIG.groupColors[grp] = e.target.value; swatch.style.background = e.target.value; this.render(); DataService.save(this.state); };
+
+                    const upBtn = document.createElement('button');
+                    upBtn.textContent = '↑'; upBtn.className = 'primary'; upBtn.style.padding = '4px 10px';
+                    upBtn.disabled = index === 0;
+                    upBtn.onclick = () => this.moveGroup(index, 'up');
+
+                    const downBtn = document.createElement('button');
+                    downBtn.textContent = '↓'; downBtn.className = 'primary'; downBtn.style.padding = '4px 10px';
+                    downBtn.disabled = index === groups.length - 1;
+                    downBtn.onclick = () => this.moveGroup(index, 'down');
+
+                    const delBtn = document.createElement('button');
+                    delBtn.textContent = 'Löschen'; delBtn.className = 'primary';
+                    delBtn.style.cssText = 'padding:4px 8px; font-size:0.8rem; background:var(--danger-color);';
+                    delBtn.onclick = () => this.deleteGroup(grp);
+
+                    actions.appendChild(colorPicker); actions.appendChild(upBtn); actions.appendChild(downBtn); actions.appendChild(delBtn);
+                    row.appendChild(left); row.appendChild(actions);
+                    list.appendChild(row);
+                });
+            }
+
+            moveGroup(index, direction) {
+                const groups = CONFIG.groupOrder.filter(g => g !== '');
+                if (direction === 'up' && index > 0) { [groups[index], groups[index-1]] = [groups[index-1], groups[index]]; }
+                else if (direction === 'down' && index < groups.length - 1) { [groups[index], groups[index+1]] = [groups[index+1], groups[index]]; }
+                else return;
+                CONFIG.groupOrder = [...groups, ''];
+                this.sortEmployees(); this.renderGroupsAdmin(); this.render(); DataService.save(this.state);
+            }
+
+            addGroup() {
+                const input = document.getElementById('newGroupName');
+                const val = input.value.trim();
+                if (!val) return alert('Bitte einen Namen eingeben.');
+                if (CONFIG.groupOrder.includes(val)) return alert('Diese Gruppe existiert bereits.');
+                CONFIG.groupOrder.splice(CONFIG.groupOrder.length - 1, 0, val);
+                input.value = '';
+                this.renderGroupsAdmin(); this.render(); DataService.save(this.state);
+            }
+
+            deleteGroup(grp) {
+                if (!confirm(`Gruppe "${grp}" wirklich löschen?\n\nSie wird auch von allen Mitarbeitern entfernt.`)) return;
+                CONFIG.groupOrder = CONFIG.groupOrder.filter(g => g !== grp);
+                delete CONFIG.groupColors[grp];
+                CONFIG.employees.forEach(emp => { if (emp.groups) emp.groups = emp.groups.filter(g => g !== grp); });
+                this.sortEmployees(); this.renderGroupsAdmin(); this.renderAdminTable(); this.render(); DataService.save(this.state);
+            }
+
             renderAdminTable() {
                 const tbody = document.getElementById('adminEmployeeTable'); tbody.innerHTML = '';
                 CONFIG.employees.forEach(emp => { if (emp.id !== 'sekretariat') this.createEmployeeRow(tbody, emp); });
@@ -2075,7 +2173,7 @@
                 <td style="padding: 10px;"><input type="text" value="${emp.pin || ''}" data-field="pin" data-id="${emp.id}" style="width:80px;"></td>
                 <td style="padding: 10px;">
                     <div class="group-checkboxes" data-id="${emp.id}" style="display: flex; flex-wrap: wrap; gap: 5px; font-size: 0.75rem; max-width: 250px;">
-                        ${['Chef', 'Privat', 'TAVI', 'TEER', 'Herzkatheter', 'Echo', 'EPU', 'Intensiv', 'Pneumo', 'Ambulanz', 'Kein Vertreter nötig'].map(g => `<label style="display: flex; align-items: center; gap: 2px; font-weight: normal; margin-right: 5px; white-space: nowrap;"><input type="checkbox" value="${g}" ${emp.groups && emp.groups.includes(g) ? 'checked' : (emp.group === g ? 'checked' : '')} ${isReadOnly ? 'disabled' : ''}> ${g}</label>`).join('')}
+                        ${CONFIG.groupOrder.filter(g => g !== '').map(g => `<label style="display: flex; align-items: center; gap: 2px; font-weight: normal; margin-right: 5px; white-space: nowrap;"><input type="checkbox" value="${g}" ${emp.groups && emp.groups.includes(g) ? 'checked' : (emp.group === g ? 'checked' : '')} ${isReadOnly ? 'disabled' : ''}> ${g}</label>`).join('')}
                     </div>
                 </td>
                 <td style="padding: 10px; text-align: center;"><input type="checkbox" ${emp.active !== false ? 'checked' : ''} data-field="active" data-id="${emp.id}"></td>
@@ -2106,8 +2204,17 @@
                 const maxId = CONFIG.employees.reduce((max, e) => { if (e.id.startsWith('emp_')) { const num = parseInt(e.id.replace('emp_', ''), 10); return !isNaN(num) && num > max ? num : max; } return max; }, 0);
                 document.getElementById('addEmpId').value = 'emp_' + String(maxId + 1).padStart(5, '0');
                 document.getElementById('addEmpName').value = ''; document.getElementById('addEmpEmail').value = '';
-                document.querySelectorAll('#addEmpGroups input').forEach(cb => cb.checked = false);
                 document.getElementById('addEmpPin').value = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+                // Build checkboxes dynamically from CONFIG.groupOrder
+                const groupDiv = document.getElementById('addEmpGroups');
+                groupDiv.innerHTML = '';
+                CONFIG.groupOrder.filter(g => g !== '').forEach(g => {
+                    const label = document.createElement('label');
+                    label.style.cssText = 'display:flex; align-items:center; gap:4px; font-weight:normal;';
+                    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = g;
+                    label.appendChild(cb); label.appendChild(document.createTextNode(' ' + g));
+                    groupDiv.appendChild(label);
+                });
                 document.getElementById('addEmployeeModal').style.display = 'flex';
             }
 
