@@ -887,7 +887,7 @@
             handleMouseDown(empId, dateStr) {
                 if (this.currentUser === 'sekretariat') { alert('Du bist als Sekretariat angemeldet und kannst keine Bearbeitungen machen'); return; }
                 if (!this.checkPermission(empId)) return;
-                if (this.currentUser !== 'admin' && this.currentUser !== 'assistentensprecher') {
+                if (this.currentUser !== 'admin') {
                     this.openRequestModal(empId, dateStr);
                     return;
                 }
@@ -996,8 +996,8 @@
                 ['admin', 'summary', 'status', 'skills'].forEach(t => {
                     const el = document.getElementById('tab-' + t);
                     if (el) {
-                        if (t === 'skills') el.style.display = adminOnly ? 'inline-block' : 'none';
-                        else el.style.display = (isAdmin && !isSprecher) ? 'inline-block' : (isSprecher && t !== 'admin' ? 'inline-block' : 'none');
+                        if (t === 'skills') el.style.display = (adminOnly || isSprecher) ? 'inline-block' : 'none';
+                        else el.style.display = (isAdmin && t !== 'admin') ? 'inline-block' : (t === 'admin' && adminOnly ? 'inline-block' : 'none');
                     }
                 });
                 const tabRequests = document.getElementById('tab-requests');
