@@ -714,12 +714,15 @@
         <div class="modal">
             <h2>Abwesenheit eintragen</h2>
             <div class="form-group"><label>Mitarbeiter:</label><select id="modalEmp"></select></div>
-            <div class="form-group"><label>Art:</label><select id="modalType">
+            <div class="form-group"><label>Art:</label><select id="modalType" onchange="document.getElementById('kiii-hint').style.display=(this.value==='D'||this.value==='F')?'block':'none'">
                     <option value="U">Urlaub</option>
                     <option value="D">Dienstreise</option>
                     <option value="F">Fortbildung</option>
                     <option value="S">Sonstiges</option>
                 </select></div>
+            <div id="kiii-hint" style="display:none;margin:4px 0 8px;padding:10px 14px;background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;font-size:0.88rem;color:#1e40af;">
+                ℹ️ Für Dienstreisen und Fortbildungen ist zusätzlich ein Antrag an das <strong>Referat KIII/1</strong> erforderlich.
+            </div>
             <div class="form-group"><label>Beschreibung:</label><input type="text" id="modalText"></div>
             <div class="form-group"><label>Vertreter:</label>
                 <div style="position:relative">
