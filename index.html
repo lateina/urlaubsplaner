@@ -970,7 +970,13 @@
 
             async processLogin() {
                 const id = document.getElementById('loginSelect').value, key = document.getElementById('apiKeyInput').value.trim();
+                const pwd = document.getElementById('loginPwdInput').value.trim();
                 if (!id || !key) return alert('Daten fehlen');
+                // PIN-Prüfung
+                const userEntry = CONFIG.employees.find(e => e.id === id);
+                if (userEntry?.pin && String(userEntry.pin) !== pwd) {
+                    return alert('Falscher PIN.');
+                }
                 localStorage.setItem('jsonbin_key', key); CONFIG.apiKey = key; this.currentUser = id;
                 document.getElementById('loginModal').style.display = 'none'; document.body.classList.remove('pre-login');
 
