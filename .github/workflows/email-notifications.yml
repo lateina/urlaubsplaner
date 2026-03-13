@@ -197,7 +197,10 @@ jobs:
                           f"Guten Morgen,\n\n"
                           f"folgende {count} Antrag{'stellt' if count == 1 else 'stellen'} noch {'eine Entscheidung' if count == 1 else 'Entscheidungen'} aus:\n\n"
                           + "\n\n".join(admin_digest_lines)
-                          + "\n\n-- Automatische Benachrichtigung vom Urlaubsplaner"
+                          + "\n\nZum Urlaubsplaner → Anfragen:\n"
+                          + "Oberärzte:   https://lateina.github.io/urlaubsplaner/\n"
+                          + "Assistenten: https://lateina.github.io/urlaubsplaner/assistenz.html\n"
+                          + "\n-- Automatische Benachrichtigung vom Urlaubsplaner"
                       )
                   )
               except Exception as e:
@@ -217,7 +220,10 @@ jobs:
                           f"folgende {count} Abwesenheit{'wurde' if count == 1 else 'en wurden'} genehmigt und "
                           f"{'muss' if count == 1 else 'müssen'} noch in PO eingetragen werden:\n\n"
                           + "\n\n".join(sekretariat_digest_lines)
-                          + "\n\n-- Automatische Benachrichtigung vom Urlaubsplaner"
+                          + "\n\nZur PO-Übersicht im Urlaubsplaner:\n"
+                          + "Oberärzte:   https://lateina.github.io/urlaubsplaner/\n"
+                          + "Assistenten: https://lateina.github.io/urlaubsplaner/assistenz.html\n"
+                          + "\n-- Automatische Benachrichtigung vom Urlaubsplaner"
                       )
                   )
               except Exception as e:
