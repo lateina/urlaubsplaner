@@ -1,0 +1,194 @@
+name: Email Notifications
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'  # alle 10 Minuten
+  workflow_dispatch:         # manuell auslösbar
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send pending notifications
+        env:
+          JSONBIN_KEY: ${{ secrets.JSONBIN_KEY }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+        run: |
+          python3 << 'EOF'
+          import json, smtplib, urllib.request, os
+          from email.mime.text import MIMEText
+          from email.mime.multipart import MIMEMultipart
+
+          JSONBIN_KEY    = os.environ['JSONBIN_KEY']
+          GMAIL_PASSWORD = os.environ['GMAIL_APP_PASSWORD']
+          ADMIN_EMAIL    = os.environ['ADMIN_EMAIL']
+          GMAIL_USER     = 'dienstereminder@gmail.com'
+
+          BINS = {
+              '694548d1d0ea881f403427e3': 'https://lateina.github.io/urlaubsplaner/',
+              '699ffb53ae596e708f4b3de5': 'https://lateina.github.io/urlaubsplaner/assistenz.html',
+          }
+          TYPE_LABELS = {'U': 'Urlaub', 'D': 'Dienstreise', 'F': 'Fortbildung', 'T': 'Sonstiges', 'S': 'Sonstiges'}
+
+          def fetch_bin(bin_id):
+              req = urllib.request.Request(
+                  f'https://api.jsonbin.io/v3/b/{bin_id}/latest',
+                  headers={'X-Master-Key': JSONBIN_KEY}
+              )
+              with urllib.request.urlopen(req) as r:
+                  return json.loads(r.read())['record']
+
+          def save_bin(bin_id, data):
+              body = json.dumps(data).encode()
+              req = urllib.request.Request(
+                  f'https://api.jsonbin.io/v3/b/{bin_id}',
+                  data=body,
+                  headers={'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY},
+                  method='PUT'
+              )
+              urllib.request.urlopen(req)
+
+          def send_email(to_email, to_name, subject, body_text):
+              msg = MIMEMultipart()
+              msg['From'] = f'Urlaubsplaner <{GMAIL_USER}>'
+              msg['To']   = to_email
+              msg['Subject'] = subject
+              msg.attach(MIMEText(body_text, 'plain', 'utf-8'))
+              with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+                  server.login(GMAIL_USER, GMAIL_PASSWORD)
+                  server.send_message(msg)
+              print(f'  → Mail an {to_email}: {subject}')
+
+          def fmt_dates(dates):
+              if not dates: return ''
+              return dates[0] if len(dates) == 1 else f"{dates[0]} – {dates[-1]}"
+
+          def find_emp(employees, emp_id):
+              return next((e for e in employees if e.get('id') == emp_id), None)
+
+          for bin_id, app_url in BINS.items():
+              print(f'Prüfe Bin {bin_id}...')
+              try:
+                  data      = fetch_bin(bin_id)
+                  employees = data.get('employees', [])
+                  state     = data.get('state', {})
+                  requests  = state.get('__REQUESTS__', [])
+                  changed   = False
+
+                  for req in requests:
+                      notified   = req.setdefault('notified', {})
+                      status     = req.get('status', '')
+                      emp        = find_emp(employees, req.get('empId', ''))
+                      vtr        = find_emp(employees, req.get('vertreterId', ''))
+                      emp_name   = emp['name'] if emp else req.get('empId', '')
+                      dates_str  = fmt_dates(req.get('dates', []))
+                      type_label = TYPE_LABELS.get(req.get('type', ''), req.get('type', ''))
+                      link       = f'\nZum Urlaubsplaner → Anfragen:\n{app_url}\n'
+
+                      # 1) pending_vertreter → Vertreter benachrichtigen
+                      if status == 'pending_vertreter' and not notified.get('pending_vertreter'):
+                          if vtr and vtr.get('email'):
+                              try:
+                                  send_email(
+                                      to_email=vtr['email'],
+                                      to_name=vtr['name'],
+                                      subject=f'Vertretungsanfrage von {emp_name}',
+                                      body_text=(
+                                          f"Hallo {vtr['name']},\n\n"
+                                          f"{emp_name} beantragt {type_label} und bittet dich um Zustimmung als Vertreter.\n\n"
+                                          f"Zeitraum: {dates_str}\n"
+                                          f"Art:      {type_label}\n"
+                                          + (f"Beschreibung: {req.get('text')}\n" if req.get('text') else '')
+                                          + link +
+                                          "\n-- Automatische Benachrichtigung vom Urlaubsplaner"
+                                      )
+                                  )
+                                  notified['pending_vertreter'] = True
+                                  changed = True
+                              except Exception as e:
+                                  print(f'  ! Fehler (Vertreter-Mail): {e}')
+                          else:
+                              print(f'  ! Kein E-Mail für Vertreter {req.get("vertreterId")}')
+
+                      # 2) pending_admin → Admin benachrichtigen
+                      if status == 'pending_admin' and not notified.get('pending_admin'):
+                          try:
+                              send_email(
+                                  to_email=ADMIN_EMAIL,
+                                  to_name='Admin',
+                                  subject=f'Urlaubsantrag zur Genehmigung: {emp_name}',
+                                  body_text=(
+                                      f"Hallo,\n\n"
+                                      f"{emp_name} beantragt {type_label}. "
+                                      f"Vertreter {req.get('vertreter', '')} hat bereits zugestimmt.\n\n"
+                                      f"Zeitraum: {dates_str}\n"
+                                      f"Art:      {type_label}\n"
+                                      f"Vertreter: {req.get('vertreter', '')}\n"
+                                      + (f"Beschreibung: {req.get('text')}\n" if req.get('text') else '')
+                                      + link +
+                                      "\n-- Automatische Benachrichtigung vom Urlaubsplaner"
+                                  )
+                              )
+                              notified['pending_admin'] = True
+                              changed = True
+                          except Exception as e:
+                              print(f'  ! Fehler (Admin-Mail): {e}')
+
+                      # 3) approved → Antragsteller benachrichtigen
+                      if status == 'approved' and not notified.get('approved'):
+                          if emp and emp.get('email'):
+                              try:
+                                  send_email(
+                                      to_email=emp['email'],
+                                      to_name=emp_name,
+                                      subject=f'Dein Antrag wurde genehmigt ✓',
+                                      body_text=(
+                                          f"Hallo {emp_name},\n\n"
+                                          f"Dein Antrag auf {type_label} wurde genehmigt.\n\n"
+                                          f"Zeitraum: {dates_str}\n"
+                                          f"Vertreter: {req.get('vertreter', '')}\n"
+                                          + link +
+                                          "\n-- Automatische Benachrichtigung vom Urlaubsplaner"
+                                      )
+                                  )
+                                  notified['approved'] = True
+                                  changed = True
+                              except Exception as e:
+                                  print(f'  ! Fehler (Genehmigungs-Mail): {e}')
+
+                      # 4) rejected → Antragsteller benachrichtigen
+                      if status == 'rejected' and not notified.get('rejected'):
+                          if emp and emp.get('email'):
+                              try:
+                                  rejected_by = req.get('rejectedBy', '')
+                                  by_label = 'deinem Vertreter' if rejected_by == 'vertreter' else 'dem Leitenden Oberarzt'
+                                  send_email(
+                                      to_email=emp['email'],
+                                      to_name=emp_name,
+                                      subject=f'Dein Antrag wurde abgelehnt',
+                                      body_text=(
+                                          f"Hallo {emp_name},\n\n"
+                                          f"Dein Antrag auf {type_label} wurde von {by_label} abgelehnt.\n\n"
+                                          f"Zeitraum: {dates_str}\n"
+                                          + (f"Grund: {req.get('rejectionNote')}\n" if req.get('rejectionNote') else '')
+                                          + link +
+                                          "\n-- Automatische Benachrichtigung vom Urlaubsplaner"
+                                      )
+                                  )
+                                  notified['rejected'] = True
+                                  changed = True
+                              except Exception as e:
+                                  print(f'  ! Fehler (Ablehnungs-Mail): {e}')
+
+                  if changed:
+                      state['__REQUESTS__'] = requests
+                      data['state'] = state
+                      save_bin(bin_id, data)
+                      print(f'  Bin {bin_id} aktualisiert.')
+
+              except Exception as e:
+                  print(f'Fehler bei Bin {bin_id}: {e}')
+
+          print('Fertig.')
+          EOF
