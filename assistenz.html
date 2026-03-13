@@ -210,6 +210,20 @@
             position: relative;
         }
 
+        .vac-badge {
+            display: block;
+            font-size: 0.68rem;
+            margin-top: 2px;
+            line-height: 1;
+            font-weight: normal;
+        }
+        .vac-quota {
+            border-bottom: 1px dashed #9ca3af;
+            cursor: pointer;
+            color: #6b7280;
+        }
+        .vac-quota:hover { color: #374151; }
+
         .day-cell {
             cursor: pointer;
             transition: background 0.1s;
@@ -1086,7 +1100,14 @@
 
                 emps.forEach((e, ei) => {
                     const n = document.createElement('div'); n.className = 'cell employee-row-header sticky-col'; n.style.gridRow = ei + 4; n.style.gridColumn = '1';
-                    n.style.position = 'relative'; if (isMobile) { const p = e.name.split(' '); n.innerText = p[p.length - 1]; } else n.innerText = e.name;
+                    n.style.position = 'relative';
+                    const displayName = isMobile ? (e.name.split(' ').pop() || e.name) : e.name;
+                    n.innerHTML = `<span>${displayName}</span>`;
+                    const vacBadge = document.createElement('span');
+                    vacBadge.id = `vac-badge-${e.id}`;
+                    vacBadge.className = 'vac-badge';
+                    n.appendChild(vacBadge);
+                    this._renderVacBadge(e.id, vacBadge);
                     if (this.currentUser === e.id) n.style.backgroundColor = '#e0f2fe';
 
                     const grp = this.getPrimaryGrp(e);
@@ -1238,7 +1259,7 @@
                 if (el && c) { const offset = document.querySelector('.sticky-corner').offsetWidth; c.scrollTo({ left: el.offsetLeft - offset, behavior: 'smooth' }); }
             }
 
-            setYear(y) { this.currentYear = y; this.scrollToMonth(0, true); }
+            setYear(y) { this.currentYear = y; this.scrollToMonth(0, true); this.updateVacationBadges(); }
 
             updateNavHighlighting() {
                 const c = document.getElementById('calendar'); if (!c) return;
@@ -2072,6 +2093,45 @@
                     return (a.name.split(' ').pop() || '').localeCompare((b.name.split(' ').pop() || ''));
                 });
                 CONFIG.employees = [...admins, ...others];
+            }
+
+            countVacationDays(empId) {
+                const year = this.currentYear || CONFIG.years[0];
+                const entries = this.state[empId] || {};
+                return Object.entries(entries).filter(([d, v]) =>
+                    d.startsWith(String(year)) && v && (v.type === 'U' || v.type === 'V')
+                ).length;
+            }
+
+            _renderVacBadge(empId, el) {
+                if (!el) el = document.getElementById(`vac-badge-${empId}`);
+                if (!el) return;
+                const used = this.countVacationDays(empId);
+                const quota = (this.state.__VACATION_QUOTA__ || {})[empId] ?? 30;
+                const over = used > quota;
+                el.innerHTML =
+                    `<span style="color:${over ? '#ef4444' : '#3b82f6'};font-weight:bold">${used}</span>`
+                    + `<span style="color:#9ca3af"> von </span>`
+                    + `<span class="vac-quota" onclick="app.editVacationQuota('${empId}')" title="Klicken zum Ändern">${quota}</span>`;
+                el.title = `${used} von ${quota} Urlaubstagen genommen`;
+            }
+
+            updateVacationBadges() {
+                const emps = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false);
+                emps.forEach(e => this._renderVacBadge(e.id));
+            }
+
+            editVacationQuota(empId) {
+                const current = (this.state.__VACATION_QUOTA__ || {})[empId] ?? 30;
+                const emp = CONFIG.employees.find(e => e.id === empId);
+                const val = prompt(`Jahresurlaub für ${emp?.name || empId} (Tage):`, current);
+                if (val === null) return;
+                const num = parseInt(val);
+                if (isNaN(num) || num < 0) { alert('Ungültige Zahl.'); return; }
+                if (!this.state.__VACATION_QUOTA__) this.state.__VACATION_QUOTA__ = {};
+                this.state.__VACATION_QUOTA__[empId] = num;
+                this.saveState();
+                this._renderVacBadge(empId);
             }
 
             processBulkImport() {
