@@ -1923,6 +1923,7 @@
                 // The priority is determined by the index in CONFIG.skills
                 let best = CONFIG.skills.length, res = '';
                 grps.forEach(g => {
+                    if (g === 'Kein Vertreter nötig') return;
                     const i = CONFIG.skills.indexOf(g);
                     if (i !== -1 && i < best) { best = i; res = g; }
                 });

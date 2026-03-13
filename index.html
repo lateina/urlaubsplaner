@@ -1247,7 +1247,7 @@
                 const grps = Array.isArray(e.groups) ? e.groups : (e.group ? [e.group] : []);
                 if (grps.length === 0) return '';
                 let best = CONFIG.groupOrder.length, res = '';
-                grps.forEach(g => { const i = CONFIG.groupOrder.indexOf(g); if (i !== -1 && i < best) { best = i; res = g; } });
+                grps.forEach(g => { if (g === 'Kein Vertreter nötig') return; const i = CONFIG.groupOrder.indexOf(g); if (i !== -1 && i < best) { best = i; res = g; } });
                 return res;
             }
 
