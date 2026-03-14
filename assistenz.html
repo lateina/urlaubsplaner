@@ -219,12 +219,16 @@
             line-height: 1;
             font-weight: normal;
         }
+
         .vac-quota {
             border-bottom: 1px dashed #9ca3af;
             cursor: pointer;
             color: #6b7280;
         }
-        .vac-quota:hover { color: #374151; }
+
+        .vac-quota:hover {
+            color: #374151;
+        }
 
         .day-cell {
             cursor: pointer;
@@ -542,18 +546,18 @@
 
         /* Wunsch wartet auf Vertreter-Zustimmung — blau gestreift */
         .status-pending-vertreter {
-            background: repeating-linear-gradient(
-                45deg, #bfdbfe, #bfdbfe 4px, #fff 4px, #fff 10px) !important;
+            background: repeating-linear-gradient(45deg, #bfdbfe, #bfdbfe 4px, #fff 4px, #fff 10px) !important;
             color: #1e40af !important;
             cursor: default !important;
         }
+
         /* Wunsch wartet auf Admin-Freigabe — gelb gestreift */
         .status-pending-admin {
-            background: repeating-linear-gradient(
-                45deg, #fde68a, #fde68a 4px, #fff 4px, #fff 10px) !important;
+            background: repeating-linear-gradient(45deg, #fde68a, #fde68a 4px, #fff 4px, #fff 10px) !important;
             color: #92400e !important;
             cursor: default !important;
         }
+
         #requests-badge {
             display: inline-block;
             background: #ef4444;
@@ -564,7 +568,10 @@
             margin-left: 4px;
             vertical-align: middle;
         }
-        #requests-badge:empty { display: none; }
+
+        #requests-badge:empty {
+            display: none;
+        }
     </style>
 </head>
 
@@ -593,7 +600,8 @@
             <button id="tab-requests" class="tab-button" onclick="app.switchTab('requests')" style="display:none;">
                 Anfragen <span id="requests-badge"></span>
             </button>
-            <button id="tab-po" class="tab-button" onclick="app.switchTab('po')" style="display:none;">PO-Übersicht</button>
+            <button id="tab-po" class="tab-button" onclick="app.switchTab('po')"
+                style="display:none;">PO-Übersicht</button>
         </div>
 
         <div id="bulkImportPanel" class="bulk-import-panel" style="display:none;">
@@ -704,7 +712,9 @@
         <div id="requestsList"></div>
     </div>
 
-    <div id="poView" style="display:none; padding:20px;"><div id="poList"></div></div>
+    <div id="poView" style="display:none; padding:20px;">
+        <div id="poList"></div>
+    </div>
 
     <div id="loginModal" class="modal-overlay" style="display:flex;">
         <div class="modal">
@@ -730,26 +740,35 @@
         <div class="modal">
             <h2>Abwesenheit eintragen</h2>
             <div class="form-group"><label>Mitarbeiter:</label><select id="modalEmp"></select></div>
-            <div class="form-group"><label>Art:</label><select id="modalType" onchange="document.getElementById('kiii-hint').style.display=(this.value==='D'||this.value==='F')?'block':'none'">
+            <div class="form-group"><label>Art:</label><select id="modalType"
+                    onchange="document.getElementById('kiii-hint').style.display=(this.value==='D'||this.value==='F')?'block':'none'">
                     <option value="U">Urlaub</option>
                     <option value="D">Dienstreise</option>
                     <option value="F">Fortbildung</option>
                     <option value="S">Sonstiges</option>
                 </select></div>
-            <div id="kiii-hint" style="display:none;margin:4px 0 8px;padding:10px 14px;background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;font-size:0.88rem;color:#1e40af;">
-                ℹ️ Für Dienstreisen und Fortbildungen ist zusätzlich ein Antrag an das <strong>Referat KIII/1</strong> erforderlich.
+            <div id="kiii-hint"
+                style="display:none;margin:4px 0 8px;padding:10px 14px;background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;font-size:0.88rem;color:#1e40af;">
+                ℹ️ Für Dienstreisen und Fortbildungen ist zusätzlich ein Antrag an das <strong>Referat KIII/1</strong>
+                erforderlich.
             </div>
             <div class="form-group"><label>Beschreibung:</label><input type="text" id="modalText"></div>
             <div class="form-group" id="vertreterGroup"><label>Vertreter:</label>
                 <div style="position:relative">
                     <input type="text" id="modalVertreterInput" placeholder="Vertreter suchen...">
                     <input type="hidden" id="modalVertreterId">
-                    <div id="vertreterResults" style="position:absolute;background:#fff;border:1px solid #ccc;max-height:150px;overflow-y:auto;width:100%;z-index:1000;"></div>
+                    <div id="vertreterResults"
+                        style="position:absolute;background:#fff;border:1px solid #ccc;max-height:150px;overflow-y:auto;width:100%;z-index:1000;">
+                    </div>
                 </div>
             </div>
-            <div class="form-group"><label>Von:</label><input type="date" id="modalStart" oninput="app.onModalDateChange()"></div>
-            <div class="form-group"><label>Bis:</label><input type="date" id="modalEnd" oninput="app.onModalDateChange()"></div>
-            <div id="coverageWarning" style="display:none;margin:8px 0;padding:10px 14px;background:#fef3c7;border:1px solid #fbbf24;border-radius:6px;font-size:0.88rem;color:#92400e;"></div>
+            <div class="form-group"><label>Von:</label><input type="date" id="modalStart"
+                    oninput="app.onModalDateChange()"></div>
+            <div class="form-group"><label>Bis:</label><input type="date" id="modalEnd"
+                    oninput="app.onModalDateChange()"></div>
+            <div id="coverageWarning"
+                style="display:none;margin:8px 0;padding:10px 14px;background:#fef3c7;border:1px solid #fbbf24;border-radius:6px;font-size:0.88rem;color:#92400e;">
+            </div>
             <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
                 <button onclick="document.getElementById('addModal').style.display='none'">Abbrechen</button>
                 <button class="primary" onclick="app.addRange()">Speichern</button>
@@ -929,6 +948,11 @@
                     if (this._hasChanged) {
                         this.saveState();
                         this._affectedDates.forEach(d => this.updateValidationUI(d));
+                        const affectedEmps = new Set();
+                        // This assumes dragging only happens on one employee (which is true in current mouse handlers)
+                        // If multi-row drag is ever added, we'd need to track affected EIDs.
+                        // For now, we can just update all or rely on setVacation's immediate call.
+                        // However, setVacation is called during drag, so badge is already updated.
                         this._hasChanged = false;
                         this._affectedDates.clear();
                     }
@@ -1208,7 +1232,7 @@
                 if (!this.state[empId]) this.state[empId] = {};
                 if (valObj) this.state[empId][dateStr] = valObj;
                 else delete this.state[empId][dateStr];
-                
+
                 if (isDrag) {
                     this._hasChanged = true;
                     this._affectedDates.add(dateStr);
@@ -1231,6 +1255,7 @@
                         }
                     }
                     this.updateValidationUI(dateStr);
+                    this._renderVacBadge(empId);
                 } else if (!isDrag) {
                     this.render();
                 }
@@ -1372,7 +1397,7 @@
                             ? ` <span style="color:#f59e0b;font-size:0.8rem">⚠ abwesend: ${absentDates.join(', ')}</span>`
                             : '';
                         return `<div style="padding:6px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0;${partial ? 'background:#fffbeb' : ''}"
-                              onmousedown="document.getElementById('modalVertreterInput').value='${e.name.replace(/'/g,"\\'")}';document.getElementById('modalVertreterId').value='${e.id}';document.getElementById('vertreterResults').innerHTML=''">${e.name}${warning}</div>`;
+                              onmousedown="document.getElementById('modalVertreterInput').value='${e.name.replace(/'/g, "\\'")}';document.getElementById('modalVertreterId').value='${e.id}';document.getElementById('vertreterResults').innerHTML=''">${e.name}${warning}</div>`;
                     }).join('') || '<div style="padding:6px 10px;color:#9ca3af;font-size:0.85rem">Keine verfügbaren Kollegen aus gleicher Gruppe</div>';
                 };
                 vertreterInput.oninput = showVertreterList;
@@ -1435,7 +1460,7 @@
 
                 const dates = [];
                 let curr = new Date(start), endD = new Date(end);
-                while (curr <= endD) { dates.push(this.formatDate(curr)); curr.setDate(curr.getDate()+1); }
+                while (curr <= endD) { dates.push(this.formatDate(curr)); curr.setDate(curr.getDate() + 1); }
 
                 // Check if selected vertreter is absent on some (but not all) days
                 if (this.needsVertreter(eid)) {
@@ -1593,8 +1618,8 @@
             _fmtStamp(stamp, label) {
                 if (!stamp) return '';
                 const d = new Date(stamp.at);
-                const ds = d.toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric' });
-                const ts = d.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' });
+                const ds = d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                const ts = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
                 return `<div style="font-size:0.72rem;color:#6b7280;margin-top:3px;padding:3px 8px;background:#f9fafb;border-radius:3px;border-left:3px solid #d1d5db"><strong>${label}</strong>: ${stamp.name} · ${ds}, ${ts} Uhr · ${stamp.device}</div>`;
             }
 
@@ -1622,7 +1647,7 @@
                     } else {
                         adminReqs.forEach(req => {
                             const emp = CONFIG.employees.find(e => e.id === req.empId);
-                            const from = req.dates[0], to = req.dates[req.dates.length-1];
+                            const from = req.dates[0], to = req.dates[req.dates.length - 1];
                             html += `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:12px;background:#fff">
                                 <strong>${emp?.name || req.empId}</strong> — ${from}${from !== to ? ' bis ' + to : ''} — ${typeLabel[req.type] || req.type}
                                 ${req.text ? `<br><em>${req.text}</em>` : ''}
@@ -1646,7 +1671,7 @@
                         html += '<h4 style="margin-top:20px;color:#374151">Verlauf</h4>';
                         history.forEach(req => {
                             const emp = CONFIG.employees.find(e => e.id === req.empId);
-                            const from = req.dates[0], to = req.dates[req.dates.length-1];
+                            const from = req.dates[0], to = req.dates[req.dates.length - 1];
                             const statusColor = req.status === 'approved' ? '#22c55e' : '#ef4444';
                             const rejectedBy = req.rejectedBy === 'vertreter' ? 'Vertreter' : 'Admin';
                             html += `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:8px;background:#f9fafb;opacity:0.8">
@@ -1665,7 +1690,7 @@
                         html += '<h4 style="color:#374151;margin-bottom:12px">Vertretungsanfragen</h4>';
                         vertretenReqs.forEach(req => {
                             const emp = CONFIG.employees.find(e => e.id === req.empId);
-                            const from = req.dates[0], to = req.dates[req.dates.length-1];
+                            const from = req.dates[0], to = req.dates[req.dates.length - 1];
                             html += `<div style="border:1px solid #bfdbfe;border-radius:8px;padding:16px;margin-bottom:12px;background:#eff6ff">
                                 <strong>${emp?.name || req.empId}</strong> möchte vom <strong>${from}</strong>${from !== to ? ' bis <strong>' + to + '</strong>' : ''} ${typeLabel[req.type] || req.type} nehmen.
                                 ${req.text ? `<br>Beschreibung: <em>${req.text}</em>` : ''}
@@ -1685,7 +1710,7 @@
                     if (ownReqs.length > 0) {
                         html += '<h4 style="color:#374151;margin-bottom:12px;margin-top:20px">Meine Anfragen</h4>';
                         ownReqs.forEach(req => {
-                            const from = req.dates[0], to = req.dates[req.dates.length-1];
+                            const from = req.dates[0], to = req.dates[req.dates.length - 1];
                             const statusColor = { pending_vertreter: '#3b82f6', pending_admin: '#f59e0b', approved: '#22c55e', rejected: '#ef4444' }[req.status] || '#6b7280';
                             const rejectedBy = req.rejectedBy === 'vertreter' ? 'Vertreter' : 'Admin';
                             html += `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:8px;background:#fff">
@@ -1810,9 +1835,9 @@
                 const s = customTxt ? null : (eid ? this.state[eid]?.[d] : null), dObj = this._datesMap.get(d);
                 const info = customTxt || [dObj?.holiday, dObj?.schoolHoliday].filter(x => x).join(' & ');
                 if (!s && !info) return;
-                const TYPE_NAMES = {U:'Urlaub', D:'Dienstreise', F:'Fortbildung', T:'Sonstiges', S:'Sonstiges'};
+                const TYPE_NAMES = { U: 'Urlaub', D: 'Dienstreise', F: 'Fortbildung', T: 'Sonstiges', S: 'Sonstiges' };
                 let tip = customTxt ? `<strong>${customTxt}</strong>` : `<strong>${s ? (s.text || TYPE_NAMES[s.type] || s.type) : ''}</strong>`;
-                if (s && s.vertreter) tip += `<br>Vertreter: ${s.vertreter}`; 
+                if (s && s.vertreter) tip += `<br>Vertreter: ${s.vertreter}`;
                 if (info && !customTxt) tip += `<br>${info}`;
                 this.showSimpleTip(ev, tip, true);
             }
