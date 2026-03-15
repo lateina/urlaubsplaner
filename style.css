@@ -424,12 +424,18 @@ body.pre-login .tab-container {
     .controls {
         display: flex;
         gap: 4px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
     }
 
     .controls button {
-        padding: 4px 6px;
-        font-size: 0.7rem;
+        padding: 6px 8px;
+        font-size: 0.75rem;
         width: auto;
+    }
+
+    #btnLogout {
+        order: -1; /* Place logout button prominently on mobile */
     }
 
     .calendar-container {
