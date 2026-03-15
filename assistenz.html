@@ -5,574 +5,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Urlaubsplaner Assistenzärzte 2026/2027</title>
-    <style>
-        :root {
-            --primary-color: #2563eb;
-            --primary-hover: #1d4ed8;
-            --bg-color: #f8fafc;
-            --surface-color: #ffffff;
-            --text-main: #1e293b;
-            --text-secondary: #64748b;
-            --border-color: #e2e8f0;
-            --danger-color: #ef4444;
-            --warning-color: #f59e0b;
-            --success-color: #10b981;
-            --status-vacation: #3b82f6;
-            --status-trip: #8b5cf6;
-            --status-training: #f97316;
-            --status-custom: #64748b;
-            --status-weekend: #f1f5f9;
-            --radius-md: 8px;
-            --radius-lg: 12px;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    <link rel="manifest" href="manifest-ass.json">
+    <link rel="stylesheet" href="style.css">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('Service Worker registriert'))
+                    .catch(err => console.log('Service Worker Fehler', err));
+            });
         }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            padding: 20px;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow-x: hidden;
-        }
-
-        header {
-            background: var(--surface-color);
-            padding: 10px 15px;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-sm);
-            margin-bottom: 10px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        h1 {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: var(--text-main);
-        }
-
-        .controls {
-            display: flex;
-            gap: 10px;
-        }
-
-        button {
-            padding: 8px 16px;
-            border-radius: var(--radius-md);
-            border: 1px solid var(--border-color);
-            background: var(--surface-color);
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        button.primary {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-        }
-
-        .calendar-container {
-            display: grid;
-            overflow-x: auto;
-            overflow-y: auto;
-            position: relative;
-            width: 100%;
-            height: auto;
-            max-height: calc(100vh - 250px);
-            grid-template-columns: 200px repeat(762, 40px);
-            grid-template-rows: 30px 30px 30px;
-            grid-auto-rows: minmax(50px, auto);
-            padding-bottom: 80px;
-            user-select: none;
-            -webkit-user-select: none;
-            background-color: #ffffff;
-        }
-
-        .employee-data-wrapper {
-            grid-column: 2 / 764;
-            position: relative;
-            box-sizing: border-box;
-        }
-
-        .sticky-col {
-            position: -webkit-sticky !important;
-            position: sticky !important;
-            left: 0 !important;
-            background-color: #ffffff !important;
-            z-index: 50 !important;
-            border-right: 1px solid var(--border-color);
-            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
-            min-width: 200px;
-            will-change: transform;
-        }
-
-        .sticky-header {
-            position: -webkit-sticky !important;
-            position: sticky !important;
-            background-color: #ffffff !important;
-            z-index: 90 !important;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .sticky-corner {
-            top: 0 !important;
-            left: 0 !important;
-            z-index: 100 !important;
-            background-color: #ffffff !important;
-        }
-
-        .cell {
-            padding: 5px;
-            border-bottom: 1px solid var(--border-color);
-            border-right: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.85rem;
-            background-color: #ffffff;
-        }
-
-        .header-cell {
-            font-weight: 600;
-            color: var(--text-secondary);
-            flex-direction: column;
-        }
-
-        .month-header {
-            grid-row: 1;
-            top: 0 !important;
-            background-color: #ffffff !important;
-            font-weight: 700;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 0.05em;
-        }
-
-        .day-header {
-            grid-row: 2;
-            top: 30px !important;
-            background-color: #ffffff !important;
-            align-items: center;
-            justify-content: flex-start;
-            padding: 5px 0;
-        }
-
-        .validation-row {
-            grid-row: 3;
-            position: -webkit-sticky !important;
-            position: sticky !important;
-            top: 60px !important;
-            left: 0 !important;
-            background-color: #fff1f2 !important;
-            color: var(--danger-color);
-            font-weight: bold;
-            justify-content: flex-start;
-            padding-left: 10px;
-            border-bottom: 2px solid var(--danger-color);
-            z-index: 85 !important;
-        }
-
-        .validation-cell {
-            grid-row: 3;
-            position: -webkit-sticky !important;
-            position: sticky !important;
-            top: 60px !important;
-            border-bottom: 2px solid var(--danger-color);
-            z-index: 45 !important;
-            background-color: #fff1f2 !important;
-        }
-
-        .warning-text {
-            color: var(--danger-color);
-            font-size: 0.65rem;
-            font-weight: bold;
-            line-height: 1.1;
-            text-align: center;
-            position: relative;
-        }
-
-        .employee-row-header {
-            flex-direction: column;
-            align-items: flex-start;
-            justify-content: center;
-            padding-left: 15px;
-            gap: 6px;
-            font-weight: 600;
-            background: var(--surface-color);
-            position: relative;
-        }
-
-        .vac-badge {
-            display: block;
-            font-size: 0.68rem;
-            line-height: 1;
-            font-weight: normal;
-        }
-
-        .vac-quota {
-            border-bottom: 1px dashed #9ca3af;
-            cursor: pointer;
-            color: #6b7280;
-        }
-
-        .vac-quota:hover {
-            color: #374151;
-        }
-
-        .day-cell {
-            cursor: pointer;
-            transition: background 0.1s;
-            position: relative;
-        }
-
-        .cell-text {
-            font-size: 0.6rem;
-            color: white;
-            pointer-events: none;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            max-width: 100%;
-            padding: 0 2px;
-        }
-
-        .weekend {
-            background-color: var(--status-weekend);
-        }
-
-        .holiday {
-            background-color: #fecaca;
-        }
-
-        .day-header.holiday,
-        .validation-cell.holiday {
-            background-color: #fecaca !important;
-        }
-
-        .school-holiday {
-            border-top: 3px solid #94a3b8;
-        }
-
-        .holiday.school-holiday {
-            border-top: 3px solid #64748b;
-        }
-
-        .day-cell.status-vacation {
-            background-color: var(--status-vacation) !important;
-            color: white !important;
-        }
-
-        .day-cell.status-trip {
-            background-color: var(--status-trip) !important;
-            color: white !important;
-        }
-
-        .day-cell.status-training {
-            background-color: var(--status-training) !important;
-            color: white !important;
-        }
-
-        .day-cell.status-custom {
-            background-color: var(--status-custom) !important;
-            color: white !important;
-        }
-
-        .month-nav {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .month-nav button {
-            padding: 4px 10px;
-            font-size: 0.8rem;
-        }
-
-        #custom-tooltip {
-            position: fixed;
-            background: #333;
-            color: white;
-            padding: 6px 10px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            z-index: 1000;
-            pointer-events: none;
-            display: none;
-            max-width: 200px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-        }
-
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-
-        .modal {
-            background: var(--surface-color);
-            padding: 25px;
-            border-radius: var(--radius-lg);
-            width: 450px;
-            max-width: 95vw;
-            box-shadow: var(--shadow-md);
-        }
-
-        .modal h2 {
-            margin-bottom: 20px;
-            font-size: 1.3rem;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-        }
-
-        .form-group input[type="checkbox"],
-        .form-group input[type="radio"] {
-            width: auto;
-            padding: 0;
-            margin: 0;
-        }
-
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-
-        .modal {
-            background: var(--surface-color);
-            padding: 25px;
-            border-radius: var(--radius-lg);
-            width: 450px;
-            max-width: 95vw;
-            box-shadow: var(--shadow-md);
-        }
-
-        .modal h2 {
-            margin-bottom: 20px;
-            font-size: 1.3rem;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-        }
-
-        body.pre-login header,
-        body.pre-login .month-nav,
-        body.pre-login #calendarView,
-        body.pre-login .tab-container {
-            display: none !important;
-        }
-
-        .tab-container {
-            display: flex;
-            border-bottom: 2px solid #ddd;
-            margin-bottom: 15px;
-            background: white;
-            padding: 10px 15px 0;
-        }
-
-        .tab-button {
-            padding: 10px 20px;
-            cursor: pointer;
-            background: transparent;
-            border: none;
-            border-bottom: 3px solid transparent;
-            font-size: 1rem;
-            font-weight: bold;
-            color: #64748b;
-            margin-right: 10px;
-        }
-
-        .tab-button.active {
-            color: var(--primary-color);
-            border-bottom-color: var(--primary-color);
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding: 4px;
-            }
-
-            header {
-                padding: 6px 10px;
-                margin-bottom: 6px;
-            }
-
-            .header-top {
-                display: flex;
-                flex-direction: row;
-                justify-content: space-between;
-                align-items: center;
-                gap: 10px;
-            }
-
-            h1 {
-                font-size: 0.95rem;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-
-            .tab-container {
-                margin-bottom: 6px;
-                padding-top: 4px;
-            }
-
-            .controls {
-                display: flex;
-                gap: 4px;
-            }
-
-            .controls button {
-                padding: 4px 6px;
-                font-size: 0.7rem;
-                width: auto;
-            }
-
-            .calendar-container {
-                grid-template-columns: 80px repeat(762, 40px);
-                max-height: calc(100vh - 140px);
-            }
-
-            .sticky-col {
-                min-width: 80px;
-                width: 80px;
-                font-size: 0.75rem;
-            }
-
-            .employee-row-header {
-                padding-left: 5px;
-                line-height: 1.2;
-                word-break: break-word;
-            }
-
-            .month-nav {
-                overflow-x: auto;
-                white-space: nowrap;
-                padding-bottom: 5px;
-                -webkit-overflow-scrolling: touch;
-                display: block;
-            }
-
-            .month-nav button {
-                display: inline-block;
-                padding: 8px 15px;
-                margin-right: 5px;
-            }
-
-            #btnAddAbsence {
-                width: 100%;
-                margin-left: 0 !important;
-                padding: 10px !important;
-                grid-column: span 2;
-            }
-        }
-
-        /* Bulk Import Panel inside Header */
-        .bulk-import-panel {
-            background: #f8fafc;
-            padding: 15px;
-            border-radius: var(--radius-md);
-            border: 1px solid var(--border-color);
-            display: flex;
-            gap: 20px;
-            align-items: flex-start;
-        }
-
-        .summary-section {
-            margin-top: 20px;
-            background: var(--surface-color);
-            padding: 20px;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-md);
-        }
-
-        /* Wunsch wartet auf Vertreter-Zustimmung — blau gestreift */
-        .status-pending-vertreter {
-            background: repeating-linear-gradient(45deg, #bfdbfe, #bfdbfe 4px, #fff 4px, #fff 10px) !important;
-            color: #1e40af !important;
-            cursor: default !important;
-        }
-
-        /* Wunsch wartet auf Admin-Freigabe — gelb gestreift */
-        .status-pending-admin {
-            background: repeating-linear-gradient(45deg, #fde68a, #fde68a 4px, #fff 4px, #fff 10px) !important;
-            color: #92400e !important;
-            cursor: default !important;
-        }
-
-        #requests-badge {
-            display: inline-block;
-            background: #ef4444;
-            color: white;
-            border-radius: 50%;
-            padding: 1px 6px;
-            font-size: 0.7rem;
-            margin-left: 4px;
-            vertical-align: middle;
-        }
-
-        #requests-badge:empty {
-            display: none;
-        }
-    </style>
+    </script>
 </head>
 
 <body class="pre-login">
@@ -581,6 +24,8 @@
             <h1>Urlaubsplaner Assistenzärzte</h1>
             <div class="controls">
                 <button id="btnExport" onclick="app.exportData()">Export JSON</button>
+                <button id="btnExportICal" onclick="app.exportICal()"
+                    style="display:none; background-color: #10b981; color: white; border: none;">Export iCal</button>
                 <button id="btnImport" class="primary" onclick="document.getElementById('fileInput').click()">Import
                     JSON</button>
                 <input type="file" id="fileInput" style="display:none" onchange="app.importData(this)">
@@ -684,7 +129,6 @@
                 </table>
             </div>
         </div>
-
     </div>
 
     <div id="skillsView" style="display:none; padding: 20px;">
@@ -699,7 +143,6 @@
             </div>
             <div id="adminSkillList"
                 style="display: flex; flex-direction: column; gap: 10px; max-height: 600px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; border-radius: 4px; background: #fff;">
-                <!-- Filled via JS -->
             </div>
         </div>
     </div>
@@ -776,8 +219,6 @@
         </div>
     </div>
 
-    <div id="custom-tooltip"></div>
-
     <div id="addEmployeeModal" class="modal-overlay">
         <div class="modal">
             <h2>Neuer Mitarbeiter</h2>
@@ -801,7 +242,6 @@
                 <label>Mitarbeitergruppen</label>
                 <div id="addEmpGroups"
                     style="display: flex; flex-wrap: wrap; gap: 10px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
-                    <!-- Filled via JS -->
                 </div>
             </div>
             <div style="display:flex; justify-content:space-between; margin-top:20px;">
@@ -811,7 +251,6 @@
         </div>
     </div>
 
-    <!-- iCal Export Modal -->
     <div id="iCalExportModal" class="modal-overlay">
         <div class="modal">
             <h2>iCal Export Einstellungen</h2>
@@ -827,7 +266,6 @@
 
             <div id="icalEmpList"
                 style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
-                <!-- Filled via JS -->
             </div>
 
             <div style="display:flex; justify-content:flex-end; gap: 10px;">
@@ -837,1110 +275,80 @@
         </div>
     </div>
 
-    <script>
-        function getBavarianHolidays(year) {
-            function getEaster(year) {
-                const a = year % 19, b = Math.floor(year / 100), c = year % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
-                const month = Math.floor((h + l - 7 * m + 114) / 31), day = ((h + l - 7 * m + 114) % 31) + 1;
-                return new Date(year, month - 1, day);
-            }
-            const easter = getEaster(year);
-            const add = (d, n) => { let r = new Date(d); r.setDate(r.getDate() + n); return `${r.getFullYear()}-${String(r.getMonth() + 1).padStart(2, '0')}-${String(r.getDate()).padStart(2, '0')}`; };
-            return {
-                [`${year}-01-01`]: 'Neujahr', [`${year}-01-06`]: 'Hl. 3 Könige', [`${year}-05-01`]: 'Tag der Arbeit', [`${year}-08-15`]: 'Mariä Himmelfahrt', [`${year}-10-03`]: 'Tag d. dt. Einheit', [`${year}-11-01`]: 'Allerheiligen', [`${year}-12-25`]: '1. Weihnachtstag', [`${year}-12-26`]: '2. Weihnachtstag',
-                [add(easter, -2)]: 'Karfreitag', [add(easter, 1)]: 'Ostermontag', [add(easter, 39)]: 'Christi Himmelfahrt', [add(easter, 50)]: 'Pfingstmontag', [add(easter, 60)]: 'Fronleichnam'
-            };
-        }
+    <div id="custom-tooltip"></div>
 
-        const CONFIG = {
-            years: [2026, 2027, 2028], binId: '699ffb53ae596e708f4b3de5', apiKey: localStorage.getItem('jsonbin_key') || '', employees: [], holidays: {}, skills: ['Station 50-52', 'Interm/ITS', 'Notaufnahme', 'Fremdrotation', 'Kardiologie', 'Kein Vertreter nötig'],
+    <script src="shared.js"></script>
+    <script>
+        const PAGE_CONFIG = {
+            years: [2026, 2027, 2028],
+            binId: '699ffb53ae596e708f4b3de5',
+            apiKey: localStorage.getItem('jsonbin_key') || '',
+            employees: [],
+            holidays: {},
+            skills: ['Station 50-52', 'Interm/ITS', 'Notaufnahme', 'Fremdrotation', 'Kardiologie', 'Kein Vertreter nötig'],
             groupColors: { 'Station 50-52': '#3b82f6', 'Interm/ITS': '#6366f1', 'Notaufnahme': '#14b8a6', 'Fremdrotation': '#8b5cf6', 'Kardiologie': '#06b6d4', 'Chef': '#ef4444', 'Privat': '#84cc16', 'Kein Vertreter nötig': '#6b7280' },
             schoolHolidays: [
                 { start: '2026-01-01', end: '2026-01-05', name: 'Weihnachtsferien' }, { start: '2026-02-16', end: '2026-02-20', name: 'Winterferien' }, { start: '2026-03-30', end: '2026-04-10', name: 'Osterferien' }, { start: '2026-05-26', end: '2026-06-05', name: 'Pfingstferien' }, { start: '2026-08-03', end: '2026-09-14', name: 'Sommerferien' }, { start: '2026-11-02', end: '2026-11-06', name: 'Herbstferien' }, { start: '2026-12-24', end: '2027-01-08', name: 'Weihnachtsferien' }, { start: '2027-02-08', end: '2027-02-12', name: 'Winterferien' }, { start: '2027-03-22', end: '2027-04-02', name: 'Osterferien' }, { start: '2027-05-18', end: '2027-05-28', name: 'Pfingstferien' }, { start: '2027-08-02', end: '2027-09-13', name: 'Sommerferien' }, { start: '2027-11-02', end: '2027-11-05', name: 'Herbstferien' }, { start: '2027-12-24', end: '2028-01-07', name: 'Weihnachtsferien' }
-            ]
+            ],
+            exportFilename: "abwesenheiten_assistenz.json",
+            isSprecher: "assistentensprecher",
+            additionalLoginOptions: [{ id: 'assistentensprecher', name: 'Assistentensprecher' }]
         };
-        CONFIG.years.forEach(y => Object.assign(CONFIG.holidays, getBavarianHolidays(y)));
+        PAGE_CONFIG.years.forEach(y => Object.assign(PAGE_CONFIG.holidays, getBavarianHolidays(y)));
 
-        class DataService {
-            static async load() {
-                try { const res = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}/latest`, { headers: { 'X-Master-Key': CONFIG.apiKey } }); return (await res.json()).record; } catch (e) { return null; }
-            }
-            static async save(state) {
-                try { await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Master-Key': CONFIG.apiKey }, body: JSON.stringify({ employees: CONFIG.employees, skills: CONFIG.skills, groupColors: CONFIG.groupColors, state }) }); } catch (e) { }
-            }
-        }
-
-        class App {
+        class AssistenzPlanerApp extends App {
             constructor() {
-                this.currentUser = null; this.state = {}; this.isDragging = false; this.dragLock = false; this.currentMode = 'U';
-                this.currentText = ''; this.currentVertreterText = ''; this._hasChanged = false;
-                this._pendingValUpdates = new Map();
-                this._affectedDates = new Set();
-                this._updateScheduled = false;
-                this._validationTimeout = null;
-                this._visStart = -1; this._visEnd = -1; this._rafPending = false;
-                this.dates = this.generateDates();
-                this._datesMap = new Map();
-                this.dates.forEach(d => this._datesMap.set(d.dateStr, d));
-                this.initApp();
-                document.getElementById('calendar').addEventListener('scroll', () => this._scheduleVirtualUpdate(), { passive: true });
-                this.stopDrag = this.stopDrag.bind(this);
-                document.addEventListener('mouseup', this.stopDrag);
-                document.addEventListener('touchend', this.stopDrag);
-                document.addEventListener('touchcancel', this.stopDrag);
+                super(PAGE_CONFIG);
+            }
 
-                const cal = document.getElementById('calendar');
-                cal.addEventListener('mousedown', ev => {
-                    if (ev.button !== 0) return;
-                    const cell = ev.target.closest('.day-cell[data-eid]');
-                    if (!cell) return;
-                    ev.preventDefault();
-                    this.handleMouseDown(cell.dataset.eid, cell.dataset.date);
-                }, { passive: false });
-                cal.addEventListener('mouseover', ev => {
-                    const cell = ev.target.closest('.day-cell[data-eid]');
-                    if (cell) this.handleMouseOver(cell.dataset.eid, cell.dataset.date);
+            sortEmployees() {
+                const admins = CONFIG.employees.filter(e => e.id === 'admin' || e.id === 'sekretariat' || e.id === CONFIG.isSprecher);
+                const others = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.id !== CONFIG.isSprecher);
+                others.sort((a, b) => {
+                    const iA = CONFIG.skills.indexOf(this.getPrimaryGrp(a)), iB = CONFIG.skills.indexOf(this.getPrimaryGrp(b));
+                    if (iA !== iB) return iA - iB;
+                    return (a.name.split(' ').pop() || '').localeCompare((b.name.split(' ').pop() || ''));
                 });
-                cal.addEventListener('dblclick', ev => {
-                    const cell = ev.target.closest('.day-cell[data-eid]');
-                    if (cell) this.editAbsence(cell.dataset.eid, cell.dataset.date);
-                });
-                cal.addEventListener('contextmenu', ev => {
-                    const cell = ev.target.closest('.day-cell[data-eid]');
-                    if (!cell) return;
-                    ev.preventDefault();
-                    this.editAbsence(cell.dataset.eid, cell.dataset.date);
-                });
-                cal.addEventListener('touchstart', ev => {
-                    const cell = ev.target.closest('.day-cell[data-eid]');
-                    if (cell) this.handleMouseDown(cell.dataset.eid, cell.dataset.date);
-                }, { passive: true });
-                cal.addEventListener('touchmove', ev => {
-                    const touch = ev.touches[0];
-                    const el = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.day-cell[data-eid]');
-                    if (el) this.handleMouseOver(el.dataset.eid, el.dataset.date);
-                }, { passive: true });
+                CONFIG.employees = [...admins, ...others];
             }
 
-            handleMouseDown(empId, dateStr) {
-                if (this.currentUser === 'sekretariat') { alert('Du bist als Sekretariat angemeldet und kannst keine Bearbeitungen machen'); return; }
-                if (!this.checkPermission(empId)) return;
-                if (this.currentUser !== 'admin') {
-                    this.openRequestModal(empId, dateStr);
-                    return;
-                }
-                this.isDragging = true;
-                const current = this.state[empId]?.[dateStr];
-                this.dragStartVal = current ? null : { type: this.currentMode, text: this.currentText, vertreter: this.currentVertreterText };
-                this.setVacation(empId, dateStr, this.dragStartVal, true, true);
-            }
-
-            handleMouseOver(empId, dateStr) {
-                if (this.isDragging) {
-                    this.setVacation(empId, dateStr, this.dragStartVal, true, true);
-                }
-            }
-
-            stopDrag() {
-                if (this.isDragging) {
-                    this.isDragging = false;
-                    this.dragStartVal = null;
-                    if (this._hasChanged) {
-                        this.saveState();
-                        this._affectedDates.forEach(d => this.updateValidationUI(d));
-                        const affectedEmps = new Set();
-                        // This assumes dragging only happens on one employee (which is true in current mouse handlers)
-                        // If multi-row drag is ever added, we'd need to track affected EIDs.
-                        // For now, we can just update all or rely on setVacation's immediate call.
-                        // However, setVacation is called during drag, so badge is already updated.
-                        this._hasChanged = false;
-                        this._affectedDates.clear();
-                    }
-                }
-            }
-
-            formatDate(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
-
-            generateDates() {
-                const res = [];
-                CONFIG.years.forEach(y => {
-                    let d = new Date(y, 0, 1);
-                    while (d.getFullYear() === y) {
-                        if (y === 2028 && d.getMonth() > 0) break;
-                        const s = this.formatDate(d), sh = CONFIG.schoolHolidays.find(h => s >= h.start && s <= h.end);
-                        res.push({ year: y, dateStr: s, day: d.getDate(), month: d.getMonth(), weekday: d.getDay(), isWeekend: d.getDay() === 0 || d.getDay() === 6, holiday: CONFIG.holidays[s], isSchoolHoliday: !!sh, schoolHoliday: sh ? sh.name : null });
-                        d.setDate(d.getDate() + 1);
-                    }
+            getPrimaryGrp(emp) {
+                const grps = Array.isArray(emp.groups) ? emp.groups : [];
+                if (grps.length === 0) return '';
+                let best = CONFIG.skills.length, res = '';
+                const realGrps = grps.filter(g => g !== 'Kein Vertreter nötig');
+                const lookup = realGrps.length > 0 ? realGrps : grps;
+                lookup.forEach(g => {
+                    const i = CONFIG.skills.indexOf(g);
+                    if (i !== -1 && i < best) { best = i; res = g; }
                 });
                 return res;
-            }
-
-            async initApp() {
-                const storedKey = localStorage.getItem('jsonbin_key');
-                if (storedKey) { CONFIG.apiKey = storedKey; document.getElementById('apiKeyInput').value = storedKey; }
-                const data = await DataService.load();
-                if (data) {
-                    CONFIG.employees = data.employees || [];
-                    if (data.skills) CONFIG.skills = data.skills;
-                    if (!CONFIG.skills.includes('Kein Vertreter nötig')) CONFIG.skills.push('Kein Vertreter nötig');
-                    if (data.groupColors) CONFIG.groupColors = data.groupColors;
-                    if (!CONFIG.groupColors['Kein Vertreter nötig']) CONFIG.groupColors['Kein Vertreter nötig'] = '#6b7280';
-                    this.state = data.state || {};
-                    this.sortEmployees();
-                }
-                this.initUI();
-                this.showLoginModal();
-            }
-
-            initUI() {
-                const yNav = document.getElementById('yearNav'), mNav = document.getElementById('monthNav');
-                CONFIG.years.forEach(y => { const b = document.createElement('button'); b.innerText = y; b.id = `btn-year-${y}`; b.onclick = () => this.setYear(y); yNav.appendChild(b); });
-                ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'].forEach((m, i) => { const b = document.createElement('button'); b.innerText = m; b.id = `btn-month-${i}`; b.onclick = () => this.scrollToMonth(i, true); mNav.appendChild(b); });
-            }
-
-            showLoginModal() {
-                this._loginOptions = [{ id: 'admin', name: 'Admin' }, { id: 'sekretariat', name: 'Sekretariat' }, ...CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && (e.active !== false || e.pin)).map(e => ({ id: e.id, name: e.name }))];
-                document.getElementById('loginSearch').onfocus = () => this.filterLoginEmployees();
-            }
-
-            filterLoginEmployees() {
-                const q = document.getElementById('loginSearch').value.toLowerCase(), res = document.getElementById('loginResults');
-                res.innerHTML = '';
-                const matches = this._loginOptions.filter(o => !q || o.name.toLowerCase().includes(q));
-                if (matches.length === 0) { res.style.display = 'none'; return; }
-                matches.forEach(o => {
-                    const i = document.createElement('div'); i.textContent = o.name; i.style.padding = '10px'; i.style.cursor = 'pointer'; i.onmousedown = () => { document.getElementById('loginSearch').value = o.name; document.getElementById('loginSelect').value = o.id; res.style.display = 'none'; };
-                    res.appendChild(i);
-                });
-                res.style.display = 'block';
-            }
-
-            async processLogin() {
-                const id = document.getElementById('loginSelect').value, key = document.getElementById('apiKeyInput').value.trim();
-                const pwd = document.getElementById('loginPwdInput').value.trim();
-                if (!id || !key) return alert('Daten fehlen');
-                // PIN-Prüfung
-                const userEntry = CONFIG.employees.find(e => e.id === id);
-                if (userEntry?.pin && String(userEntry.pin) !== pwd) {
-                    return alert('Falscher PIN.');
-                }
-                localStorage.setItem('jsonbin_key', key); CONFIG.apiKey = key; this.currentUser = id;
-                document.getElementById('loginModal').style.display = 'none'; document.body.classList.remove('pre-login');
-
-                const isAdmin = (id === 'admin' || id === 'sekretariat' || id === 'assistentensprecher');
-                const adminOnly = (id === 'admin');
-                const isSprecher = (id === 'assistentensprecher');
-
-                document.querySelector('.tab-container').style.display = 'flex';
-
-                // Controls visibility
-                const btnExport = document.getElementById('btnExport');
-                if (btnExport) btnExport.style.display = isAdmin ? 'inline-block' : 'none';
-                const btnExportICal = document.getElementById('btnExportICal');
-                if (btnExportICal) btnExportICal.style.display = isAdmin ? 'inline-block' : 'none';
-                const btnImport = document.getElementById('btnImport');
-                if (btnImport) btnImport.style.display = adminOnly ? 'inline-block' : 'none';
-
-                document.getElementById('btnAddAbsence').style.display = (id === 'sekretariat' ? 'none' : 'inline-block');
-
-                // Tabs
-                ['admin', 'summary', 'status', 'skills'].forEach(t => {
-                    const el = document.getElementById('tab-' + t);
-                    if (el) {
-                        if (t === 'admin' || t === 'skills') el.style.display = (adminOnly || isSprecher) ? 'inline-block' : 'none';
-                        else el.style.display = (isAdmin && !isSprecher) ? 'inline-block' : 'none';
-                    }
-                });
-                const tabRequests = document.getElementById('tab-requests');
-                if (tabRequests) tabRequests.style.display = (id === 'sekretariat' ? 'none' : 'inline-block');
-                const tabPO = document.getElementById('tab-po');
-                if (tabPO) tabPO.style.display = (id === 'sekretariat' ? 'inline-block' : 'none');
-
-                document.getElementById('bulkImportPanel').style.display = isAdmin ? 'flex' : 'none';
-
-                const mSel = document.getElementById('modalEmp'); mSel.innerHTML = '';
-                const iSel = document.getElementById('importEmp');
-                if (iSel) iSel.innerHTML = '';
-
-                const allowed = (isAdmin ? CONFIG.employees.filter(e => e.active !== false && e.id !== 'admin' && e.id !== 'sekretariat') : CONFIG.employees.filter(e => e.id === id));
-                allowed.forEach(e => {
-                    const o = document.createElement('option'); o.value = e.id; o.innerText = e.name; mSel.appendChild(o);
-                    if (iSel) {
-                        const o2 = document.createElement('option'); o2.value = e.id; o2.innerText = e.name; iSel.appendChild(o2);
-                    }
-                });
-
-                this.render();
-                this.updateSummary();
-                this.switchTab(id === 'sekretariat' ? 'po' : 'calendar');
-                this.updateRequestsBadge();
-                setTimeout(() => this.scrollToMonth(new Date().getMonth(), true), 500);
-            }
-
-            checkPermission(eid) {
-                if (this.currentUser === 'admin' || this.currentUser === 'sekretariat' || this.currentUser === 'assistentensprecher' || eid === this.currentUser) return true;
-                alert('Stopp! Du kannst Abwesenheiten nur in deiner eigenen Zeile eintragen oder bearbeiten.');
-                return false;
-            }
-
-            render() {
-                const container = document.getElementById('calendar'); container.innerHTML = '';
-                const isMobile = window.innerWidth <= 768;
-                let lastM = -1, lastY = -1;
-                const frag = document.createDocumentFragment();
-
-                this.dates.forEach((d, i) => {
-                    if (d.month !== lastM || d.year !== lastY) {
-                        const m = document.createElement('div'); m.className = 'cell header-cell sticky-header month-header'; m.innerText = new Date(d.year, d.month, 1).toLocaleString('de-DE', { month: 'long', year: 'numeric' });
-                        m.id = `month-header-${d.year}-${d.month}`; m.style.gridColumnStart = i + 2;
-                        let s = 1, j = i + 1; while (j < this.dates.length && this.dates[j].month === d.month && this.dates[j].year === d.year) { s++; j++; }
-                        m.style.gridColumnEnd = `span ${s}`; frag.appendChild(m); lastM = d.month; lastY = d.year;
-                    }
-                });
-
-                const corner = document.createElement('div'); corner.className = 'cell header-cell sticky-col sticky-corner sticky-header'; corner.style.gridRow = '1 / span 2'; corner.style.gridColumn = '1'; corner.innerText = isMobile ? 'Name' : 'Mitarbeiter'; frag.appendChild(corner);
-
-                this.dates.forEach((d, i) => {
-                    const h = document.createElement('div'); h.className = `cell header-cell sticky-header day-header ${d.isWeekend ? 'weekend' : ''} ${d.holiday ? 'holiday' : ''} ${d.isSchoolHoliday ? 'school-holiday' : ''}`;
-                    h.innerHTML = `<span>${d.day}</span>`; h.style.gridRow = 2; h.style.gridColumn = i + 2;
-                    h.onmouseenter = (ev) => {
-                        const info = [d.holiday, d.schoolHoliday].filter(x => x).join(' & ');
-                        if (info) this.showSimpleTip(ev, info, false);
-                    };
-                    h.onmouseleave = () => this.hideTip();
-                    h.dataset.date = d.dateStr; frag.appendChild(h);
-                });
-
-                const valH = document.createElement('div'); valH.className = 'cell sticky-col validation-row'; valH.style.gridRow = 3; valH.style.gridColumn = '1'; valH.innerText = '⚠ Abdeckung'; frag.appendChild(valH);
-
-                this.dates.forEach((d, i) => {
-                    const issues = this.validateCoverage(d);
-                    const c = document.createElement('div'); c.className = `cell validation-cell ${d.holiday ? 'holiday' : ''}`;
-                    c.id = `val-${d.dateStr}`; c.style.gridRow = 3; c.style.gridColumn = i + 2;
-                    if (issues) {
-                        c.innerHTML = `<span class="warning-text">${issues.join('<br>')}</span>`;
-                        c.title = 'Fehlend: ' + issues.join(', ');
-                    }
-                    frag.appendChild(c);
-                });
-
-                const emps = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false);
-
-                emps.forEach((e, ei) => {
-                    const n = document.createElement('div'); n.className = 'cell employee-row-header sticky-col'; n.style.gridRow = ei + 4; n.style.gridColumn = '1';
-                    n.style.position = 'relative';
-                    const displayName = isMobile ? (e.name.split(' ').pop() || e.name) : e.name;
-                    n.innerHTML = `<span>${displayName}</span>`;
-                    const vacBadge = document.createElement('span');
-                    vacBadge.id = `vac-badge-${e.id}`;
-                    vacBadge.className = 'vac-badge';
-                    n.appendChild(vacBadge);
-                    this._renderVacBadge(e.id, vacBadge);
-                    if (this.currentUser === e.id) n.style.backgroundColor = '#e0f2fe';
-
-                    const grp = this.getPrimaryGrp(e);
-                    if (grp) {
-                        const color = this.getGroupColor(grp);
-                        n.style.borderLeft = `4px solid ${color}`;
-                        const prev = emps[ei - 1];
-                        if (!prev || this.getPrimaryGrp(prev) !== grp) {
-                            const lbl = document.createElement('span'); lbl.innerText = grp;
-                            lbl.style.cssText = `position:absolute; top:1px; left:4px; font-size:0.5rem; color:${color}; font-weight:bold; text-transform:uppercase; pointer-events:none;`;
-                            n.appendChild(lbl);
-                        }
-                    }
-                    frag.appendChild(n);
-
-                    const wrapper = document.createElement('div');
-                    wrapper.id = `dw-${e.id}`;
-                    wrapper.className = 'employee-data-wrapper';
-                    wrapper.style.gridRow = ei + 4;
-                    frag.appendChild(wrapper);
-                });
-                container.appendChild(frag);
-                this.updateNavHighlighting();
-                this._visStart = -1; this._visEnd = -1;
-                const initialEnd = Math.max(30, Math.min(this.dates.length, Math.ceil((container.clientWidth - 200) / 40) + 10));
-                this.renderVisibleCells(0, initialEnd);
-            }
-
-            renderVisibleCells(startCol, endCol) {
-                const emps = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false);
-                emps.forEach(e => {
-                    const wrapper = document.getElementById(`dw-${e.id}`);
-                    if (!wrapper) return;
-                    Array.from(wrapper.children).forEach(cell => {
-                        const ci = parseInt(cell.dataset.ci);
-                        if (ci < startCol || ci >= endCol) cell.remove();
-                    });
-                    for (let ci = startCol; ci < endCol; ci++) {
-                        const d = this.dates[ci];
-                        if (!d) continue;
-                        if (document.getElementById(`cell-${e.id}-${d.dateStr}`)) continue;
-                        const s = this.state[e.id]?.[d.dateStr];
-                        const cell = document.createElement('div');
-                        cell.className = `cell day-cell${d.isWeekend ? ' weekend' : ''}${d.holiday ? ' holiday' : ''}${d.isSchoolHoliday ? ' school-holiday' : ''}`;
-                        cell.id = `cell-${e.id}-${d.dateStr}`;
-                        cell.dataset.eid = e.id;
-                        cell.dataset.date = d.dateStr;
-                        cell.dataset.ci = ci;
-                        cell.style.cssText = `position:absolute;left:${ci * 40}px;width:40px;top:0;bottom:0`;
-                        if (s) {
-                            const t = s.type || s;
-                            cell.classList.add(t === 'U' || t === 'V' ? 'status-vacation' : t === 'D' ? 'status-trip' : t === 'F' ? 'status-training' : (t === 'S' || t === 'T' ? 'status-custom' : ''));
-                            if (s.text) { const span = document.createElement('span'); span.className = 'cell-text'; span.textContent = s.text; cell.appendChild(span); }
-                        } else {
-                            const req = (this.state.__REQUESTS__ || []).find(r =>
-                                r.empId === e.id &&
-                                r.dates.includes(d.dateStr) &&
-                                (r.status === 'pending_vertreter' || r.status === 'pending_admin')
-                            );
-                            if (req) {
-                                cell.classList.add(req.status === 'pending_vertreter' ? 'status-pending-vertreter' : 'status-pending-admin');
-                                cell.dataset.reqId = req.id;
-                                cell.title = req.status === 'pending_vertreter'
-                                    ? 'Wunsch eingereicht — wartet auf Vertreter-Zustimmung'
-                                    : 'Wunsch eingereicht — wartet auf Admin-Freigabe';
-                            }
-                        }
-                        cell.onmouseenter = (ev) => this.showTip(ev, e.id, d.dateStr);
-                        cell.onmouseleave = () => this.hideTip();
-                        wrapper.appendChild(cell);
-                    }
-                });
-                this._visStart = startCol;
-                this._visEnd = endCol;
-            }
-
-            _scheduleVirtualUpdate() {
-                if (this._rafPending) return;
-                this._rafPending = true;
-                requestAnimationFrame(() => {
-                    this._rafPending = false;
-                    const c = document.getElementById('calendar');
-                    if (!c) return;
-                    const start = Math.max(0, Math.floor(c.scrollLeft / 40) - 10);
-                    const end = Math.min(this.dates.length, Math.ceil((c.scrollLeft + c.clientWidth - 200) / 40) + 10);
-                    if (start !== this._visStart || end !== this._visEnd) {
-                        this.renderVisibleCells(start, end);
-                    }
-                    this.updateNavHighlighting();
-                });
-            }
-
-            setVacation(empId, dateStr, valObj, isDrag = false, immediateDOM = false) {
-                if (!this.state[empId]) this.state[empId] = {};
-                if (valObj) this.state[empId][dateStr] = valObj;
-                else delete this.state[empId][dateStr];
-
-                if (isDrag) {
-                    this._hasChanged = true;
-                    this._affectedDates.add(dateStr);
-                }
-
-                if (immediateDOM) {
-                    const cell = document.getElementById(`cell-${empId}-${dateStr}`);
-                    if (cell) {
-                        cell.classList.remove('status-vacation', 'status-trip', 'status-training', 'status-custom');
-                        cell.innerHTML = '';
-                        if (valObj) {
-                            const t = valObj.type;
-                            cell.classList.add(t === 'U' || t === 'V' ? 'status-vacation' : t === 'D' ? 'status-trip' : t === 'F' ? 'status-training' : 'status-custom');
-                            if (valObj.text) {
-                                const span = document.createElement('span');
-                                span.className = 'cell-text';
-                                span.textContent = valObj.text;
-                                cell.appendChild(span);
-                            }
-                        }
-                    }
-                    this.updateValidationUI(dateStr);
-                    this._renderVacBadge(empId);
-                } else if (!isDrag) {
-                    this.render();
-                }
-            }
-
-            updateValidationUI(dateStr) {
-                const valCell = document.getElementById(`val-${dateStr}`);
-                if (!valCell) return;
-                const dObj = this._datesMap.get(dateStr);
-                if (!dObj) return;
-                const issues = this.validateCoverage(dObj);
-                valCell.innerHTML = '';
-                if (issues) {
-                    valCell.innerHTML = `<span class="warning-text">${issues.join('<br>')}</span>`;
-                    valCell.title = 'Fehlend: ' + issues.join(', ');
-                } else {
-                    valCell.title = '';
-                }
-            }
-
-            validateCoverage(d) {
-                // For residents, we don't have specified rules yet.
-                // Returning null for structural parity without showing false errors.
-                return null;
-            }
-
-
-            scrollToMonth(m, cur) {
-                const y = cur ? this.currentYear || 2026 : 2026, el = document.getElementById(`month-header-${y}-${m}`), c = document.getElementById('calendar');
-                if (el && c) { const offset = document.querySelector('.sticky-corner').offsetWidth; c.scrollTo({ left: el.offsetLeft - offset, behavior: 'smooth' }); }
-            }
-
-            setYear(y) { this.currentYear = y; this.scrollToMonth(0, true); this.updateVacationBadges(); }
-
-            updateNavHighlighting() {
-                const c = document.getElementById('calendar'); if (!c) return;
-                const dIdx = Math.min(Math.floor(c.scrollLeft / 40), this.dates.length - 1);
-                const d = this.dates[dIdx < 0 ? 0 : dIdx];
-                if (d) {
-                    this.currentYear = d.year;
-                    CONFIG.years.forEach(y => { const b = document.getElementById(`btn-year-${y}`); if (b) b.classList.toggle('primary', y === d.year); });
-                    for (let i = 0; i < 12; i++) { const b = document.getElementById(`btn-month-${i}`); if (b) b.classList.toggle('primary', i === d.month); }
-                }
-            }
-
-            editAbsence(eid, d) {
-                if (!this.checkPermission(eid)) return;
-                const s = this.state[eid]?.[d]; if (!s) return;
-                document.getElementById('modalEmp').value = eid; document.getElementById('modalType').value = (s.type === 'T' ? 'S' : s.type) || 'U'; document.getElementById('modalText').value = s.text || '';
-                document.getElementById('modalVertreterInput').value = s.vertreter || '';
-                document.getElementById('modalVertreterId').value = s.vertreterId || '';
-                document.getElementById('vertreterResults').innerHTML = '';
-                const titleEl = document.querySelector('#addModal h2');
-                if (titleEl) titleEl.textContent = 'Abwesenheit eintragen';
-                document.getElementById('modalStart').value = document.getElementById('modalEnd').value = d; document.getElementById('addModal').style.display = 'flex';
-            }
-
-            addRange() {
-                const isAdmin = (this.currentUser === 'admin' || this.currentUser === 'assistentensprecher');
-                if (isAdmin) {
-                    this._addRangeDirect();
-                } else {
-                    this.submitRequest();
-                }
-            }
-
-            _addRangeDirect() {
-                const eid = document.getElementById('modalEmp').value;
-                const type = document.getElementById('modalType').value;
-                const text = document.getElementById('modalText').value;
-                const vertreter = document.getElementById('modalVertreterInput').value;
-                const vertreterId = document.getElementById('modalVertreterId').value;
-                const start = document.getElementById('modalStart').value;
-                const end = document.getElementById('modalEnd').value;
-                if (!eid || !start || !end) return;
-                if (!this.checkPermission(eid)) return;
-                let curr = new Date(start), endD = new Date(end);
-                while (curr <= endD) {
-                    const ds = this.formatDate(curr);
-                    if (!this.state[eid]) this.state[eid] = {};
-                    this.state[eid][ds] = { type, text, vertreter, vertreterId, status: 'confirmed' };
-                    curr.setDate(curr.getDate() + 1);
-                }
-                this.saveState();
-                this.render();
-                document.getElementById('addModal').style.display = 'none';
-            }
-
-            openModal() {
-                document.getElementById('modalType').value = this.currentMode;
-                document.getElementById('modalText').value = '';
-                document.getElementById('modalVertreterInput').value = '';
-                document.getElementById('modalVertreterId').value = '';
-                document.getElementById('vertreterResults').innerHTML = '';
-                const titleEl = document.querySelector('#addModal h2');
-                if (titleEl) titleEl.textContent = 'Abwesenheit eintragen';
-                document.getElementById('addModal').style.display = 'flex';
-            }
-
-            openRequestModal(empId, dateStr) {
-                const modal = document.getElementById('addModal');
-                document.getElementById('modalEmp').value = empId;
-                document.getElementById('modalStart').value = dateStr;
-                document.getElementById('modalEnd').value = dateStr;
-                document.getElementById('modalType').value = 'U';
-                document.getElementById('modalText').value = '';
-                document.getElementById('modalVertreterInput').value = '';
-                document.getElementById('modalVertreterId').value = '';
-                document.getElementById('vertreterResults').innerHTML = '';
-                document.getElementById('vertreterGroup').style.display = this.needsVertreter(empId) ? '' : 'none';
-                const titleEl = modal.querySelector('h2');
-                if (titleEl) titleEl.textContent = 'Abwesenheitswunsch einreichen';
-                const vertreterInput = document.getElementById('modalVertreterInput');
-                const vertreterResults = document.getElementById('vertreterResults');
-                const showVertreterList = () => {
-                    const q = vertreterInput.value.toLowerCase().trim();
-                    const reqEmp = CONFIG.employees.find(e => e.id === empId);
-                    const reqGrps = Array.isArray(reqEmp?.groups) ? reqEmp.groups : (reqEmp?.group ? [reqEmp.group] : []);
-                    // Build list of requested dates
-                    const startVal = document.getElementById('modalStart').value;
-                    const endVal = document.getElementById('modalEnd').value;
-                    const reqDates = [];
-                    if (startVal) {
-                        let cur = new Date(startVal), endD = new Date(endVal || startVal);
-                        while (cur <= endD) { reqDates.push(this.formatDate(cur)); cur.setDate(cur.getDate() + 1); }
-                    }
-                    // Classify each candidate: fully available, partially available, or fully absent
-                    const candidates = CONFIG.employees.map(e => {
-                        if (e.id === empId || e.id === 'admin' || e.id === 'sekretariat' || e.active === false) return null;
-                        if (q && !e.name.toLowerCase().includes(q)) return null;
-                        const eGrps = Array.isArray(e.groups) ? e.groups : (e.group ? [e.group] : []);
-                        if (reqGrps.length > 0 && !eGrps.some(g => reqGrps.includes(g))) return null;
-                        const absentDates = reqDates.filter(d => this.state[e.id]?.[d]);
-                        if (absentDates.length === reqDates.length && reqDates.length > 0) return null; // fully absent
-                        return { e, partial: absentDates.length > 0, absentDates };
-                    }).filter(Boolean);
-                    vertreterResults.innerHTML = candidates.slice(0, 10).map(({ e, partial, absentDates }) => {
-                        const warning = partial
-                            ? ` <span style="color:#f59e0b;font-size:0.8rem">⚠ abwesend: ${absentDates.join(', ')}</span>`
-                            : '';
-                        return `<div style="padding:6px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0;${partial ? 'background:#fffbeb' : ''}"
-                              onmousedown="document.getElementById('modalVertreterInput').value='${e.name.replace(/'/g, "\\'")}';document.getElementById('modalVertreterId').value='${e.id}';document.getElementById('vertreterResults').innerHTML=''">${e.name}${warning}</div>`;
-                    }).join('') || '<div style="padding:6px 10px;color:#9ca3af;font-size:0.85rem">Keine verfügbaren Kollegen aus gleicher Gruppe</div>';
-                };
-                vertreterInput.oninput = showVertreterList;
-                vertreterInput.onfocus = showVertreterList;
-                vertreterInput.onblur = () => setTimeout(() => { vertreterResults.innerHTML = ''; }, 200);
-                this._showVertreterListFn = showVertreterList;
-                this._requestModalEmpId = empId;
-                this.onModalDateChange();
-                modal.style.display = 'flex';
-            }
-
-            onModalDateChange() {
-                if (typeof this._showVertreterListFn === 'function') this._showVertreterListFn();
-                const empId = this._requestModalEmpId;
-                if (!empId || this.currentUser === 'admin' || this.currentUser === 'assistentensprecher') return;
-                const startVal = document.getElementById('modalStart').value;
-                const endVal = document.getElementById('modalEnd').value;
-                if (!startVal) return;
-                const dates = [];
-                let cur = new Date(startVal), endD = new Date(endVal || startVal);
-                while (cur <= endD) { dates.push(this.formatDate(cur)); cur.setDate(cur.getDate() + 1); }
-                const issues = this.checkCoverageForRequest(empId, dates);
-                const box = document.getElementById('coverageWarning');
-                if (!box) return;
-                if (issues.length > 0) {
-                    const lines = issues.map(({ date, missing }) => `${date}: fehlend ${missing.join(', ')}`).join('<br>');
-                    box.innerHTML = `⚠ <strong>Abdeckungsproblem:</strong> Deine Abwesenheit würde an folgenden Tagen die Mindestbesetzung verletzen:<br>${lines}<br><small>Du kannst den Antrag trotzdem einreichen.</small>`;
-                    box.style.display = 'block';
-                } else {
-                    box.style.display = 'none';
-                }
-            }
-
-            checkCoverageForRequest(empId, dates) {
-                const issues = [];
-                for (const dateStr of dates) {
-                    const dObj = this._datesMap?.get(dateStr);
-                    if (!dObj || dObj.isWeekend || dObj.holiday) continue;
-                    if (!this.state[empId]) this.state[empId] = {};
-                    const prev = this.state[empId][dateStr];
-                    this.state[empId][dateStr] = { type: 'U', status: 'confirmed' };
-                    const result = this.validateCoverage(dObj);
-                    if (prev === undefined) delete this.state[empId][dateStr];
-                    else this.state[empId][dateStr] = prev;
-                    if (result) issues.push({ date: dateStr, missing: result });
-                }
-                return issues;
-            }
-
-            submitRequest() {
-                const eid = document.getElementById('modalEmp').value;
-                const type = document.getElementById('modalType').value;
-                const text = document.getElementById('modalText').value;
-                const vertreter = document.getElementById('modalVertreterInput').value;
-                const vertreterId = document.getElementById('modalVertreterId').value;
-                const start = document.getElementById('modalStart').value;
-                const end = document.getElementById('modalEnd').value;
-
-                if (this.needsVertreter(eid) && !vertreterId) { alert('Bitte einen Vertreter aus der Liste auswählen.'); return; }
-
-                const dates = [];
-                let curr = new Date(start), endD = new Date(end);
-                while (curr <= endD) { dates.push(this.formatDate(curr)); curr.setDate(curr.getDate() + 1); }
-
-                // Check if selected vertreter is absent on some (but not all) days
-                if (this.needsVertreter(eid)) {
-                    const vertreterAbsentDates = dates.filter(d => this.state[vertreterId]?.[d]);
-                    if (vertreterAbsentDates.length > 0) {
-                        alert(`${vertreter} ist an folgenden Tagen selbst abwesend: ${vertreterAbsentDates.join(', ')}.\n\nBitte teile den Antrag auf und wähle für diese Tage einen anderen Vertreter.`);
-                        return;
-                    }
-                }
-
-                const conflict = this.checkVertretungConflict(eid, dates);
-                if (conflict) {
-                    alert(`Achtung: Du bist an ${conflict.date} bereits als Vertreter für ${conflict.who} eingetragen. Wunsch kann nicht eingereicht werden.`);
-                    return;
-                }
-
-                // Quota-Prüfung für Urlaub
-                if (type === 'U') {
-                    const reqYear = new Date(start).getFullYear();
-                    const quota = (this.state.__VACATION_QUOTA__ || {})[eid] ?? 30;
-                    const entries = this.state[eid] || {};
-                    const alreadyUsed = Object.entries(entries).filter(([d, v]) =>
-                        d.startsWith(String(reqYear)) && v && v.type === 'U' && this.isWorkday(d)
-                    ).length;
-                    const newDays = dates.filter(d => d.startsWith(String(reqYear)) && this.isWorkday(d)).length;
-                    const total = alreadyUsed + newDays;
-                    if (total > quota) {
-                        alert(`Urlaubskontingent überschritten!\n\nBereits genommen: ${alreadyUsed} Tage\nNeu beantragt:    ${newDays} Tage\nGesamt:           ${total} Tage\nKontingent:       ${quota} Tage\n\nDer Antrag kann nicht eingereicht werden.`);
-                        return;
-                    }
-                }
-
-                const coverageIssues = this.checkCoverageForRequest(eid, dates);
-                if (coverageIssues.length > 0) {
-                    const lines = coverageIssues.map(({ date, missing }) => `${date}: fehlend ${missing.join(', ')}`).join('\n');
-                    const proceed = confirm(`⚠ Abdeckungsproblem:\nDeine Abwesenheit würde an folgenden Tagen die Mindestbesetzung verletzen:\n\n${lines}\n\nTrotzdem einreichen?`);
-                    if (!proceed) return;
-                }
-
-                const req = {
-                    id: 'req_' + Date.now(),
-                    empId: eid, type, text, vertreter, vertreterId, dates,
-                    status: this.needsVertreter(eid) ? 'pending_vertreter' : 'pending_admin',
-                    createdAt: this.formatDate(new Date()),
-                    rejectedBy: null, rejectionNote: null,
-                    stamps: { submitted: this.makeStamp() }
-                };
-                if (!this.state.__REQUESTS__) this.state.__REQUESTS__ = [];
-                this.state.__REQUESTS__.push(req);
-                this.saveState();
-                this.render();
-                this.updateRequestsBadge();
-                document.getElementById('addModal').style.display = 'none';
-            }
-
-            checkVertretungConflict(empId, dates) {
-                for (const dateStr of dates) {
-                    for (const otherId of Object.keys(this.state)) {
-                        if (otherId.startsWith('__') || otherId === empId) continue;
-                        const entry = this.state[otherId]?.[dateStr];
-                        if (entry && entry.vertreterId === empId && entry.status === 'confirmed') {
-                            const other = CONFIG.employees.find(e => e.id === otherId);
-                            return { date: dateStr, who: other?.name || otherId };
-                        }
-                    }
-                }
-                return null;
-            }
-
-            approveAsVertreter(reqId) {
-                const req = (this.state.__REQUESTS__ || []).find(r => r.id === reqId);
-                if (!req) return;
-                const coverageIssues = this.checkCoverageForRequest(req.empId, req.dates);
-                if (coverageIssues.length > 0) {
-                    const lines = coverageIssues.map(({ date, missing }) => `${date}: fehlend ${missing.join(', ')}`).join('\n');
-                    const proceed = confirm(`⚠ Abdeckungsproblem:\nDiese Abwesenheit würde an folgenden Tagen die Mindestbesetzung verletzen:\n\n${lines}\n\nTrotzdem zustimmen?`);
-                    if (!proceed) return;
-                }
-                req.status = 'pending_admin';
-                if (!req.stamps) req.stamps = {};
-                req.stamps.vertreter = this.makeStamp();
-                this.saveState();
-                this.render();
-                this.renderRequestsTab();
-                this.updateRequestsBadge();
-            }
-
-            approveAsAdmin(reqId) {
-                const req = (this.state.__REQUESTS__ || []).find(r => r.id === reqId);
-                if (!req) return;
-                const coverageIssues = this.checkCoverageForRequest(req.empId, req.dates);
-                if (coverageIssues.length > 0) {
-                    const lines = coverageIssues.map(({ date, missing }) => `${date}: fehlend ${missing.join(', ')}`).join('\n');
-                    const proceed = confirm(`⚠ Abdeckungsproblem:\nDiese Abwesenheit würde an folgenden Tagen die Mindestbesetzung verletzen:\n\n${lines}\n\nTrotzdem genehmigen?`);
-                    if (!proceed) return;
-                }
-                req.status = 'approved';
-                if (!req.stamps) req.stamps = {};
-                req.stamps.admin = this.makeStamp();
-                if (!this.state[req.empId]) this.state[req.empId] = {};
-                req.dates.forEach(ds => {
-                    this.state[req.empId][ds] = {
-                        type: req.type,
-                        text: req.text,
-                        vertreter: req.vertreter,
-                        vertreterId: req.vertreterId,
-                        status: 'confirmed'
-                    };
-                });
-                this.saveState();
-                this.render();
-                this.renderRequestsTab();
-                this.updateRequestsBadge();
-            }
-
-            rejectRequest(reqId, by, note) {
-                const req = (this.state.__REQUESTS__ || []).find(r => r.id === reqId);
-                if (!req) return;
-                req.status = 'rejected';
-                req.rejectedBy = by;
-                req.rejectionNote = note || null;
-                if (!req.stamps) req.stamps = {};
-                req.stamps.rejected = this.makeStamp();
-                this.saveState();
-                this.render();
-                this.renderRequestsTab();
-                this.updateRequestsBadge();
-            }
-
-            updateRequestsBadge() {
-                const badge = document.getElementById('requests-badge');
-                if (!badge) return;
-                const requests = this.state.__REQUESTS__ || [];
-                const cu = this.currentUser;
-                const isAdmin = cu === 'admin' || cu === 'assistentensprecher';
-                let count = 0;
-                if (isAdmin) {
-                    count = requests.filter(r => r.status === 'pending_admin').length;
-                } else {
-                    count = requests.filter(r => r.vertreterId === cu && r.status === 'pending_vertreter').length;
-                    const ownPending = requests.filter(r => r.empId === cu && (r.status === 'pending_vertreter' || r.status === 'pending_admin')).length;
-                    if (count === 0) count = ownPending;
-                }
-                badge.textContent = count > 0 ? String(count) : '';
-            }
-
-            makeStamp() {
-                const ua = navigator.userAgent;
-                let os = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? 'Android' : /Macintosh/.test(ua) ? 'macOS' : /Windows/.test(ua) ? 'Windows' : /Linux/.test(ua) ? 'Linux' : 'Unbekannt';
-                let br = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
-                const emp = CONFIG.employees.find(e => e.id === this.currentUser);
-                return { by: this.currentUser, name: emp?.name || this.currentUser, at: new Date().toISOString(), device: `${br} / ${os}` };
-            }
-
-            _fmtStamp(stamp, label) {
-                if (!stamp) return '';
-                const d = new Date(stamp.at);
-                const ds = d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                const ts = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-                return `<div style="font-size:0.72rem;color:#6b7280;margin-top:3px;padding:3px 8px;background:#f9fafb;border-radius:3px;border-left:3px solid #d1d5db"><strong>${label}</strong>: ${stamp.name} · ${ds}, ${ts} Uhr · ${stamp.device}</div>`;
-            }
-
-            renderRequestsTab() {
-                const container = document.getElementById('requestsList');
-                if (!container) return;
-                const requests = this.state.__REQUESTS__ || [];
-                const cu = this.currentUser;
-                const isAdmin = cu === 'admin';
-                const isSprecher = cu === 'assistentensprecher';
-                let html = '';
-
-                const typeLabel = { U: 'Urlaub', D: 'Dienstreise', F: 'Fortbildung', T: 'Sonstiges', S: 'Sonstiges' };
-                const statusLabel = {
-                    pending_vertreter: '⏳ Wartet auf Vertreter-Zustimmung',
-                    pending_admin: '⏳ Wartet auf Admin-Freigabe',
-                    approved: '✓ Genehmigt',
-                    rejected: '✗ Abgelehnt'
-                };
-
-                if (isAdmin || isSprecher) {
-                    const adminReqs = requests.filter(r => r.status === 'pending_admin');
-                    if (adminReqs.length === 0) {
-                        html += '<p style="color:#6b7280">Keine offenen Anfragen zur Genehmigung.</p>';
-                    } else {
-                        adminReqs.forEach(req => {
-                            const emp = CONFIG.employees.find(e => e.id === req.empId);
-                            const from = req.dates[0], to = req.dates[req.dates.length - 1];
-                            html += `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:12px;background:#fff">
-                                <strong>${emp?.name || req.empId}</strong> — ${from}${from !== to ? ' bis ' + to : ''} — ${typeLabel[req.type] || req.type}
-                                ${req.text ? `<br><em>${req.text}</em>` : ''}
-                                <br>Vertreter: ${req.vertreter} ✓
-                                ${this._fmtStamp(req.stamps?.submitted, 'Antrag')}
-                                ${this._fmtStamp(req.stamps?.vertreter, 'Vertreter-Zustimmung')}
-                                ${isAdmin ? `
-                                <br><div id="reject-area-${req.id}" style="display:none;margin-top:8px">
-                                    <input type="text" id="reject-note-${req.id}" placeholder="Ablehnungsgrund (optional)" style="width:100%;padding:4px;margin-bottom:4px">
-                                </div>
-                                <div style="margin-top:8px;display:flex;gap:8px">
-                                    <button onclick="app.approveAsAdmin('${req.id}')" style="background:#22c55e;color:white;border:none;padding:6px 14px;border-radius:4px;cursor:pointer">Genehmigen</button>
-                                    <button onclick="document.getElementById('reject-area-${req.id}').style.display='block';this.style.display='none';document.getElementById('confirm-reject-${req.id}').style.display='inline'" style="background:#f3f4f6;border:1px solid #d1d5db;padding:6px 14px;border-radius:4px;cursor:pointer">Ablehnen...</button>
-                                    <button onclick="app.rejectRequest('${req.id}','admin',document.getElementById('reject-note-${req.id}').value)" style="display:none;background:#ef4444;color:white;border:none;padding:6px 14px;border-radius:4px;cursor:pointer" id="confirm-reject-${req.id}">Ablehnen bestätigen</button>
-                                </div>` : '<br><span style="color:#6b7280;font-size:0.85rem;margin-top:6px;display:inline-block">⏳ Wartet auf Genehmigung durch Admin</span>'}
-                            </div>`;
-                        });
-                    }
-                    const history = requests.filter(r => r.status === 'approved' || r.status === 'rejected');
-                    if (history.length > 0) {
-                        html += '<h4 style="margin-top:20px;color:#374151">Verlauf</h4>';
-                        history.forEach(req => {
-                            const emp = CONFIG.employees.find(e => e.id === req.empId);
-                            const from = req.dates[0], to = req.dates[req.dates.length - 1];
-                            const statusColor = req.status === 'approved' ? '#22c55e' : '#ef4444';
-                            const rejectedBy = req.rejectedBy === 'vertreter' ? 'Vertreter' : 'Admin';
-                            html += `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:8px;background:#f9fafb;opacity:0.8">
-                                <strong>${emp?.name || req.empId}</strong> — ${from}${from !== to ? ' bis ' + to : ''} — ${typeLabel[req.type] || req.type}
-                                <span style="float:right;color:${statusColor}">${statusLabel[req.status]}</span>
-                                ${req.rejectionNote ? `<br><small>Grund: ${req.rejectionNote}</small>` : ''}
-                                ${this._fmtStamp(req.stamps?.submitted, 'Antrag')}
-                                ${this._fmtStamp(req.stamps?.vertreter, 'Vertreter-Zustimmung')}
-                                ${req.status === 'approved' ? this._fmtStamp(req.stamps?.admin, 'Genehmigung Admin') : this._fmtStamp(req.stamps?.rejected, `Ablehnung (${rejectedBy})`)}
-                            </div>`;
-                        });
-                    }
-                } else {
-                    const vertretenReqs = requests.filter(r => r.vertreterId === cu && r.status === 'pending_vertreter');
-                    if (vertretenReqs.length > 0) {
-                        html += '<h4 style="color:#374151;margin-bottom:12px">Vertretungsanfragen</h4>';
-                        vertretenReqs.forEach(req => {
-                            const emp = CONFIG.employees.find(e => e.id === req.empId);
-                            const from = req.dates[0], to = req.dates[req.dates.length - 1];
-                            html += `<div style="border:1px solid #bfdbfe;border-radius:8px;padding:16px;margin-bottom:12px;background:#eff6ff">
-                                <strong>${emp?.name || req.empId}</strong> möchte vom <strong>${from}</strong>${from !== to ? ' bis <strong>' + to + '</strong>' : ''} ${typeLabel[req.type] || req.type} nehmen.
-                                ${req.text ? `<br>Beschreibung: <em>${req.text}</em>` : ''}
-                                ${this._fmtStamp(req.stamps?.submitted, 'Antrag')}
-                                <br><div id="reject-area-v-${req.id}" style="display:none;margin-top:8px">
-                                    <input type="text" id="reject-note-v-${req.id}" placeholder="Ablehnungsgrund (optional)" style="width:100%;padding:4px;margin-bottom:4px">
-                                </div>
-                                <div style="margin-top:10px;display:flex;gap:8px">
-                                    <button onclick="app.approveAsVertreter('${req.id}')" style="background:#22c55e;color:white;border:none;padding:6px 14px;border-radius:4px;cursor:pointer">Zustimmen</button>
-                                    <button onclick="document.getElementById('reject-area-v-${req.id}').style.display='block';document.getElementById('confirm-reject-v-${req.id}').style.display='inline'" style="background:#f3f4f6;border:1px solid #d1d5db;padding:6px 14px;border-radius:4px;cursor:pointer">Ablehnen...</button>
-                                    <button onclick="app.rejectRequest('${req.id}','vertreter',document.getElementById('reject-note-v-${req.id}').value)" style="display:none;background:#ef4444;color:white;border:none;padding:6px 14px;border-radius:4px;cursor:pointer" id="confirm-reject-v-${req.id}">Ablehnen bestätigen</button>
-                                </div>
-                            </div>`;
-                        });
-                    }
-                    const ownReqs = requests.filter(r => r.empId === cu);
-                    if (ownReqs.length > 0) {
-                        html += '<h4 style="color:#374151;margin-bottom:12px;margin-top:20px">Meine Anfragen</h4>';
-                        ownReqs.forEach(req => {
-                            const from = req.dates[0], to = req.dates[req.dates.length - 1];
-                            const statusColor = { pending_vertreter: '#3b82f6', pending_admin: '#f59e0b', approved: '#22c55e', rejected: '#ef4444' }[req.status] || '#6b7280';
-                            const rejectedBy = req.rejectedBy === 'vertreter' ? 'Vertreter' : 'Admin';
-                            html += `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:8px;background:#fff">
-                                <strong>${typeLabel[req.type] || req.type}</strong>: ${from}${from !== to ? ' – ' + to : ''}
-                                | Vertreter: ${req.vertreter}
-                                <span style="float:right;color:${statusColor}">${statusLabel[req.status] || req.status}</span>
-                                ${req.rejectionNote ? `<br><small style="color:#ef4444">Ablehnungsgrund: ${req.rejectionNote}</small>` : ''}
-                                ${this._fmtStamp(req.stamps?.submitted, 'Antrag')}
-                                ${this._fmtStamp(req.stamps?.vertreter, 'Vertreter-Zustimmung')}
-                                ${req.status === 'approved' ? this._fmtStamp(req.stamps?.admin, 'Genehmigung Admin') : ''}
-                                ${req.status === 'rejected' ? this._fmtStamp(req.stamps?.rejected, `Ablehnung (${rejectedBy})`) : ''}
-                            </div>`;
-                        });
-                    }
-                    if (vertretenReqs.length === 0 && ownReqs.length === 0) {
-                        html += '<p style="color:#6b7280">Keine Anfragen vorhanden.</p>';
-                    }
-                }
-
-                container.innerHTML = html;
-            }
-
-            renderPOView() {
-                const container = document.getElementById('poList');
-                if (!container) return;
-                const requests = this.state.__REQUESTS__ || [];
-                const poDone = this.state.__PO_DONE__ || {};
-
-                const approved = requests.filter(r => r.status === 'approved');
-
-                if (approved.length === 0) {
-                    container.innerHTML = '<p style="color:#6b7280">Keine genehmigten Abwesenheiten vorhanden.</p>';
-                    return;
-                }
-
-                const typeLabel = { U: 'Urlaub', D: 'Dienstreise', F: 'Fortbildung', T: 'Sonstiges', S: 'Sonstiges' };
-
-                approved.sort((a, b) => (a.dates[0] || '').localeCompare(b.dates[0] || ''));
-
-                const pending = approved.filter(r => !poDone[r.id]);
-                const done = approved.filter(r => poDone[r.id]);
-
-                let html = '<h3 style="margin-bottom:16px;color:#111827">Genehmigte Abwesenheiten — Übertragung in PO</h3>';
-
-                if (pending.length > 0) {
-                    html += '<table style="width:100%;border-collapse:collapse;margin-bottom:24px">';
-                    html += '<thead><tr style="background:#f3f4f6;text-align:left">';
-                    html += '<th style="padding:8px 12px;border:1px solid #e5e7eb">Person</th>';
-                    html += '<th style="padding:8px 12px;border:1px solid #e5e7eb">Von</th>';
-                    html += '<th style="padding:8px 12px;border:1px solid #e5e7eb">Bis</th>';
-                    html += '<th style="padding:8px 12px;border:1px solid #e5e7eb">Art</th>';
-                    html += '<th style="padding:8px 12px;border:1px solid #e5e7eb">Vertreter</th>';
-                    html += '<th style="padding:8px 12px;border:1px solid #e5e7eb">In PO eingetragen</th>';
-                    html += '</tr></thead><tbody>';
-
-                    pending.forEach(req => {
-                        const emp = CONFIG.employees.find(e => e.id === req.empId);
-                        const from = req.dates[0];
-                        const to = req.dates[req.dates.length - 1];
-                        html += `<tr style="background:#fff">`;
-                        html += `<td style="padding:8px 12px;border:1px solid #e5e7eb;font-weight:500">${emp?.name || req.empId}</td>`;
-                        html += `<td style="padding:8px 12px;border:1px solid #e5e7eb">${from}</td>`;
-                        html += `<td style="padding:8px 12px;border:1px solid #e5e7eb">${to}</td>`;
-                        html += `<td style="padding:8px 12px;border:1px solid #e5e7eb">${typeLabel[req.type] || req.type}</td>`;
-                        html += `<td style="padding:8px 12px;border:1px solid #e5e7eb">${req.vertreter || '—'}</td>`;
-                        html += `<td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center">
-                <input type="checkbox" onchange="app.markPODone('${req.id}', this.checked)" style="width:18px;height:18px;cursor:pointer">
-            </td>`;
-                        html += '</tr>';
-                    });
-                    html += '</tbody></table>';
-                } else {
-                    html += '<p style="color:#22c55e;margin-bottom:24px">&#10003; Alle genehmigten Abwesenheiten wurden in PO eingetragen.</p>';
-                }
-
-                if (done.length > 0) {
-                    html += `<details style="margin-top:16px"><summary style="cursor:pointer;color:#6b7280;font-size:0.9rem">Bereits eingetragen (${done.length})</summary>`;
-                    html += '<table style="width:100%;border-collapse:collapse;margin-top:8px;opacity:0.6">';
-                    html += '<thead><tr style="background:#f3f4f6;text-align:left">';
-                    html += '<th style="padding:6px 10px;border:1px solid #e5e7eb">Person</th>';
-                    html += '<th style="padding:6px 10px;border:1px solid #e5e7eb">Von</th>';
-                    html += '<th style="padding:6px 10px;border:1px solid #e5e7eb">Bis</th>';
-                    html += '<th style="padding:6px 10px;border:1px solid #e5e7eb">Art</th>';
-                    html += '<th style="padding:6px 10px;border:1px solid #e5e7eb">Vertreter</th>';
-                    html += '<th style="padding:6px 10px;border:1px solid #e5e7eb">Status</th>';
-                    html += '</tr></thead><tbody>';
-                    done.forEach(req => {
-                        const emp = CONFIG.employees.find(e => e.id === req.empId);
-                        const from = req.dates[0];
-                        const to = req.dates[req.dates.length - 1];
-                        html += `<tr style="background:#f9fafb">`;
-                        html += `<td style="padding:6px 10px;border:1px solid #e5e7eb">${emp?.name || req.empId}</td>`;
-                        html += `<td style="padding:6px 10px;border:1px solid #e5e7eb">${from}</td>`;
-                        html += `<td style="padding:6px 10px;border:1px solid #e5e7eb">${to}</td>`;
-                        html += `<td style="padding:6px 10px;border:1px solid #e5e7eb">${typeLabel[req.type] || req.type}</td>`;
-                        html += `<td style="padding:6px 10px;border:1px solid #e5e7eb">${req.vertreter || '—'}</td>`;
-                        html += `<td style="padding:6px 10px;border:1px solid #e5e7eb;color:#22c55e">&#10003; Eingetragen${req.stamps?.po ? '<br>' + this._fmtStamp(req.stamps.po, 'PO-Eintragung') : ''}</td>`;
-                        html += '</tr>';
-                    });
-                    html += '</tbody></table></details>';
-                }
-
-                container.innerHTML = html;
-            }
-
-            markPODone(reqId, checked) {
-                if (!this.state.__PO_DONE__) this.state.__PO_DONE__ = {};
-                const req = (this.state.__REQUESTS__ || []).find(r => r.id === reqId);
-                if (checked) {
-                    this.state.__PO_DONE__[reqId] = true;
-                    if (req) { if (!req.stamps) req.stamps = {}; req.stamps.po = this.makeStamp(); }
-                } else {
-                    delete this.state.__PO_DONE__[reqId];
-                    if (req && req.stamps) delete req.stamps.po;
-                }
-                this.saveState();
-                this.renderPOView();
-            }
-
-            showTip(ev, eid, d, customTxt = null) {
-                if (this.isDragging) return;
-                const s = customTxt ? null : (eid ? this.state[eid]?.[d] : null), dObj = this._datesMap.get(d);
-                const info = customTxt || [dObj?.holiday, dObj?.schoolHoliday].filter(x => x).join(' & ');
-                if (!s && !info) return;
-                const TYPE_NAMES = { U: 'Urlaub', D: 'Dienstreise', F: 'Fortbildung', T: 'Sonstiges', S: 'Sonstiges' };
-                let tip = customTxt ? `<strong>${customTxt}</strong>` : `<strong>${s ? (s.text || TYPE_NAMES[s.type] || s.type) : ''}</strong>`;
-                if (s && s.vertreter) tip += `<br>Vertreter: ${s.vertreter}`;
-                if (info && !customTxt) tip += `<br>${info}`;
-                this.showSimpleTip(ev, tip, true);
-            }
-
-            showSimpleTip(ev, text, isHTML = false) {
-                const t = document.getElementById('custom-tooltip');
-                if (isHTML) t.innerHTML = text;
-                else t.innerHTML = `<strong>${text}</strong>`;
-                t.style.display = 'block'; t.style.left = ev.clientX + 10 + 'px'; t.style.top = ev.clientY + 10 + 'px';
-            }
-
-            hideTip() {
-                const t = document.getElementById('custom-tooltip');
-                if (t) t.style.display = 'none';
-            }
-
-            formatRange(start, end) {
-                const fmt = d => { const [y, m, day] = d.split('-'); return `${day}.${m}.`; };
-                const datePart = (start.date === end.date) ? fmt(start.date) : `${fmt(start.date)} - ${fmt(end.date)}`;
-                const t = { 'U': 'Urlaub', 'D': 'Dienstreise', 'F': 'Fortbildung', 'S': 'Sonstiges', 'T': 'Sonstiges' }[start.val.type] || 'Abwesend';
-                const txt = start.val.text ? `: ${start.val.text}` : '';
-                return `${datePart} (${t}${txt})`;
-            }
-
-            updateSummary() {
-                const list = [];
-                CONFIG.employees.forEach(emp => {
-                    if (emp.id === 'admin' || emp.id === 'sekretariat' || emp.active === false || !this.state[emp.id]) return;
-                    const entries = Object.keys(this.state[emp.id]).sort().map(d => ({ date: d, val: this.state[emp.id][d] }));
-                    if (entries.length === 0) return;
-
-                    const ranges = [];
-                    let rStart = entries[0], rEnd = entries[0];
-                    for (let i = 1; i < entries.length; i++) {
-                        const curr = entries[i];
-                        const d1 = new Date(rEnd.date); d1.setDate(d1.getDate() + 1);
-                        const isNext = this.formatDate(d1) === curr.date;
-                        const isSame = (rEnd.val.type === curr.val.type) && (rEnd.val.text === curr.val.text);
-                        if (isNext && isSame) { rEnd = curr; }
-                        else { ranges.push(this.formatRange(rStart, rEnd)); rStart = curr; rEnd = curr; }
-                    }
-                    ranges.push(this.formatRange(rStart, rEnd));
-                    list.push(`${emp.name}: ${ranges.join(', ')}`);
-                });
-                const summaryEl = document.getElementById('exportSummary');
-                if (summaryEl) summaryEl.value = list.join('\n');
-            }
-
-            switchTab(tabId) {
-                ['calendar', 'summary', 'status', 'admin', 'skills', 'requests', 'po'].forEach(x => {
-                    const btn = document.getElementById('tab-' + x);
-                    if (btn) {
-                        if (x === tabId) btn.classList.add('active');
-                        else btn.classList.remove('active');
-                    }
-                    const v = document.getElementById(x + 'View');
-                    if (v) v.style.display = (x === tabId ? 'block' : 'none');
-                });
-
-                const bulkPanel = document.getElementById('bulkImportPanel');
-                if (tabId === 'calendar' && (this.currentUser === 'admin' || this.currentUser === 'sekretariat')) bulkPanel.style.display = 'flex';
-                else bulkPanel.style.display = 'none';
-
-                if (tabId === 'calendar') this.render();
-                if (tabId === 'admin') this.renderAdminTable();
-                if (tabId === 'skills') this.renderSkillsAdmin();
-                if (tabId === 'requests') this.renderRequestsTab();
-                if (tabId === 'po') this.renderPOView();
             }
 
             renderAdminTable() {
                 const tbody = document.getElementById('adminEmployeeTable'); tbody.innerHTML = '';
                 const sorted = [...CONFIG.employees].sort((a, b) => (a.name || '').split(' ').pop().localeCompare((b.name || '').split(' ').pop(), 'de'));
-                sorted.forEach(emp => {
-                    if (emp.id === 'admin' || emp.id === 'sekretariat') return;
-                    this.createEmployeeRow(tbody, emp);
-                });
+                sorted.forEach(emp => { if (emp.id !== 'admin' && emp.id !== 'sekretariat') this.createEmployeeRow(tbody, emp); });
             }
 
             createEmployeeRow(tbody, emp) {
                 const tr = document.createElement('tr'); tr.style.borderBottom = '1px solid #eee';
-
-                // Construct skill checkboxes HTML
                 let skillsHtml = '';
                 CONFIG.skills.forEach(skill => {
                     const isChecked = (emp.groups || []).includes(skill);
-                    skillsHtml += `
-                            <label style="display: flex; align-items: center; gap: 4px; font-weight: normal; font-size: 0.75rem; white-space: nowrap;">
-                                <input type="checkbox" value="${skill}" ${isChecked ? 'checked' : ''} class="skill-checkbox" data-id="${emp.id}"> ${skill}
-                            </label>`;
+                    skillsHtml += `<label style="display: flex; align-items: center; gap: 4px; font-weight: normal; font-size: 0.75rem; white-space: nowrap;"><input type="checkbox" value="${skill}" ${isChecked ? 'checked' : ''} class="skill-checkbox" data-id="${emp.id}"> ${skill}</label>`;
                 });
 
                 tr.innerHTML = `
-                        <td style="padding: 5px;"><input type="text" value="${emp.id}" data-field="id" data-id="${emp.id}" style="width: 100px; padding: 4px;"></td>
-                        <td style="padding: 5px;"><input type="text" value="${emp.name}" data-field="name" data-id="${emp.id}" style="width: 100%; padding: 4px;"></td>
-                        <td style="padding: 5px;"><input type="text" value="${emp.email || ''}" data-field="email" data-id="${emp.id}" style="width: 100%; padding: 4px;"></td>
-                        <td style="padding: 5px;"><input type="text" value="${emp.pin || ''}" data-field="pin" data-id="${emp.id}" style="width: 60px; padding: 4px;"></td>
-                        <td style="padding: 5px;"><div style="display: flex; flex-wrap: wrap; gap: 8px; padding: 2px; border: 1px solid #eee; border-radius: 4px; min-width: 200px;">${skillsHtml}</div></td>
-                        <td style="padding: 5px; text-align: center;"><input type="checkbox" ${emp.active !== false ? 'checked' : ''} data-field="active" data-id="${emp.id}"></td>
-                        <td style="padding: 5px; text-align: center;"><button class="primary" style="background: var(--danger-color); padding: 4px 8px; font-size: 0.8rem;" onclick="app.deleteEmployee('${emp.id}')">Löschen</button></td>
-                    `;
+                    <td style="padding: 5px;"><input type="text" value="${emp.id}" data-field="id" data-id="${emp.id}" style="width: 100px; padding: 4px;"></td>
+                    <td style="padding: 5px;"><input type="text" value="${emp.name}" data-field="name" data-id="${emp.id}" style="width: 100%; padding: 4px;"></td>
+                    <td style="padding: 5px;"><input type="text" value="${emp.email || ''}" data-field="email" data-id="${emp.id}" style="width: 100%; padding: 4px;"></td>
+                    <td style="padding: 5px;"><input type="text" value="${emp.pin || ''}" data-field="pin" data-id="${emp.id}" style="width: 60px; padding: 4px;"></td>
+                    <td style="padding: 5px;"><div style="display: flex; flex-wrap: wrap; gap: 8px; padding: 2px; border: 1px solid #eee; border-radius: 4px; min-width: 200px;">${skillsHtml}</div></td>
+                    <td style="padding: 5px; text-align: center;"><input type="checkbox" ${emp.active !== false ? 'checked' : ''} data-field="active" data-id="${emp.id}"></td>
+                    <td style="padding: 5px; text-align: center;"><button class="primary" style="background: var(--danger-color); padding: 4px 8px; font-size: 0.8rem;" onclick="app.deleteEmployee('${emp.id}')">Löschen</button></td>
+                `;
 
-                // Handle changes for main input fields
                 const inputs = tr.querySelectorAll('input:not(.skill-checkbox)');
                 inputs.forEach(input => {
                     input.onchange = (e) => {
@@ -1953,393 +361,103 @@
                     };
                 });
 
-                // Handle changes for skill checkboxes
                 const skillCbs = tr.querySelectorAll('.skill-checkbox');
                 skillCbs.forEach(cb => {
                     cb.onchange = (e) => {
-                        const skill = e.target.value;
-                        const targetId = e.target.getAttribute('data-id');
-                        const targetEmp = CONFIG.employees.find(x => x.id === targetId);
+                        const skill = e.target.value, targetId = e.target.getAttribute('data-id'), targetEmp = CONFIG.employees.find(x => x.id === targetId);
                         if (targetEmp) {
                             if (!targetEmp.groups) targetEmp.groups = [];
-                            if (e.target.checked) {
-                                if (!targetEmp.groups.includes(skill)) targetEmp.groups.push(skill);
-                            } else {
-                                targetEmp.groups = targetEmp.groups.filter(g => g !== skill);
-                            }
+                            if (e.target.checked) { if (!targetEmp.groups.includes(skill)) targetEmp.groups.push(skill); }
+                            else { targetEmp.groups = targetEmp.groups.filter(g => g !== skill); }
                         }
-                        this.render(); // Update calendar grouping
+                        this.render();
                     };
                 });
-
                 tbody.appendChild(tr);
             }
 
-            deleteEmployee(empId) {
-                if (confirm('Mitarbeiter wirklich löschen? Werden nach dem "Änderungen speichern" wirksam.')) {
-                    CONFIG.employees = CONFIG.employees.filter(e => e.id !== empId);
-                    this.renderAdminTable();
-                }
-            }
-
-            getPrimaryGrp(emp) {
-                const grps = Array.isArray(emp.groups) ? emp.groups : [];
-                if (grps.length === 0) return '';
-                // The priority is determined by the index in CONFIG.skills
-                let best = CONFIG.skills.length, res = '';
-                const realGrps = grps.filter(g => g !== 'Kein Vertreter nötig');
-                const lookup = realGrps.length > 0 ? realGrps : grps;
-                lookup.forEach(g => {
-                    const i = CONFIG.skills.indexOf(g);
-                    if (i !== -1 && i < best) { best = i; res = g; }
+            renderSkillsAdmin() {
+                const list = document.getElementById('adminSkillList'); if (!list) return;
+                list.innerHTML = '';
+                CONFIG.skills.forEach((skill, index) => {
+                    const row = document.createElement('div'); row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #eee;';
+                    const nameSpan = document.createElement('span'); nameSpan.innerText = skill; nameSpan.style.fontWeight = 'bold';
+                    const actionContainer = document.createElement('div'); actionContainer.style.cssText = 'display:flex; gap:8px; align-items:center;';
+                    const colorPicker = document.createElement('input'); colorPicker.type = 'color'; colorPicker.value = this.getGroupColor(skill); colorPicker.style.cssText = 'width:30px; height:30px; padding:2px; border:none; cursor:pointer;';
+                    colorPicker.onchange = (e) => { CONFIG.groupColors[skill] = e.target.value; this.render(); DataService.save(this.state); };
+                    const upBtn = document.createElement('button'); upBtn.innerText = '↑'; upBtn.className = 'primary'; upBtn.style.padding = '4px 10px'; upBtn.disabled = (index === 0); upBtn.onclick = () => this.moveSkill(index, 'up');
+                    const downBtn = document.createElement('button'); downBtn.innerText = '↓'; downBtn.className = 'primary'; downBtn.style.padding = '4px 10px'; downBtn.disabled = (index === CONFIG.skills.length - 1); downBtn.onclick = () => this.moveSkill(index, 'down');
+                    const delBtn = document.createElement('button'); delBtn.innerText = 'Löschen'; delBtn.className = 'primary'; delBtn.style.cssText = 'padding:4px 8px; font-size:0.8rem; background:var(--danger-color);'; delBtn.onclick = () => this.deleteSkill(skill);
+                    actionContainer.appendChild(colorPicker); actionContainer.appendChild(upBtn); actionContainer.appendChild(downBtn); actionContainer.appendChild(delBtn);
+                    row.appendChild(nameSpan); row.appendChild(actionContainer); list.appendChild(row);
                 });
-                return res;
-            }
-
-            getGroupColor(skillName) {
-                if (CONFIG.groupColors[skillName]) return CONFIG.groupColors[skillName];
-                const baseColors = [
-                    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-                    '#06b6d4', '#ec4899', '#6366f1', '#14b8a6', '#f97316'
-                ];
-                const index = CONFIG.skills.indexOf(skillName);
-                return index !== -1 ? baseColors[index % baseColors.length] : '#64748b';
             }
 
             moveSkill(index, direction) {
-                if (direction === 'up' && index > 0) {
-                    const temp = CONFIG.skills[index];
-                    CONFIG.skills[index] = CONFIG.skills[index - 1];
-                    CONFIG.skills[index - 1] = temp;
-                } else if (direction === 'down' && index < CONFIG.skills.length - 1) {
-                    const temp = CONFIG.skills[index];
-                    CONFIG.skills[index] = CONFIG.skills[index + 1];
-                    CONFIG.skills[index + 1] = temp;
-                } else {
-                    return;
-                }
-                this.renderSkillsAdmin();
-                this.render(); // Update calendar grouping
-                // Save updated order
-                document.body.style.cursor = 'wait';
-                DataService.save(this.state).finally(() => { document.body.style.cursor = 'default'; });
-            }
-
-            renderSkillsAdmin() {
-                const list = document.getElementById('adminSkillList');
-                if (!list) return;
-                list.innerHTML = '';
-
-                CONFIG.skills.forEach((skill, index) => {
-                    const row = document.createElement('div');
-                    row.style.display = 'flex'; row.style.justifyContent = 'space-between'; row.style.alignItems = 'center'; row.style.padding = '8px'; row.style.borderBottom = '1px solid #eee';
-
-                    const nameSpan = document.createElement('span');
-                    nameSpan.innerText = skill;
-                    nameSpan.style.fontWeight = 'bold';
-
-                    const actionContainer = document.createElement('div');
-                    actionContainer.style.display = 'flex'; actionContainer.style.gap = '8px'; actionContainer.style.alignItems = 'center';
-
-                    const colorPicker = document.createElement('input');
-                    colorPicker.type = 'color';
-                    colorPicker.value = this.getGroupColor(skill);
-                    colorPicker.title = 'Farbe für diese Gruppe ändern';
-                    colorPicker.style.width = '30px'; colorPicker.style.height = '30px'; colorPicker.style.padding = '2px'; colorPicker.style.border = 'none'; colorPicker.style.cursor = 'pointer';
-                    colorPicker.onchange = (e) => {
-                        CONFIG.groupColors[skill] = e.target.value;
-                        this.render(); // Re-render calendar to show new color
-                        document.body.style.cursor = 'wait';
-                        DataService.save(this.state).finally(() => { document.body.style.cursor = 'default'; });
-                    };
-
-                    const upBtn = document.createElement('button');
-                    upBtn.innerText = '↑'; upBtn.style.padding = '4px 10px'; upBtn.className = 'primary';
-                    upBtn.disabled = (index === 0);
-                    upBtn.onclick = () => this.moveSkill(index, 'up');
-
-                    const downBtn = document.createElement('button');
-                    downBtn.innerText = '↓'; downBtn.style.padding = '4px 10px'; downBtn.className = 'primary';
-                    downBtn.disabled = (index === CONFIG.skills.length - 1);
-                    downBtn.onclick = () => this.moveSkill(index, 'down');
-
-                    const delBtn = document.createElement('button');
-                    delBtn.innerText = 'Löschen';
-                    delBtn.style.padding = '4px 8px'; delBtn.style.fontSize = '0.8rem'; delBtn.style.background = 'var(--danger-color)'; delBtn.className = 'primary';
-                    delBtn.onclick = () => this.deleteSkill(skill);
-
-                    actionContainer.appendChild(colorPicker);
-                    actionContainer.appendChild(upBtn);
-                    actionContainer.appendChild(downBtn);
-                    actionContainer.appendChild(delBtn);
-
-                    row.appendChild(nameSpan);
-                    row.appendChild(actionContainer);
-                    list.appendChild(row);
-                });
+                if (direction === 'up' && index > 0) { [CONFIG.skills[index], CONFIG.skills[index - 1]] = [CONFIG.skills[index - 1], CONFIG.skills[index]]; }
+                else if (direction === 'down' && index < CONFIG.skills.length - 1) { [CONFIG.skills[index], CONFIG.skills[index + 1]] = [CONFIG.skills[index + 1], CONFIG.skills[index]]; }
+                else return;
+                this.renderSkillsAdmin(); this.render(); DataService.save(this.state);
             }
 
             addSkill() {
-                const input = document.getElementById('newSkillName');
-                const val = input.value.trim();
-                if (!val) return alert('Bitte einen Namen für den Skill eingeben.');
-                if (CONFIG.skills.includes(val)) return alert('Dieser Skill existiert bereits.');
-
-                CONFIG.skills.push(val);
-                input.value = '';
-                this.renderSkillsAdmin();
-                this.render(); // Sync calendar
-
-                // Immediately save the updated list of skills
-                document.body.style.cursor = 'wait';
-                DataService.save(this.state).finally(() => { document.body.style.cursor = 'default'; });
+                const input = document.getElementById('newSkillName'), val = input.value.trim();
+                if (!val || CONFIG.skills.includes(val)) return alert('Fehler!');
+                CONFIG.skills.push(val); input.value = ''; this.renderSkillsAdmin(); this.render(); DataService.save(this.state);
             }
 
             deleteSkill(skillName) {
-                if (confirm(`Soll der Skill "${skillName}" wirklich entfernt werden? Dies ändert nicht rückwirkend die Skills bereits angelegter Mitarbeiter.`)) {
-                    CONFIG.skills = CONFIG.skills.filter(s => s !== skillName);
-
-                    // Optional: remove skill from all employees instantly to prevent stale data
-                    CONFIG.employees.forEach(emp => {
-                        if (emp.groups && emp.groups.includes(skillName)) {
-                            emp.groups = emp.groups.filter(g => g !== skillName);
-                        }
-                    });
-
-                    this.renderSkillsAdmin();
-                    this.render(); // Sync calendar
-
-                    document.body.style.cursor = 'wait';
-                    DataService.save(this.state).finally(() => { document.body.style.cursor = 'default'; });
-                }
+                if (!confirm('Wirklich löschen?')) return;
+                CONFIG.skills = CONFIG.skills.filter(s => s !== skillName);
+                CONFIG.employees.forEach(emp => { if (emp.groups) emp.groups = emp.groups.filter(g => g !== skillName); });
+                this.renderSkillsAdmin(); this.render(); DataService.save(this.state);
             }
 
             openAddEmployeeModal() {
-                document.getElementById('addEmpId').value = '';
-                document.getElementById('addEmpName').value = '';
-                document.getElementById('addEmpEmail').value = '';
+                document.getElementById('addEmpId').value = ''; document.getElementById('addEmpName').value = ''; document.getElementById('addEmpEmail').value = '';
                 document.getElementById('addEmpPin').value = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
-
-                // Dynamically build checkboxes for skills
-                const groupDiv = document.getElementById('addEmpGroups');
-                groupDiv.innerHTML = '';
-                CONFIG.skills.forEach((skill, i, arr) => {
-                    const label = document.createElement('label');
-                    label.style.display = 'flex'; label.style.alignItems = 'center'; label.style.gap = '4px'; label.style.fontWeight = 'normal';
-                    if (skill === 'Kein Vertreter nötig') { label.style.borderTop = '1px solid #eee'; label.style.marginTop = '4px'; label.style.paddingTop = '4px'; label.style.width = '100%'; }
-
-                    const cb = document.createElement('input');
-                    cb.type = 'checkbox'; cb.value = skill;
-
-                    label.appendChild(cb);
-                    label.appendChild(document.createTextNode(' ' + skill));
-                    groupDiv.appendChild(label);
+                const groupDiv = document.getElementById('addEmpGroups'); groupDiv.innerHTML = '';
+                CONFIG.skills.forEach(skill => {
+                    const label = document.createElement('label'); label.style.cssText = 'display:flex; align-items:center; gap:4px; font-weight:normal;';
+                    if (skill === 'Kein Vertreter nötig') label.style.cssText += 'border-top:1px solid #eee; margin-top:4px; padding-top:4px; width:100%;';
+                    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = skill;
+                    label.appendChild(cb); label.appendChild(document.createTextNode(' ' + skill)); groupDiv.appendChild(label);
                 });
-
                 document.getElementById('addEmployeeModal').style.display = 'flex';
             }
 
             confirmAddEmployee() {
                 let id = document.getElementById('addEmpId').value.trim(), name = document.getElementById('addEmpName').value.trim();
-                const email = document.getElementById('addEmpEmail').value.trim(), pin = document.getElementById('addEmpPin').value.trim();
-                if (!name) return alert('Bitte einen Namen eingeben.');
+                if (!name) return alert('Name fehlt!');
                 if (!id) {
                     let maxId = 0;
                     CONFIG.employees.forEach(e => { if (e.id.startsWith('emp_')) { const num = parseInt(e.id.replace('emp_', ''), 10); if (!isNaN(num) && num > maxId) maxId = num; } });
                     id = 'emp_' + String(maxId + 1).padStart(5, '0');
                 }
-                if (CONFIG.employees.some(e => e.id === id)) return alert('Ein Mitarbeiter mit dieser ID existiert bereits!');
-
-                const groupCheckboxes = document.querySelectorAll('#addEmpGroups input[type="checkbox"]:checked');
-                const selectedGroups = Array.from(groupCheckboxes).map(cb => cb.value);
-
-                CONFIG.employees.push({ id, name, email, role: 'Assistenzarzt', pin, active: true, groups: selectedGroups });
-                this.renderAdminTable();
-                document.getElementById('addEmployeeModal').style.display = 'none';
-            }
-
-            saveEmployees() {
-                if (confirm('Änderungen an den Mitarbeitern speichern?')) {
-                    const admins = CONFIG.employees.filter(e => e.id === 'admin' || e.id === 'sekretariat');
-                    const others = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat');
-                    others.sort((a, b) => (a.name.split(' ').pop() || '').toLowerCase().localeCompare((b.name.split(' ').pop() || '').toLowerCase()));
-                    CONFIG.employees = [...admins, ...others];
-
-                    document.body.style.cursor = 'wait';
-                    DataService.save(this.state).then(() => {
-                        document.body.style.cursor = 'default';
-                        // Rebuild employee selects without switching tabs
-                        const mSel = document.getElementById('modalEmp'); if (mSel) mSel.innerHTML = '';
-                        const iSel = document.getElementById('importEmp'); if (iSel) iSel.innerHTML = '';
-                        CONFIG.employees.filter(e => e.active !== false && e.id !== 'admin' && e.id !== 'sekretariat').forEach(e => {
-                            if (mSel) { const o = document.createElement('option'); o.value = e.id; o.innerText = e.name; mSel.appendChild(o); }
-                            if (iSel) { const o2 = document.createElement('option'); o2.value = e.id; o2.innerText = e.name; iSel.appendChild(o2); }
-                        });
-                        this.render(); this.updateSummary(); this.updateRequestsBadge();
-                        this.renderAdminTable();
-                        alert('Mitarbeiter wurden gespeichert!');
-                    });
-                }
-            }
-
-            sortEmployees() {
-                const admins = CONFIG.employees.filter(e => e.id === 'admin' || e.id === 'sekretariat' || e.id === 'assistentensprecher');
-                const others = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.id !== 'assistentensprecher');
-                others.sort((a, b) => {
-                    const iA = CONFIG.skills.indexOf(this.getPrimaryGrp(a)), iB = CONFIG.skills.indexOf(this.getPrimaryGrp(b));
-                    if (iA !== iB) return iA - iB;
-                    return (a.name.split(' ').pop() || '').localeCompare((b.name.split(' ').pop() || ''));
-                });
-                CONFIG.employees = [...admins, ...others];
-            }
-
-            needsVertreter(empId) {
-                const emp = CONFIG.employees.find(e => e.id === empId);
-                const grps = Array.isArray(emp?.groups) ? emp.groups : (emp?.group ? [emp.group] : []);
-                return !grps.includes('Kein Vertreter nötig');
-            }
-
-            isWorkday(dateStr) {
-                const dow = new Date(dateStr).getDay();
-                return dow !== 0 && dow !== 6 && !CONFIG.holidays[dateStr];
-            }
-
-            countVacationDays(empId) {
-                const year = this.currentYear || CONFIG.years[0];
-                const entries = this.state[empId] || {};
-                return Object.entries(entries).filter(([d, v]) =>
-                    d.startsWith(String(year)) && v && v.type === 'U' && this.isWorkday(d)
-                ).length;
-            }
-
-            _renderVacBadge(empId, el) {
-                if (!el) el = document.getElementById(`vac-badge-${empId}`);
-                if (!el) return;
-                const used = this.countVacationDays(empId);
-                const quota = (this.state.__VACATION_QUOTA__ || {})[empId] ?? 30;
-                const over = used > quota;
-                el.innerHTML =
-                    `<span style="color:${over ? '#ef4444' : '#3b82f6'};font-weight:bold">${used}</span>`
-                    + `<span style="color:#9ca3af"> von </span>`
-                    + `<span class="vac-quota" onclick="app.editVacationQuota('${empId}')" title="Klicken zum Ändern">${quota}</span>`;
-                el.title = `${used} von ${quota} Urlaubstagen genommen`;
-            }
-
-            updateVacationBadges() {
-                const emps = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false);
-                emps.forEach(e => this._renderVacBadge(e.id));
-            }
-
-            editVacationQuota(empId) {
-                const current = (this.state.__VACATION_QUOTA__ || {})[empId] ?? 30;
-                const emp = CONFIG.employees.find(e => e.id === empId);
-                const val = prompt(`Jahresurlaub für ${emp?.name || empId} (Tage):`, current);
-                if (val === null) return;
-                const num = parseInt(val);
-                if (isNaN(num) || num < 0) { alert('Ungültige Zahl.'); return; }
-                if (!this.state.__VACATION_QUOTA__) this.state.__VACATION_QUOTA__ = {};
-                this.state.__VACATION_QUOTA__[empId] = num;
-                this.saveState();
-                this._renderVacBadge(empId);
-            }
-
-            processBulkImport() {
-                const empId = document.getElementById('importEmp').value;
-                const text = document.getElementById('importText').value.trim();
-                if (!text || !empId) return alert('Bitte Mitarbeiter und Text angeben.');
-
-                const lines = text.split('\n');
-                let count = 0;
-
-                if (!this.state[empId]) this.state[empId] = {};
-
-                lines.forEach(line => {
-                    line = line.trim();
-                    if (!line) return;
-
-                    let start, end, descRaw;
-                    let match = line.match(/(\d{1,2})\.(\d{1,2})\.(?:(\d{2,4})?)\s*(?:bis|-)\s*(\d{1,2})\.(\d{1,2})\.(?:(\d{2,4})?)\s*(.*)/i);
-                    if (match) {
-                        const [, d1, m1, y1, d2, m2, y2, desc] = match;
-                        start = this.parseDate(d1, m1, y1); end = this.parseDate(d2, m2, y2); descRaw = desc;
-                    } else {
-                        match = line.match(/(\d{1,2})\.(\d{1,2})\.(?:(\d{2,4})?)\s*(.*)/i);
-                        if (match) {
-                            const [, d1, m1, y1, desc] = match;
-                            start = this.parseDate(d1, m1, y1); end = new Date(start); descRaw = desc;
-                        }
-                    }
-
-                    if (start && end && start <= end) {
-                        let type = 'T', desc = descRaw ? descRaw.trim() : '', vertreter = '';
-                        const vertMatch = desc.match(/(?:Vertreter|Vertr|V):?\s*(.*)/i);
-                        if (vertMatch) { vertreter = vertMatch[1].trim(); desc = desc.replace(/(?:Vertreter|Vertr|V):?\s*.*/i, '').trim(); }
-
-                        const lowerDesc = desc.toLowerCase();
-                        if (lowerDesc.includes('urlaub')) type = 'U';
-                        else if (lowerDesc.includes('dienstreise')) type = 'D';
-                        else if (lowerDesc.includes('fortbildung')) type = 'F';
-
-                        let curr = new Date(start);
-                        const val = { type, text: desc, vertreter };
-
-                        while (curr <= end) {
-                            const dStr = this.formatDate(curr);
-                            if (dStr.startsWith('2026') || dStr.startsWith('2027') || dStr.startsWith('2028')) {
-                                this.setVacation(empId, dStr, val);
-                            }
-                            curr.setDate(curr.getDate() + 1);
-                        }
-                        count++;
-                    }
-                });
-                alert(`${count} Einträge verarbeitet.`);
-                document.getElementById('importText').value = '';
-                this.saveState();
-                this.updateSummary();
-            }
-
-            parseDate(d, m, y) {
-                let year = y ? parseInt(y) : this.currentYear;
-                if (isNaN(year)) year = this.currentYear;
-                if (year < 100) year += 2000;
-                return new Date(year, parseInt(m) - 1, parseInt(d));
+                const selectedGroups = Array.from(document.querySelectorAll('#addEmpGroups input:checked')).map(cb => cb.value);
+                CONFIG.employees.push({ id, name, email: document.getElementById('addEmpEmail').value.trim(), role: 'Assistenzarzt', pin: document.getElementById('addEmpPin').value.trim(), active: true, groups: selectedGroups });
+                this.renderAdminTable(); document.getElementById('addEmployeeModal').style.display = 'none';
             }
 
             exportICal() {
-                const list = document.getElementById('icalEmpList');
-                list.innerHTML = '';
-                const activeEmps = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false);
-
-                activeEmps.forEach(emp => {
-                    const label = document.createElement('label');
-                    label.style.display = 'block'; label.style.padding = '4px 0'; label.style.fontSize = '0.9rem'; label.style.cursor = 'pointer';
+                const list = document.getElementById('icalEmpList'); list.innerHTML = '';
+                CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false).forEach(emp => {
+                    const label = document.createElement('label'); label.style.cssText = 'display:block; padding:4px 0; font-size:0.9rem; cursor:pointer;';
                     const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = emp.id; cb.checked = true; cb.className = 'ical-emp-cb';
-                    label.appendChild(cb); label.appendChild(document.createTextNode(' ' + emp.name));
-                    list.appendChild(label);
+                    label.appendChild(cb); label.appendChild(document.createTextNode(' ' + emp.name)); list.appendChild(label);
                 });
-
-                document.getElementById('icalSelectAll').onchange = (e) => {
-                    document.querySelectorAll('.ical-emp-cb').forEach(c => c.checked = e.target.checked);
-                };
+                document.getElementById('icalSelectAll').onchange = (e) => { document.querySelectorAll('.ical-emp-cb').forEach(c => c.checked = e.target.checked); };
                 document.getElementById('iCalExportModal').style.display = 'flex';
             }
 
             executeICalExport() {
                 const selectedIds = Array.from(document.querySelectorAll('.ical-emp-cb:checked')).map(cb => cb.value);
-                if (selectedIds.length === 0) return alert('Bitte mindestens einen Mitarbeiter auswählen!');
-
+                if (selectedIds.length === 0) return alert('Kein Mitarbeiter gewählt!');
                 let icalContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Urlaubsplaner Assistenzärzte//DE\nCALSCALE:GREGORIAN\n";
                 const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-
                 selectedIds.forEach(empId => {
-                    const empName = CONFIG.employees.find(e => e.id === empId)?.name || empId;
-                    if (!this.state[empId]) return;
-
+                    const empName = this.getEmpName(empId); if (!this.state[empId]) return;
                     const dates = Object.keys(this.state[empId]).sort();
-                    if (dates.length === 0) return;
-
-                    // Group consecutive blocks just like updateSummary does
                     let blocks = [], cBlock = null;
                     dates.forEach(d => {
                         const val = this.state[empId][d], dDate = new Date(d);
@@ -2351,34 +469,21 @@
                         }
                     });
                     if (cBlock) blocks.push(cBlock);
-
                     blocks.forEach(b => {
                         const typeMap = { 'U': 'Urlaub', 'D': 'Dienstreise', 'F': 'Fortbildung', 'S': 'Sonstiges', 'T': 'Sonstiges' };
-                        const summary = `${empName}: ${typeMap[b.val.type] || 'Abwesend'}${b.val.text ? ` (${b.val.text})` : ''}`;
-                        let desc = `Vertreter: ${b.val.vertreter || 'Keiner'}`;
-                        const dtStart = b.start.toISOString().replace(/[-:]/g, '').split('T')[0];
+                        const dtStart = b.start.toISOString().split('T')[0].replace(/-/g, '');
                         const tempEnd = new Date(b.end); tempEnd.setDate(tempEnd.getDate() + 1);
-                        const dtEnd = tempEnd.toISOString().replace(/[-:]/g, '').split('T')[0];
-                        const uid = `${empId}-${dtStart}-urlaubsplaner@klinik`;
-
-                        icalContent += `BEGIN:VEVENT\nUID:${uid}\nDTSTAMP:${now}\nDTSTART;VALUE=DATE:${dtStart}\nDTEND;VALUE=DATE:${dtEnd}\nSUMMARY:${summary}\nDESCRIPTION:${desc}\nEND:VEVENT\n`;
+                        const dtEnd = tempEnd.toISOString().split('T')[0].replace(/-/g, '');
+                        icalContent += `BEGIN:VEVENT\nUID:${empId}-${dtStart}@urlaubsplaner\nDTSTAMP:${now}\nDTSTART;VALUE=DATE:${dtStart}\nDTEND;VALUE=DATE:${dtEnd}\nSUMMARY:${empName}: ${typeMap[b.val.type] || 'Abwesend'}${b.val.text ? ` (${b.val.text})` : ''}\nDESCRIPTION:Vertreter: ${b.val.vertreter || 'Keiner'}\nEND:VEVENT\n`;
                     });
                 });
-
                 icalContent += "END:VCALENDAR";
                 const file = new Blob([icalContent], { type: 'text/calendar;charset=utf-8' });
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(file); a.download = 'abwesenheiten_assistenz.ics'; a.click();
-                URL.revokeObjectURL(a.href);
+                const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = 'abwesenheiten_assistenz.ics'; a.click();
                 document.getElementById('iCalExportModal').style.display = 'none';
             }
-
-            setMode(m) { this.currentMode = m; }
-            setCustomText(t) { this.currentText = t; }
-            setVertreterText(t) { this.currentVertreterText = t; }
-            saveState() { DataService.save(this.state); this.updateSummary(); }
         }
-        const app = new App();
+        const app = new AssistenzPlanerApp();
     </script>
 </body>
 
