@@ -281,9 +281,11 @@ class App {
             return;
         }
 
-        // Always ensure data is loaded with the provided key
+        // 1. Set the key and try to load data
         CONFIG.apiKey = key;
         const loaded = await this.reloadData();
+
+        // 2. Check if loading failed
         if (!loaded || loaded.error) {
             if (errorEl) {
                 errorEl.textContent = 'Master Key ungültig oder Netzwerkfehler.';
@@ -292,15 +294,37 @@ class App {
             return;
         }
 
-        const userEntry = CONFIG.employees.find(e => e.id === id);
-        if (userEntry?.pin && String(userEntry.pin) !== pwd) {
+        // 3. Ensure we actually have data (employees) before proceeding
+        if (!CONFIG.employees || CONFIG.employees.length === 0) {
             if (errorEl) {
-                errorEl.textContent = 'Falscher PIN.';
+                errorEl.textContent = 'Daten geladen, aber keine Mitarbeiter gefunden.';
                 errorEl.style.display = 'block';
             }
             return;
         }
 
+        // 4. Verify PIN for the selected account
+        const userEntry = CONFIG.employees.find(e => e.id === id);
+        // Special case for admin/sekretariat if they are not in the employees list yet (should not happen with good data)
+        if (userEntry) {
+            if (userEntry.pin && String(userEntry.pin) !== pwd) {
+                if (errorEl) {
+                    errorEl.textContent = 'Falscher PIN.';
+                    errorEl.style.display = 'block';
+                }
+                return;
+            }
+        } else if (id !== 'admin' && id !== 'sekretariat') {
+            // Only allow non-listed login for hardcoded admin/sekretariat if they are not in the DB
+            // But they should ideally be in the DB with a PIN.
+            if (errorEl) {
+                errorEl.textContent = 'Nutzer nicht in der Datenbank gefunden.';
+                errorEl.style.display = 'block';
+            }
+            return;
+        }
+
+        // 5. Successful login
         localStorage.setItem('jsonbin_key', key);
         this.currentUser = id;
 
