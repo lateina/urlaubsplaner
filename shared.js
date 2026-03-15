@@ -267,9 +267,15 @@ class App {
     onAfterLogin(id) {
         const isAdmin = (id === 'admin' || id === 'sekretariat' || (CONFIG.isSprecher && id === CONFIG.isSprecher));
         const isRealAdmin = (id === 'admin');
+        const canDrag = (id === 'admin' || (CONFIG.isSprecher && id === CONFIG.isSprecher));
 
         const tabContainer = document.querySelector('.tab-container');
         if (tabContainer) tabContainer.style.display = 'flex';
+
+        const absenceInputModePanel = document.getElementById('absenceInputModePanel');
+        if (absenceInputModePanel) {
+            absenceInputModePanel.style.display = canDrag ? 'flex' : 'none';
+        }
 
         const btnExport = document.getElementById('btnExport');
         if (btnExport) btnExport.style.display = isAdmin ? 'inline-block' : 'none';
