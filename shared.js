@@ -133,6 +133,20 @@ class App {
         return res;
     }
 
+    logout() {
+        if (!confirm('Möchtest du dich wirklich abmelden?')) return;
+        this.currentUser = null;
+        document.body.classList.add('pre-login');
+        document.getElementById('loginModal').style.display = 'flex';
+        // Reset inputs
+        document.getElementById('loginPwdInput').value = '';
+        document.getElementById('loginSelect').value = '';
+        document.getElementById('loginSearch').value = '';
+        // Clear sensitive key from memory if desired, but usually keep it for easier re-login
+        // localStorage.removeItem('jsonbin_key'); 
+        location.reload(); // Refresh to ensure a clean state
+    }
+
     async initApp() {
         const storedKey = localStorage.getItem('jsonbin_key');
         if (storedKey) {

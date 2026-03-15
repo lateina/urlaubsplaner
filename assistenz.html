@@ -26,8 +26,8 @@
                 <button id="btnExport" onclick="app.exportData()">Export JSON</button>
                 <button id="btnExportICal" onclick="app.exportICal()"
                     style="display:none; background-color: #10b981; color: white; border: none;">Export iCal</button>
-                <button id="btnImport" class="primary" onclick="document.getElementById('fileInput').click()">Import
-                    JSON</button>
+                <button id="btnImport" class="primary" onclick="document.getElementById('fileInput').click()">Import JSON</button>
+                <button id="btnLogout" onclick="app.logout()" style="background-color: var(--danger-color); color: white; border: none;">Abmelden</button>
                 <input type="file" id="fileInput" style="display:none" onchange="app.importData(this)">
             </div>
         </div>
