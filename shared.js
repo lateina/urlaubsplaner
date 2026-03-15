@@ -153,7 +153,27 @@ class App {
             CONFIG.apiKey = storedKey;
             const apiKeyInput = document.getElementById('apiKeyInput');
             if (apiKeyInput) apiKeyInput.value = storedKey;
+            await this.reloadData();
         }
+        this.initUI();
+        this.showLoginModal();
+
+        // Listen for Master Key input to load employees on-the-fly if not already loaded
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        if (apiKeyInput) {
+            apiKeyInput.addEventListener('input', async () => {
+                const key = apiKeyInput.value.trim();
+                if (key.length > 20) { // JSONBin keys are typically long
+                    CONFIG.apiKey = key;
+                    if (await this.reloadData()) {
+                        this.showLoginModal(); // Refresh the list
+                    }
+                }
+            });
+        }
+    }
+
+    async reloadData() {
         const data = await DataService.load();
         if (data) {
             CONFIG.employees = data.employees || [];
@@ -162,9 +182,9 @@ class App {
             if (data.groupOrder) CONFIG.groupOrder = data.groupOrder;
             if (data.groupColors) CONFIG.groupColors = data.groupColors;
             this.sortEmployees();
+            return true;
         }
-        this.initUI();
-        this.showLoginModal();
+        return false;
     }
 
     initUI() {
@@ -243,13 +263,17 @@ class App {
 
         if (!id || !key) return alert('Daten fehlen');
 
+        // Always ensure data is loaded with the provided key
+        CONFIG.apiKey = key;
+        const loaded = await this.reloadData();
+        if (!loaded) return alert('Daten konnten nicht geladen werden. Bitte prüfe den Master Key.');
+
         const userEntry = CONFIG.employees.find(e => e.id === id);
         if (userEntry?.pin && String(userEntry.pin) !== pwd) {
             return alert('Falscher PIN.');
         }
 
         localStorage.setItem('jsonbin_key', key);
-        CONFIG.apiKey = key;
         this.currentUser = id;
 
         document.getElementById('loginModal').style.display = 'none';
