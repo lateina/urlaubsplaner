@@ -18,10 +18,15 @@ class DataService {
             const res = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}/latest`, {
                 headers: { 'X-Master-Key': CONFIG.apiKey }
             });
+            if (!res.ok) {
+                const err = await res.json();
+                console.error("JSONBin Error:", err);
+                return { error: true, status: res.status, message: err.message };
+            }
             return (await res.json()).record;
         } catch (e) {
             console.error("Error loading data:", e);
-            return null;
+            return { error: true, message: e.message };
         }
     }
     static async save(state) {
@@ -162,10 +167,14 @@ class App {
         const apiKeyInput = document.getElementById('apiKeyInput');
         if (apiKeyInput) {
             apiKeyInput.addEventListener('input', async () => {
+                const errorEl = document.getElementById('loginError');
+                if (errorEl) errorEl.style.display = 'none'; // Hide error on input
+
                 const key = apiKeyInput.value.trim();
                 if (key.length > 20) { // JSONBin keys are typically long
                     CONFIG.apiKey = key;
-                    if (await this.reloadData()) {
+                    const loaded = await this.reloadData();
+                    if (loaded && !loaded.error) {
                         this.showLoginModal(); // Refresh the list
                     }
                 }
@@ -175,16 +184,16 @@ class App {
 
     async reloadData() {
         const data = await DataService.load();
-        if (data) {
+        if (data && !data.error) {
             CONFIG.employees = data.employees || [];
             this.state = data.state || {};
             if (data.skills) CONFIG.skills = data.skills;
             if (data.groupOrder) CONFIG.groupOrder = data.groupOrder;
             if (data.groupColors) CONFIG.groupColors = data.groupColors;
             this.sortEmployees();
-            return true;
+            return data;
         }
-        return false;
+        return data; // returns the error object if data.error is true
     }
 
     initUI() {
@@ -255,22 +264,41 @@ class App {
         const loginSelect = document.getElementById('loginSelect');
         const apiKeyInput = document.getElementById('apiKeyInput');
         const loginPwdInput = document.getElementById('loginPwdInput');
+        const errorEl = document.getElementById('loginError');
         if (!loginSelect || !apiKeyInput || !loginPwdInput) return;
+
+        if (errorEl) errorEl.style.display = 'none';
 
         const id = loginSelect.value;
         const key = apiKeyInput.value.trim();
         const pwd = loginPwdInput.value.trim();
 
-        if (!id || !key) return alert('Daten fehlen');
+        if (!id || !key) {
+            if (errorEl) {
+                errorEl.textContent = 'Bitte Name und Master Key eingeben.';
+                errorEl.style.display = 'block';
+            }
+            return;
+        }
 
         // Always ensure data is loaded with the provided key
         CONFIG.apiKey = key;
         const loaded = await this.reloadData();
-        if (!loaded) return alert('Daten konnten nicht geladen werden. Bitte prüfe den Master Key.');
+        if (!loaded || loaded.error) {
+            if (errorEl) {
+                errorEl.textContent = 'Master Key ungültig oder Netzwerkfehler.';
+                errorEl.style.display = 'block';
+            }
+            return;
+        }
 
         const userEntry = CONFIG.employees.find(e => e.id === id);
         if (userEntry?.pin && String(userEntry.pin) !== pwd) {
-            return alert('Falscher PIN.');
+            if (errorEl) {
+                errorEl.textContent = 'Falscher PIN.';
+                errorEl.style.display = 'block';
+            }
+            return;
         }
 
         localStorage.setItem('jsonbin_key', key);
