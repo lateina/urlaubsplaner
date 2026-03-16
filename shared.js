@@ -61,6 +61,8 @@ class App {
         this._visStart = -1;
         this._visEnd = -1;
         this._rafPending = false;
+        this._touchStart = null;
+        this._isScroll = false;
 
         this.dates = this.generateDates();
         this._datesMap = new Map();
@@ -91,15 +93,36 @@ class App {
                 if (!cell) return;
                 ev.preventDefault();
                 this.editAbsence(cell.dataset.eid, cell.dataset.date);
-            });
-            calendar.addEventListener('touchstart', ev => {
-                const cell = ev.target.closest('.day-cell[data-eid]');
-                if (cell) this.handleMouseDown(cell.dataset.eid, cell.dataset.date);
-            }, { passive: true });
-            calendar.addEventListener('touchmove', ev => {
+            });            calendar.addEventListener('touchstart', ev => {
                 const touch = ev.touches[0];
-                const el = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.day-cell[data-eid]');
-                if (el) this.handleMouseOver(el.dataset.eid, el.dataset.date);
+                this._touchStart = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+                this._isScroll = false;
+            }, { passive: true });
+
+            calendar.addEventListener('touchmove', ev => {
+                if (!this._touchStart) return;
+                const touch = ev.touches[0];
+                const dx = Math.abs(touch.clientX - this._touchStart.x);
+                const dy = Math.abs(touch.clientY - this._touchStart.y);
+                if (dx > 10 || dy > 10) this._isScroll = true;
+
+                if (this.isDragging) {
+                    const el = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.day-cell[data-eid]');
+                    if (el) this.handleMouseOver(el.dataset.eid, el.dataset.date);
+                }
+            }, { passive: true });
+
+            calendar.addEventListener('touchend', ev => {
+                if (!this._touchStart) return;
+                if (!this._isScroll) {
+                    const elapsed = Date.now() - this._touchStart.time;
+                    const cell = ev.target.closest('.day-cell[data-eid]');
+                    if (cell && elapsed < 300) {
+                        this.handleMouseDown(cell.dataset.eid, cell.dataset.date);
+                    }
+                }
+                this.stopDrag();
+                this._touchStart = null;
             }, { passive: true });
         }
 
