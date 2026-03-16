@@ -1366,6 +1366,10 @@ class App {
     }
 
     editVacationQuota(empId) {
+        if (this.currentUser !== 'admin' && this.currentUser !== empId && (!CONFIG.isSprecher || this.currentUser !== CONFIG.isSprecher)) {
+            alert('Stopp! Nur der Admin oder du selbst können das Urlaubskontingent ändern.');
+            return;
+        }
         const current = (this.state.__VACATION_QUOTA__ || {})[empId] ?? 30;
         const emp = CONFIG.employees.find(e => e.id === empId);
         const val = prompt(`Jahresurlaub für ${emp?.name || empId} (Tage):`, current);
