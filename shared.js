@@ -1367,7 +1367,7 @@ class App {
 
     editVacationQuota(empId) {
         if (this.currentUser !== 'admin' && this.currentUser !== empId && (!CONFIG.isSprecher || this.currentUser !== CONFIG.isSprecher)) {
-            alert('Stopp! Nur der Admin oder du selbst können das Urlaubskontingent ändern.');
+            alert('Stopp! Nur der Admin oder der Mitarbeiter selbst können das Urlaubskontingent ändern.');
             return;
         }
         const current = (this.state.__VACATION_QUOTA__ || {})[empId] ?? 30;
