@@ -201,7 +201,8 @@ button.primary {
     align-items: flex-start;
     justify-content: center;
     padding-left: 15px;
-    gap: 6px;
+    padding-top: 10px; /* Space for the group label */
+    gap: 4px;
     font-weight: 600;
     background: var(--surface-color);
     position: relative;

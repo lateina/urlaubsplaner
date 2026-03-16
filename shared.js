@@ -544,7 +544,7 @@ class App {
                 if (!prev || this.getPrimaryGrp(prev) !== grp) {
                     const lbl = document.createElement('span');
                     lbl.innerText = grp;
-                    lbl.style.cssText = `position:absolute; top:1px; left:4px; font-size:0.5rem; color:${color}; font-weight:bold; text-transform:uppercase; pointer-events:none;`;
+                    lbl.style.cssText = `position:absolute; top:1px; right:4px; font-size:0.45rem; color:${color}; font-weight:700; text-transform:uppercase; pointer-events:none; opacity:0.8;`;
                     n.appendChild(lbl);
                     n.style.borderTop = `1px solid ${color}`;
                 }
