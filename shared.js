@@ -107,7 +107,7 @@ class App {
                     if (!this._isScroll && this._touchStart) {
                         this.handleMouseDown(this._touchStart.eid, this._touchStart.date);
                     }
-                }, 500);
+                }, 1000);
             }, { passive: true });
 
             calendar.addEventListener('touchmove', ev => {
