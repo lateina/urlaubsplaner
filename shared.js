@@ -63,6 +63,7 @@ class App {
         this._rafPending = false;
         this._touchStart = null;
         this._isScroll = false;
+        this._longPressTimer = null;
 
         this.dates = this.generateDates();
         this._datesMap = new Map();
@@ -95,8 +96,18 @@ class App {
                 this.editAbsence(cell.dataset.eid, cell.dataset.date);
             });            calendar.addEventListener('touchstart', ev => {
                 const touch = ev.touches[0];
-                this._touchStart = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+                const cell = ev.target.closest('.day-cell[data-eid]');
+                if (!cell) return;
+
+                this._touchStart = { x: touch.clientX, y: touch.clientY, time: Date.now(), eid: cell.dataset.eid, date: cell.dataset.date };
                 this._isScroll = false;
+
+                if (this._longPressTimer) clearTimeout(this._longPressTimer);
+                this._longPressTimer = setTimeout(() => {
+                    if (!this._isScroll && this._touchStart) {
+                        this.handleMouseDown(this._touchStart.eid, this._touchStart.date);
+                    }
+                }, 500);
             }, { passive: true });
 
             calendar.addEventListener('touchmove', ev => {
@@ -104,7 +115,10 @@ class App {
                 const touch = ev.touches[0];
                 const dx = Math.abs(touch.clientX - this._touchStart.x);
                 const dy = Math.abs(touch.clientY - this._touchStart.y);
-                if (dx > 10 || dy > 10) this._isScroll = true;
+                if (dx > 10 || dy > 10) {
+                    this._isScroll = true;
+                    if (this._longPressTimer) clearTimeout(this._longPressTimer);
+                }
 
                 if (this.isDragging) {
                     const el = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.day-cell[data-eid]');
@@ -113,14 +127,7 @@ class App {
             }, { passive: true });
 
             calendar.addEventListener('touchend', ev => {
-                if (!this._touchStart) return;
-                if (!this._isScroll) {
-                    const elapsed = Date.now() - this._touchStart.time;
-                    const cell = ev.target.closest('.day-cell[data-eid]');
-                    if (cell && elapsed < 300) {
-                        this.handleMouseDown(cell.dataset.eid, cell.dataset.date);
-                    }
-                }
+                if (this._longPressTimer) clearTimeout(this._longPressTimer);
                 this.stopDrag();
                 this._touchStart = null;
             }, { passive: true });
