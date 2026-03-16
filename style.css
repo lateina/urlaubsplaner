@@ -405,7 +405,8 @@ body.pre-login .tab-container {
     }
 
     header {
-        padding: 6px 10px;
+        padding: 10px 15px;
+        padding-top: calc(env(safe-area-inset-top, 0px) + 10px);
         margin-bottom: 6px;
     }
 
@@ -448,7 +449,8 @@ body.pre-login .tab-container {
 
     .calendar-container {
         grid-template-columns: 80px repeat(762, 40px);
-        max-height: calc(100vh - 140px);
+        max-height: calc(100vh - 180px); /* Increased offset to prevent row truncation */
+        padding-bottom: 100px; /* Added padding at the bottom of the scrollable area */
     }
 
     .sticky-col {
