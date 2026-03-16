@@ -1,4 +1,4 @@
-const CACHE_NAME = 'urlaubsplaner-v2';
+const CACHE_NAME = 'urlaubsplaner-v3';
 const ASSETS = [
   'index.html',
   'assistenz.html',
@@ -17,6 +17,7 @@ self.addEventListener('install', (event) => {
       return cache.addAll(ASSETS);
     })
   );
+  self.skipWaiting();
 });
 
 // Activate Service Worker

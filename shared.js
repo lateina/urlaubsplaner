@@ -148,7 +148,8 @@ class App {
         document.getElementById('loginSelect').value = '';
         document.getElementById('loginSearch').value = '';
         // Clear sensitive key from memory if desired, but usually keep it for easier re-login
-        // localStorage.removeItem('jsonbin_key'); 
+        localStorage.removeItem('last_user_id');
+        localStorage.removeItem('last_user_pin');
         location.reload(); // Refresh to ensure a clean state
     }
 
@@ -162,6 +163,15 @@ class App {
         }
         this.initUI();
         this.showLoginModal();
+
+        // Try auto-login if credentials exist
+        const lastUserId = localStorage.getItem('last_user_id');
+        const lastUserPin = localStorage.getItem('last_user_pin');
+        if (lastUserId && lastUserPin && storedKey) {
+            document.getElementById('loginSelect').value = lastUserId;
+            document.getElementById('loginPwdInput').value = lastUserPin;
+            this.processLogin(true); // true means auto-login attempt
+        }
 
         // Listen for Master Key input to load employees on-the-fly if not already loaded
         const apiKeyInput = document.getElementById('apiKeyInput');
@@ -260,7 +270,7 @@ class App {
         loginResults.style.display = 'block';
     }
 
-    async processLogin() {
+    async processLogin(isAutoLogin = false) {
         const loginSelect = document.getElementById('loginSelect');
         const apiKeyInput = document.getElementById('apiKeyInput');
         const loginPwdInput = document.getElementById('loginPwdInput');
@@ -287,9 +297,13 @@ class App {
 
         // 2. Check if loading failed
         if (!loaded || loaded.error) {
-            if (errorEl) {
+            if (errorEl && !isAutoLogin) {
                 errorEl.textContent = 'Master Key ungültig oder Netzwerkfehler.';
                 errorEl.style.display = 'block';
+            }
+            if (isAutoLogin) {
+                localStorage.removeItem('last_user_id');
+                localStorage.removeItem('last_user_pin');
             }
             return;
         }
@@ -308,9 +322,13 @@ class App {
         // Special case for admin/sekretariat if they are not in the employees list yet (should not happen with good data)
         if (userEntry) {
             if (userEntry.pin && String(userEntry.pin) !== pwd) {
-                if (errorEl) {
+                if (errorEl && !isAutoLogin) {
                     errorEl.textContent = 'Falscher PIN.';
                     errorEl.style.display = 'block';
+                }
+                if (isAutoLogin) {
+                    localStorage.removeItem('last_user_id');
+                    localStorage.removeItem('last_user_pin');
                 }
                 return;
             }
@@ -326,6 +344,8 @@ class App {
 
         // 5. Successful login
         localStorage.setItem('jsonbin_key', key);
+        localStorage.setItem('last_user_id', id);
+        localStorage.setItem('last_user_pin', pwd);
         this.currentUser = id;
 
         document.getElementById('loginModal').style.display = 'none';
