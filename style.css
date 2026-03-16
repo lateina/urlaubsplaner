@@ -44,10 +44,11 @@ body {
 
 header {
     background: var(--surface-color);
-    padding: 10px 15px;
+    padding: 6px 15px; /* Compact padding */
+    padding-top: calc(env(safe-area-inset-top, 0px) + 6px);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 h1 {
@@ -62,12 +63,13 @@ h1 {
 }
 
 button {
-    padding: 8px 16px;
+    padding: 6px 12px; /* Compact padding */
     border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
     background: var(--surface-color);
     cursor: pointer;
     font-weight: 500;
+    font-size: 0.85rem; /* Consistently smaller */
     transition: all 0.2s;
 }
 
@@ -379,15 +381,15 @@ body.pre-login .tab-container {
 }
 
 .tab-button {
-    padding: 10px 20px;
+    padding: 6px 16px; /* Compact padding */
     cursor: pointer;
     background: transparent;
     border: none;
     border-bottom: 3px solid transparent;
-    font-size: 1rem;
+    font-size: 0.9rem; /* Slightly smaller */
     font-weight: bold;
     color: #64748b;
-    margin-right: 10px;
+    margin-right: 8px;
 }
 
 .tab-button.active {
@@ -428,28 +430,15 @@ body.pre-login .tab-container {
         text-overflow: ellipsis;
     }
 
-    .tab-container {
-        margin-bottom: 4px;
-        padding-top: 2px;
-    }
-
     .tab-button {
         padding: 6px 12px;
         font-size: 0.85rem;
         margin-right: 4px;
     }
 
-    .controls {
-        display: flex;
-        gap: 4px;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-    }
-
     .controls button {
         padding: 4px 8px;
         font-size: 0.75rem;
-        width: auto;
     }
 
     #calendarView {
