@@ -1315,7 +1315,7 @@ class App {
         const views = ['calendar', 'summary', 'status', 'admin', 'requests', 'po', 'groups', 'skills'];
         views.forEach(v => {
             const el = document.getElementById(v + 'View');
-            if (el) el.style.display = (v === tabId) ? 'block' : 'none';
+            if (el) el.style.display = (v === tabId) ? 'flex' : 'none';
         });
 
         if (bulkPanel) bulkPanel.style.display = (tabId === 'calendar' && (this.currentUser === 'admin' || this.currentUser === 'sekretariat')) ? 'flex' : 'none';

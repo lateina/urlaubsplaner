@@ -81,19 +81,29 @@ button.primary {
 
 .calendar-container {
     display: grid;
-    overflow-x: auto;
-    overflow-y: auto;
+    overflow: auto; /* Enable scroll */
     position: relative;
     width: 100%;
-    height: auto;
-    max-height: calc(100vh - 250px);
+    flex: 1; /* Take all remaining space */
     grid-template-columns: 200px repeat(762, 40px);
     grid-template-rows: 30px 30px 30px;
     grid-auto-rows: minmax(50px, auto);
-    padding-bottom: 80px;
+    padding-bottom: 20px;
     user-select: none;
     -webkit-user-select: none;
     background-color: #ffffff;
+}
+
+#calendarView, #adminView, #summaryView, #statusView, #requestsView, #poView, #groupsView, #skillsView {
+    flex: 1;
+    flex-direction: column;
+    overflow: hidden;
+    display: none; /* Controlled by JS */
+}
+
+/* Ensure the calendar toolbar and nav don't shrink */
+.calendar-toolbar, .month-nav {
+    flex-shrink: 0;
 }
 
 .employee-data-wrapper {
@@ -460,10 +470,7 @@ body.pre-login .tab-container {
     }
 
     .calendar-container {
-        flex: 1;
         grid-template-columns: 80px repeat(762, 40px);
-        max-height: none !important;
-        padding-bottom: 20px;
     }
 
     .sticky-col {
