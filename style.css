@@ -33,10 +33,11 @@ body {
     background-color: var(--bg-color);
     color: var(--text-main);
     padding: 20px;
-    min-height: 100vh;
+    height: 100vh; /* Fallback */
+    height: 100dvh;
     display: flex;
     flex-direction: column;
-    overflow-x: hidden;
+    overflow: hidden; /* Prevent page scroll */
     width: 100vw;
     -webkit-text-size-adjust: 100%;
 }
@@ -402,13 +403,14 @@ body.pre-login .tab-container {
         padding-left: env(safe-area-inset-left, 4px);
         padding-right: env(safe-area-inset-right, 4px);
         width: 100vw;
-        overflow-x: hidden;
+        height: 100dvh;
+        overflow: hidden;
     }
 
     header {
-        padding: 10px 15px;
-        padding-top: calc(env(safe-area-inset-top, 0px) + 10px);
-        margin-bottom: 6px;
+        padding: 6px 10px;
+        padding-top: calc(env(safe-area-inset-top, 0px) + 6px);
+        margin-bottom: 4px;
     }
 
     .header-top {
@@ -427,8 +429,14 @@ body.pre-login .tab-container {
     }
 
     .tab-container {
-        margin-bottom: 6px;
-        padding-top: 4px;
+        margin-bottom: 4px;
+        padding-top: 2px;
+    }
+
+    .tab-button {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+        margin-right: 4px;
     }
 
     .controls {
@@ -439,19 +447,34 @@ body.pre-login .tab-container {
     }
 
     .controls button {
-        padding: 6px 8px;
+        padding: 4px 8px;
         font-size: 0.75rem;
         width: auto;
     }
 
-    #btnLogout {
-        order: -1; /* Place logout button prominently on mobile */
+    #calendarView {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        overflow: hidden;
+    }
+
+    .calendar-toolbar {
+        padding: 6px !important;
+        margin-bottom: 4px !important;
+        gap: 6px !important;
+    }
+
+    .month-nav {
+        margin-bottom: 4px !important;
+        padding: 2px 0 !important;
     }
 
     .calendar-container {
+        flex: 1;
         grid-template-columns: 80px repeat(762, 40px);
-        max-height: calc(100vh - 180px); /* Increased offset to prevent row truncation */
-        padding-bottom: 100px; /* Added padding at the bottom of the scrollable area */
+        max-height: none !important;
+        padding-bottom: 20px;
     }
 
     .sticky-col {
