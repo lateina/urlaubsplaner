@@ -391,6 +391,18 @@ class App {
     }
 
     onAfterLogin(id) {
+        const uDisp = document.getElementById('currentUserDisplay');
+        if (uDisp) {
+            let name = id;
+            if (id === 'admin') name = 'Administrator';
+            else if (id === 'sekretariat') name = 'Sekretariat';
+            else {
+                const emp = CONFIG.employees.find(e => e.id === id);
+                if (emp) name = emp.name;
+            }
+            uDisp.innerText = 'Eingeloggt als: ' + name;
+        }
+
         const isAdmin = (id === 'admin' || id === 'sekretariat' || (CONFIG.isSprecher && id === CONFIG.isSprecher));
         const isRealAdmin = (id === 'admin');
         const canDrag = (id === 'admin' || (CONFIG.isSprecher && id === CONFIG.isSprecher));
