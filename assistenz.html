@@ -6,12 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Urlaubsplaner Assistenzärzte 2026/2027</title>
     <link rel="manifest" href="manifest-ass.json">
-    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-ass-192.png">
     <link rel="stylesheet" href="style.css">
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
+                navigator.serviceWorker.register('sw.js', { scope: './assistenz.html' })
                     .then(reg => console.log('Service Worker registriert'))
                     .catch(err => console.log('Service Worker Fehler', err));
             });

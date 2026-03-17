@@ -1,4 +1,4 @@
-const CACHE_NAME = 'urlaubsplaner-v19';
+const CACHE_NAME = 'urlaubsplaner-v20';
 const ASSETS = [
   'index.html',
   'assistenz.html',
@@ -7,7 +7,9 @@ const ASSETS = [
   'manifest-oa.json',
   'manifest-ass.json',
   'icon-192.png',
-  'icon-512.png'
+  'icon-512.png',
+  'icon-ass-192.png',
+  'icon-ass-512.png'
 ];
 
 // Install Service Worker

@@ -11,7 +11,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
+                navigator.serviceWorker.register('sw.js', { scope: './index.html' })
                     .then(reg => console.log('Service Worker registriert'))
                     .catch(err => console.log('Service Worker Fehler', err));
             });
@@ -505,7 +505,7 @@
             renderAdminTable() {
                 const tbody = document.getElementById('adminEmployeeTable'); tbody.innerHTML = '';
                 const sorted = [...CONFIG.employees].sort((a, b) => (a.name || '').split(' ').pop().localeCompare((b.name || '').split(' ').pop(), 'de'));
-                sorted.forEach(emp => { if (emp.id !== 'sekretariat') this.createEmployeeRow(tbody, emp); });
+                sorted.forEach(emp => { if (emp.id !== 'sekretariat' && emp.id !== 'admin') this.createEmployeeRow(tbody, emp); });
             }
 
             createEmployeeRow(tbody, emp) {

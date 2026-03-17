@@ -4,6 +4,7 @@
   "short_name": "Planer OA",
   "description": "Urlaubsplaner für Oberärzte 2026/2027",
   "start_url": "index.html",
+  "scope": "./index.html",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#2563eb",

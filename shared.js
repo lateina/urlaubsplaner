@@ -965,14 +965,30 @@ class App {
             if (!proceed) return;
         }
 
+        const emp = CONFIG.employees.find(e => e.id === eid);
+        const isChef = this.getPrimaryGrp(emp) === 'Chef';
+
         const req = {
             id: 'req_' + Date.now(),
             empId: eid, type, text, vertreter, vertreterId, dates,
-            status: this.needsVertreter(eid) ? 'pending_vertreter' : 'pending_admin',
+            status: isChef ? 'approved' : (this.needsVertreter(eid) ? 'pending_vertreter' : 'pending_admin'),
             createdAt: this.formatDate(new Date()),
             rejectedBy: null, rejectionNote: null,
             stamps: { submitted: this.makeStamp() }
         };
+
+        if (isChef) {
+            req.stamps.vertreter = this.makeStamp();
+            req.stamps.admin = this.makeStamp();
+            if (!this.state[eid]) this.state[eid] = {};
+            dates.forEach(ds => {
+                this.state[eid][ds] = {
+                    type, text, vertreter, vertreterId,
+                    status: 'confirmed'
+                };
+            });
+        }
+
         if (!this.state.__REQUESTS__) this.state.__REQUESTS__ = [];
         this.state.__REQUESTS__.push(req);
         this.saveState();
