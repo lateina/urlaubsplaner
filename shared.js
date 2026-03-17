@@ -51,6 +51,8 @@ class App {
     constructor(config) {
         window.CONFIG = config;
         this.currentUser = null;
+        this.deferredPrompt = null;
+        this._initPwaInstall();
         this.state = {};
         this.isDragging = false;
         this.currentMode = 'U';
@@ -1553,4 +1555,37 @@ class App {
     renderAdminTable() {}
     renderGroupsAdmin() {}
     renderSkillsAdmin() {}
+
+    _initPwaInstall() {
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            this.deferredPrompt = e;
+            const lastShown = localStorage.getItem('pwa_banner_last_shown');
+            if (lastShown) {
+                const diff = Date.now() - parseInt(lastShown);
+                if (diff < 7 * 24 * 60 * 60 * 1000) return; // Wait 7 days
+            }
+            const banner = document.getElementById('pwaInstallBanner');
+            if (banner) banner.style.display = 'flex';
+        });
+
+        document.getElementById('btnPwaInstall')?.addEventListener('click', async () => {
+            if (!this.deferredPrompt) return;
+            this.deferredPrompt.prompt();
+            const { outcome } = await this.deferredPrompt.userChoice;
+            console.log(`PWA Install User Choice: ${outcome}`);
+            this.deferredPrompt = null;
+            this._hidePwaBanner();
+        });
+
+        document.getElementById('btnPwaLater')?.addEventListener('click', () => {
+            localStorage.setItem('pwa_banner_last_shown', Date.now().toString());
+            this._hidePwaBanner();
+        });
+    }
+
+    _hidePwaBanner() {
+        const banner = document.getElementById('pwaInstallBanner');
+        if (banner) banner.style.display = 'none';
+    }
 }
