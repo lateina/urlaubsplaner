@@ -23,7 +23,8 @@ class DataService {
                 console.error("JSONBin Error:", err);
                 return { error: true, status: res.status, message: err.message };
             }
-            return (await res.json()).record;
+            const data = await res.json();
+            return data.record;
         } catch (e) {
             console.error("Error loading data:", e);
             return { error: true, message: e.message };
@@ -174,15 +175,20 @@ class App {
         if (!confirm('Möchtest du dich wirklich abmelden?')) return;
         this.currentUser = null;
         document.body.classList.add('pre-login');
-        document.getElementById('loginModal').style.display = 'flex';
+        const modal = document.getElementById('loginModal');
+        if (modal) modal.style.display = 'flex';
+        
         // Reset inputs
-        document.getElementById('loginPwdInput').value = '';
-        document.getElementById('loginSelect').value = '';
-        document.getElementById('loginSearch').value = '';
-        // Clear sensitive key from memory if desired, but usually keep it for easier re-login
+        const pwdInput = document.getElementById('loginPwdInput');
+        if (pwdInput) pwdInput.value = '';
+        const loginSelect = document.getElementById('loginSelect');
+        if (loginSelect) loginSelect.value = '';
+        const loginSearch = document.getElementById('loginSearch');
+        if (loginSearch) loginSearch.value = '';
+        
         localStorage.removeItem('last_user_id');
         localStorage.removeItem('last_user_pin');
-        location.reload(); // Refresh to ensure a clean state
+        location.reload(); 
     }
 
     async initApp() {
@@ -196,28 +202,36 @@ class App {
         this.initUI();
         this.showLoginModal();
 
-        // Try auto-login if credentials exist
         const lastUserId = localStorage.getItem('last_user_id');
         const lastUserPin = localStorage.getItem('last_user_pin');
         if (lastUserId && lastUserPin && storedKey) {
-            document.getElementById('loginSelect').value = lastUserId;
-            document.getElementById('loginPwdInput').value = lastUserPin;
-            this.processLogin(true); // true means auto-login attempt
+            const loginSelect = document.getElementById('loginSelect');
+            if (loginSelect) loginSelect.value = lastUserId;
+            const loginPwdInput = document.getElementById('loginPwdInput');
+            if (loginPwdInput) loginPwdInput.value = lastUserPin;
+            this.processLogin(true);
         }
 
-        // Listen for Master Key input to load employees on-the-fly if not already loaded
         const apiKeyInput = document.getElementById('apiKeyInput');
         if (apiKeyInput) {
             apiKeyInput.addEventListener('input', async () => {
                 const errorEl = document.getElementById('loginError');
-                if (errorEl) errorEl.style.display = 'none'; // Hide error on input
+                if (errorEl) errorEl.style.display = 'none';
 
                 const key = apiKeyInput.value.trim();
-                if (key.length > 20) { // JSONBin keys are typically long
+                if (key.length >= 20) {
                     CONFIG.apiKey = key;
+                    apiKeyInput.style.borderColor = 'var(--primary-color)';
+                    apiKeyInput.style.background = 'rgba(59, 130, 246, 0.1)';
                     const loaded = await this.reloadData();
                     if (loaded && !loaded.error) {
-                        this.showLoginModal(); // Refresh the list
+                        apiKeyInput.style.borderColor = 'var(--success-color)';
+                        apiKeyInput.style.background = 'rgba(16, 185, 129, 0.1)';
+                        this.showLoginModal();
+                        this.filterLoginEmployees();
+                    } else {
+                        apiKeyInput.style.borderColor = 'var(--danger-color)';
+                        apiKeyInput.style.background = 'rgba(239, 68, 68, 0.1)';
                     }
                 }
             });
@@ -233,9 +247,10 @@ class App {
             if (data.groupOrder) CONFIG.groupOrder = data.groupOrder;
             if (data.groupColors) CONFIG.groupColors = data.groupColors;
             this.sortEmployees();
+            this.showLoginModal();
             return data;
         }
-        return data; // returns the error object if data.error is true
+        return data;
     }
 
     initUI() {
@@ -265,14 +280,20 @@ class App {
     showLoginModal() {
         this._loginOptions = [
             { id: 'admin', name: 'Admin' },
-            { id: 'sekretariat', name: 'Sekretariat' },
-            ...CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && (e.active !== false || e.pin)).map(e => ({ id: e.id, name: e.name }))
+            { id: 'sekretariat', name: 'Sekretariat' }
         ];
+        if (CONFIG.employees && CONFIG.employees.length > 0) {
+            const others = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && (e.active !== false || e.pin)).map(e => ({ id: e.id, name: e.name }));
+            this._loginOptions.push(...others);
+        }
         if (CONFIG.additionalLoginOptions) {
             this._loginOptions.push(...CONFIG.additionalLoginOptions);
         }
         const loginSearch = document.getElementById('loginSearch');
-        if (loginSearch) loginSearch.onfocus = () => this.filterLoginEmployees();
+        if (loginSearch) {
+            loginSearch.onfocus = () => this.filterLoginEmployees();
+            loginSearch.onclick = () => this.filterLoginEmployees();
+        }
     }
 
     filterLoginEmployees() {
@@ -290,9 +311,11 @@ class App {
         matches.forEach(o => {
             const i = document.createElement('div');
             i.textContent = o.name;
-            i.style.padding = '10px';
+            i.style.padding = '12px';
             i.style.cursor = 'pointer';
-            i.onmousedown = () => {
+            i.style.borderBottom = '1px solid #f1f5f9';
+            i.onmousedown = (ev) => {
+                ev.preventDefault();
                 loginSearch.value = o.name;
                 document.getElementById('loginSelect').value = o.id;
                 loginResults.style.display = 'none';
@@ -316,18 +339,16 @@ class App {
         const pwd = loginPwdInput.value.trim();
 
         if (!id || !key) {
-            if (errorEl) {
+            if (errorEl && !isAutoLogin) {
                 errorEl.textContent = 'Bitte Name und Master Key eingeben.';
                 errorEl.style.display = 'block';
             }
             return;
         }
 
-        // 1. Set the key and try to load data
         CONFIG.apiKey = key;
         const loaded = await this.reloadData();
 
-        // 2. Check if loading failed
         if (!loaded || loaded.error) {
             if (errorEl && !isAutoLogin) {
                 errorEl.textContent = 'Master Key ungültig oder Netzwerkfehler.';
@@ -340,18 +361,7 @@ class App {
             return;
         }
 
-        // 3. Ensure we actually have data (employees) before proceeding
-        if (!CONFIG.employees || CONFIG.employees.length === 0) {
-            if (errorEl) {
-                errorEl.textContent = 'Daten geladen, aber keine Mitarbeiter gefunden.';
-                errorEl.style.display = 'block';
-            }
-            return;
-        }
-
-        // 4. Verify PIN for the selected account
         const userEntry = CONFIG.employees.find(e => e.id === id);
-        // Special case for admin/sekretariat if they are not in the employees list yet (should not happen with good data)
         if (userEntry) {
             if (userEntry.pin && String(userEntry.pin) !== pwd) {
                 if (errorEl && !isAutoLogin) {
@@ -364,9 +374,7 @@ class App {
                 }
                 return;
             }
-        } else if (id !== 'admin' && id !== 'sekretariat') {
-            // Only allow non-listed login for hardcoded admin/sekretariat if they are not in the DB
-            // But they should ideally be in the DB with a PIN.
+        } else if (id !== 'admin' && id !== 'sekretariat' && !(CONFIG.additionalLoginOptions && CONFIG.additionalLoginOptions.some(o => o.id === id))) {
             if (errorEl) {
                 errorEl.textContent = 'Nutzer nicht in der Datenbank gefunden.';
                 errorEl.style.display = 'block';
@@ -374,7 +382,6 @@ class App {
             return;
         }
 
-        // 5. Successful login
         localStorage.setItem('jsonbin_key', key);
         localStorage.setItem('last_user_id', id);
         localStorage.setItem('last_user_pin', pwd);
@@ -429,7 +436,7 @@ class App {
         const btnAddAbsence = document.getElementById('btnAddAbsence');
         if (btnAddAbsence) btnAddAbsence.style.display = (id === 'sekretariat' ? 'none' : 'inline-block');
 
-        // Common tabs
+        // Nav visibility
         const tabs = ['admin', 'summary', 'status', 'requests', 'po', 'groups', 'skills'];
         tabs.forEach(t => {
             const el = document.getElementById('tab-' + t);
@@ -439,6 +446,12 @@ class App {
                 else if (t === 'requests') el.style.display = (id === 'sekretariat' ? 'none' : 'inline-block');
                 else if (t === 'po') el.style.display = (id === 'sekretariat' ? 'inline-block' : 'none');
                 else if (t === 'groups' || t === 'skills') el.style.display = (isRealAdmin || (CONFIG.isSprecher && id === CONFIG.isSprecher)) ? 'inline-block' : 'none';
+            }
+            const navEl = document.getElementById('nav-' + t);
+            if (navEl) {
+                if (t === 'admin') navEl.style.display = isRealAdmin ? 'flex' : 'none';
+                else if (t === 'requests') navEl.style.display = (id === 'sekretariat' ? 'none' : 'flex');
+                else if (t === 'po') navEl.style.display = (id === 'sekretariat' ? 'flex' : 'none');
             }
         });
 
@@ -540,15 +553,19 @@ class App {
             n.className = 'cell employee-row-header sticky-col';
             n.style.gridRow = ei + 4;
             n.style.gridColumn = '1';
-            const displayName = isMobile ? (e.name.split(' ').pop() || e.name) : e.name;
-            n.innerHTML = `<span>${displayName}</span>`;
+            const displayName = e.name; // Show full name for better identification
+            const nameSpan = document.createElement('span');
+            nameSpan.style.fontWeight = '700';
+            nameSpan.textContent = displayName;
+            n.appendChild(nameSpan);
+
             const vacBadge = document.createElement('span');
             vacBadge.id = `vac-badge-${e.id}`;
             vacBadge.className = 'vac-badge';
             n.appendChild(vacBadge);
             this._renderVacBadge(e.id, vacBadge);
 
-            if (this.currentUser === e.id) n.style.backgroundColor = '#e0f2fe';
+            if (this.currentUser === e.id) n.style.backgroundColor = 'var(--primary-light)';
 
             const grp = this.getPrimaryGrp(e);
             if (grp) {
@@ -558,12 +575,13 @@ class App {
                 if (!prev || this.getPrimaryGrp(prev) !== grp) {
                     const lbl = document.createElement('span');
                     lbl.innerText = grp;
-                    lbl.style.cssText = `position:absolute; top:1px; right:4px; font-size:0.45rem; color:${color}; font-weight:700; text-transform:uppercase; pointer-events:none; opacity:0.8;`;
+                    lbl.style.cssText = `position:absolute; top:2px; right:6px; font-size:0.55rem; color:${color}; font-weight:800; text-transform:uppercase; pointer-events:none; opacity:0.9;`;
                     n.appendChild(lbl);
-                    n.style.borderTop = `1px solid ${color}`;
+                    n.style.borderTop = `1px solid ${color}33`;
+                    nameSpan.style.marginTop = '14px'; // Increased shift for better spacing
                 }
                 const next = emps[ei + 1];
-                if (!next || this.getPrimaryGrp(next) !== grp) n.style.borderBottom = `1px solid ${color}`;
+                if (!next || this.getPrimaryGrp(next) !== grp) n.style.borderBottom = `1px solid ${color}33`;
             }
             frag.appendChild(n);
 
@@ -571,6 +589,7 @@ class App {
             wrapper.id = `dw-${e.id}`;
             wrapper.className = 'employee-data-wrapper';
             wrapper.style.gridRow = ei + 4;
+            wrapper.style.gridColumn = `2 / span ${this.dates.length}`;
             frag.appendChild(wrapper);
         });
 
@@ -769,6 +788,7 @@ class App {
         if (!this.checkPermission(eid)) return;
         const s = this.state[eid]?.[d];
         if (!s) return;
+        this._setupVertreterSearch(eid);
         const modalEmp = document.getElementById('modalEmp');
         const modalType = document.getElementById('modalType');
         const modalText = document.getElementById('modalText');
@@ -784,15 +804,20 @@ class App {
         if (modalText) modalText.value = s.text || '';
         if (modalVertreterInput) modalVertreterInput.value = s.vertreter || '';
         if (modalVertreterId) modalVertreterId.value = s.vertreterId || '';
-        if (vertreterResults) vertreterResults.innerHTML = '';
+        if (vertreterResults) { vertreterResults.innerHTML = ''; vertreterResults.style.display = 'none'; }
         const titleEl = document.querySelector('#addModal h2');
-        if (titleEl) titleEl.textContent = 'Abwesenheit eintragen';
+        if (titleEl) titleEl.textContent = 'Abwesenheit bearbeiten';
         if (modalStart) modalStart.value = d;
         if (modalEnd) modalEnd.value = d;
         if (addModal) addModal.style.display = 'flex';
     }
 
     openModal() {
+        const modalEmp = document.getElementById('modalEmp');
+        const eid = modalEmp?.value || (CONFIG.employees.find(e => e.active !== false && e.id !== 'admin' && e.id !== 'sekretariat')?.id) || this.currentUser;
+        if (modalEmp && !modalEmp.value) modalEmp.value = eid;
+        
+        this._setupVertreterSearch(eid);
         const modalType = document.getElementById('modalType');
         const modalText = document.getElementById('modalText');
         const modalVertreterInput = document.getElementById('modalVertreterInput');
@@ -804,45 +829,85 @@ class App {
         if (modalText) modalText.value = '';
         if (modalVertreterInput) modalVertreterInput.value = '';
         if (modalVertreterId) modalVertreterId.value = '';
-        if (vertreterResults) vertreterResults.innerHTML = '';
+        if (vertreterResults) { vertreterResults.innerHTML = ''; vertreterResults.style.display = 'none'; }
         const titleEl = document.querySelector('#addModal h2');
         if (titleEl) titleEl.textContent = 'Abwesenheit eintragen';
         if (addModal) addModal.style.display = 'flex';
     }
 
-    addRange() {
-        const isAdmin = (this.currentUser === 'admin' || this.currentUser === CONFIG.isSprecher);
-        if (isAdmin) {
-            this._addRangeDirect();
-        } else {
-            this.submitRequest();
-        }
-    }
+    _setupVertreterSearch(empId) {
+        const vertreterInput = document.getElementById('modalVertreterInput');
+        const vertreterResults = document.getElementById('vertreterResults');
+        const modalEmp = document.getElementById('modalEmp');
+        const vertreterLabel = document.querySelector('#vertreterGroup label');
+        if (!vertreterInput || !vertreterResults) return;
 
-    _addRangeDirect() {
-        const eid = document.getElementById('modalEmp').value;
-        const type = document.getElementById('modalType').value;
-        const text = document.getElementById('modalText').value;
-        const vertreter = document.getElementById('modalVertreterInput').value;
-        const vertreterId = document.getElementById('modalVertreterId').value;
-        const start = document.getElementById('modalStart').value;
-        const end = document.getElementById('modalEnd').value;
-        if (!eid || !start || !end) return;
-        if (!this.checkPermission(eid)) return;
-        let curr = new Date(start), endD = new Date(end);
-        while (curr <= endD) {
-            const ds = this.formatDate(curr);
-            if (!this.state[eid]) this.state[eid] = {};
-            this.state[eid][ds] = { type, text, vertreter, vertreterId, status: 'confirmed' };
-            curr.setDate(curr.getDate() + 1);
+        const updateLabel = (eid) => {
+            if (vertreterLabel) {
+                const optional = !this.needsVertreter(eid);
+                vertreterLabel.textContent = `Vertreter ${optional ? '(Optional)' : '(Pflicht)'}`;
+            }
+        };
+        updateLabel(modalEmp?.value || empId);
+
+        vertreterResults.style.display = 'none';
+        vertreterResults.innerHTML = '';
+
+        const showList = () => {
+            const currentEid = modalEmp?.value || empId;
+            const q = vertreterInput.value.toLowerCase().trim();
+            const reqEmp = CONFIG.employees.find(e => e.id === currentEid);
+            const reqGrps = Array.isArray(reqEmp?.groups) ? reqEmp.groups : (reqEmp?.group ? [reqEmp.group] : []);
+            
+            const candidates = CONFIG.employees.filter(e => {
+                if (e.id === currentEid || e.id === 'admin' || e.id === 'sekretariat' || e.active === false) return false;
+                if (q && !e.name.toLowerCase().includes(q)) return false;
+                const eGrps = Array.isArray(e.groups) ? e.groups : (e.group ? [e.group] : []);
+                
+                // Normal rule: must share at least one group
+                let canRepresent = reqGrps.length > 0 && eGrps.some(g => reqGrps.includes(g));
+                
+                // Special rule: Herzkatheter can always represent Ambulanz
+                if (!canRepresent && reqGrps.includes('Ambulanz') && eGrps.includes('Herzkatheter')) {
+                    canRepresent = true;
+                }
+                
+                return canRepresent;
+            });
+
+            if (candidates.length > 0) {
+                vertreterResults.innerHTML = candidates.slice(0, 10).map(e => {
+                    return `<div style="padding:12px;cursor:pointer;border-bottom:1px solid #f1f5f9;" onmousedown="document.getElementById('modalVertreterInput').value='${e.name.replace(/'/g, "\\'")}';document.getElementById('modalVertreterId').value='${e.id}';document.getElementById('vertreterResults').style.display='none'">${e.name}</div>`;
+                }).join('');
+                vertreterResults.style.display = 'block';
+            } else if (q) {
+                vertreterResults.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:0.85rem">Keine passenden Kollegen gefunden</div>';
+                vertreterResults.style.display = 'block';
+            } else {
+                vertreterResults.style.display = 'none';
+            }
+        };
+
+        vertreterInput.oninput = showList;
+        vertreterInput.onfocus = showList;
+        vertreterInput.onclick = showList;
+        vertreterInput.onblur = () => setTimeout(() => { vertreterResults.style.display = 'none'; }, 300);
+        
+        if (modalEmp) {
+            modalEmp.onchange = () => {
+                const needs = this.needsVertreter(modalEmp.value);
+                const vGroup = document.getElementById('vertreterGroup');
+                if (vGroup) vGroup.style.display = needs ? '' : 'none';
+                vertreterInput.value = '';
+                document.getElementById('modalVertreterId').value = '';
+                showList();
+            };
         }
-        this.saveState();
-        this.render();
-        document.getElementById('addModal').style.display = 'none';
     }
 
     openRequestModal(empId, dateStr) {
         const modal = document.getElementById('addModal');
+        this._setupVertreterSearch(empId);
         document.getElementById('modalEmp').value = empId;
         document.getElementById('modalStart').value = dateStr;
         document.getElementById('modalEnd').value = dateStr;
@@ -850,49 +915,18 @@ class App {
         document.getElementById('modalText').value = '';
         document.getElementById('modalVertreterInput').value = '';
         document.getElementById('modalVertreterId').value = '';
-        document.getElementById('vertreterResults').innerHTML = '';
+        const vResults = document.getElementById('vertreterResults');
+        if (vResults) { vResults.innerHTML = ''; vResults.style.display = 'none'; }
         document.getElementById('vertreterGroup').style.display = this.needsVertreter(empId) ? '' : 'none';
         const titleEl = modal.querySelector('h2');
-        if (titleEl) titleEl.textContent = 'Abwesenheitswunsch einreichen';
-        const vertreterInput = document.getElementById('modalVertreterInput');
-        const vertreterResults = document.getElementById('vertreterResults');
-        const showVertreterList = () => {
-            const q = vertreterInput.value.toLowerCase().trim();
-            const reqEmp = CONFIG.employees.find(e => e.id === empId);
-            const reqGrps = Array.isArray(reqEmp?.groups) ? reqEmp.groups : (reqEmp?.group ? [reqEmp.group] : []);
-            const startVal = document.getElementById('modalStart').value;
-            const endVal = document.getElementById('modalEnd').value;
-            const reqDates = [];
-            if (startVal) {
-                let cur = new Date(startVal), endD = new Date(endVal || startVal);
-                while (cur <= endD) { reqDates.push(this.formatDate(cur)); cur.setDate(cur.getDate() + 1); }
-            }
-            const candidates = CONFIG.employees.map(e => {
-                if (e.id === empId || e.id === 'admin' || e.id === 'sekretariat' || e.active === false) return null;
-                if (q && !e.name.toLowerCase().includes(q)) return null;
-                const eGrps = Array.isArray(e.groups) ? e.groups : (e.group ? [e.group] : []);
-                if (reqGrps.length > 0 && !eGrps.some(g => reqGrps.includes(g))) return null;
-                const absentDates = reqDates.filter(d => this.state[e.id]?.[d]);
-                if (absentDates.length === reqDates.length && reqDates.length > 0) return null;
-                return { e, partial: absentDates.length > 0, absentDates };
-            }).filter(Boolean);
-            vertreterResults.innerHTML = candidates.slice(0, 10).map(({ e, partial, absentDates }) => {
-                const warning = partial ? ` <span style="color:#f59e0b;font-size:0.8rem">⚠ abwesend: ${absentDates.join(', ')}</span>` : '';
-                return `<div style="padding:6px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0;${partial ? 'background:#fffbeb' : ''}" onmousedown="document.getElementById('modalVertreterInput').value='${e.name.replace(/'/g, "\\'")}';document.getElementById('modalVertreterId').value='${e.id}';document.getElementById('vertreterResults').innerHTML=''">${e.name}${warning}</div>`;
-            }).join('') || '<div style="padding:6px 10px;color:#9ca3af;font-size:0.85rem">Keine verfügbaren Kollegen aus gleicher Gruppe</div>';
-        };
-        vertreterInput.oninput = showVertreterList;
-        vertreterInput.onfocus = showVertreterList;
-        vertreterInput.onblur = () => setTimeout(() => { vertreterResults.innerHTML = ''; }, 200);
-        this._showVertreterListFn = showVertreterList;
+        if (titleEl) titleEl.textContent = 'Abwesenheitswunsch';
         this._requestModalEmpId = empId;
         this.onModalDateChange();
         modal.style.display = 'flex';
     }
 
     onModalDateChange() {
-        if (typeof this._showVertreterListFn === 'function') this._showVertreterListFn();
-        const empId = this._requestModalEmpId;
+        const empId = this._requestModalEmpId || document.getElementById('modalEmp').value;
         if (!empId || this.currentUser === 'admin' || this.currentUser === CONFIG.isSprecher) return;
         const startVal = document.getElementById('modalStart').value;
         const endVal = document.getElementById('modalEnd').value;
@@ -926,6 +960,37 @@ class App {
             if (result) issues.push({ date: dateStr, missing: result });
         }
         return issues;
+    }
+
+    addRange() {
+        const isAdmin = (this.currentUser === 'admin' || this.currentUser === CONFIG.isSprecher);
+        if (isAdmin) {
+            this._addRangeDirect();
+        } else {
+            this.submitRequest();
+        }
+    }
+
+    _addRangeDirect() {
+        const eid = document.getElementById('modalEmp').value;
+        const type = document.getElementById('modalType').value;
+        const text = document.getElementById('modalText').value;
+        const vertreter = document.getElementById('modalVertreterInput').value;
+        const vertreterId = document.getElementById('modalVertreterId').value;
+        const start = document.getElementById('modalStart').value;
+        const end = document.getElementById('modalEnd').value;
+        if (!eid || !start || !end) return;
+        if (!this.checkPermission(eid)) return;
+        let curr = new Date(start), endD = new Date(end);
+        while (curr <= endD) {
+            const ds = this.formatDate(curr);
+            if (!this.state[eid]) this.state[eid] = {};
+            this.state[eid][ds] = { type, text, vertreter, vertreterId, status: 'confirmed' };
+            curr.setDate(curr.getDate() + 1);
+        }
+        this.saveState();
+        this.render();
+        document.getElementById('addModal').style.display = 'none';
     }
 
     submitRequest() {
@@ -1102,121 +1167,30 @@ class App {
         badge.textContent = count > 0 ? String(count) : '';
     }
 
+    makeStamp() {
+        const cu = this.currentUser;
+        let name = cu;
+        const emp = CONFIG.employees.find(e => e.id === cu);
+        if (emp) name = emp.name;
+        else if (cu === 'admin') name = 'Admin';
+        else if (cu === 'sekretariat') name = 'Sekretariat';
+
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        return {
+            at: new Date().toISOString(),
+            uid: cu,
+            name: name,
+            device: isMobile ? 'Mobilgerät' : 'Desktop',
+            ua: navigator.userAgent
+        };
+    }
+
     _fmtStamp(stamp, label) {
         if (!stamp) return '';
         const d = new Date(stamp.at);
         const ds = d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const ts = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-        return `<div style="font-size:0.72rem;color:#6b7280;margin-top:3px;padding:3px 8px;background:#f9fafb;border-radius:3px;border-left:3px solid #d1d5db"><strong>${label}</strong>: ${stamp.name} · ${ds}, ${ts} Uhr · ${stamp.device}</div>`;
-    }
-
-    renderRequestsTab() {
-        const container = document.getElementById('requestsList');
-        if (!container) return;
-        const requests = this.state.__REQUESTS__ || [];
-        const cu = this.currentUser;
-        const isAdmin = cu === 'admin';
-        const isSprecher = (CONFIG.isSprecher && cu === CONFIG.isSprecher);
-        let html = '';
-
-        const typeLabel = { U: 'Urlaub', D: 'Dienstreise', F: 'Fortbildung', T: 'Sonstiges', S: 'Sonstiges' };
-        const statusLabel = {
-            pending_vertreter: '⏳ Wartet auf Vertreter-Zustimmung',
-            pending_admin: '⏳ Wartet auf Admin-Freigabe',
-            approved: '✓ Genehmigt',
-            rejected: '✗ Abgelehnt'
-        };
-
-        if (isAdmin || isSprecher) {
-            const adminReqs = requests.filter(r => r.status === 'pending_admin');
-            if (adminReqs.length === 0) {
-                html += '<p style="color:#6b7280">Keine offenen Anfragen zur Genehmigung.</p>';
-            } else {
-                adminReqs.forEach(req => {
-                    const emp = CONFIG.employees.find(e => e.id === req.empId);
-                    const from = req.dates[0], to = req.dates[req.dates.length - 1];
-                    html += `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:12px;background:#fff">
-                        <strong>${emp?.name || req.empId}</strong> — ${from}${from !== to ? ' bis ' + to : ''} — ${typeLabel[req.type] || req.type}
-                        ${req.text ? `<br><em>${req.text}</em>` : ''}
-                        <br>Vertreter: ${req.vertreter} ✓
-                        ${this._fmtStamp(req.stamps?.submitted, 'Antrag')}
-                        ${this._fmtStamp(req.stamps?.vertreter, 'Vertreter-Zustimmung')}
-                        ${isAdmin ? `
-                        <br><div id="reject-area-${req.id}" style="display:none;margin-top:8px">
-                            <input type="text" id="reject-note-${req.id}" placeholder="Ablehnungsgrund (optional)" style="width:100%;padding:4px;margin-bottom:4px">
-                        </div>
-                        <div style="margin-top:8px;display:flex;gap:8px">
-                            <button onclick="app.approveAsAdmin('${req.id}')" style="background:#22c55e;color:white;border:none;padding:6px 14px;border-radius:4px;cursor:pointer">Genehmigen</button>
-                            <button onclick="document.getElementById('reject-area-${req.id}').style.display='block';this.style.display='none';document.getElementById('confirm-reject-${req.id}').style.display='inline'" style="background:#f3f4f6;border:1px solid #d1d5db;padding:6px 14px;border-radius:4px;cursor:pointer">Ablehnen...</button>
-                            <button onclick="app.rejectRequest('${req.id}','admin',document.getElementById('reject-note-${req.id}').value)" style="display:none;background:#ef4444;color:white;border:none;padding:6px 14px;border-radius:4px;cursor:pointer" id="confirm-reject-${req.id}">Ablehnen bestätigen</button>
-                        </div>` : '<br><span style="color:#6b7280;font-size:0.85rem;margin-top:6px;display:inline-block">⏳ Wartet auf Genehmigung durch Admin</span>'}
-                    </div>`;
-                });
-            }
-            const history = requests.filter(r => r.status === 'approved' || r.status === 'rejected');
-            if (history.length > 0) {
-                html += '<h4 style="margin-top:20px;color:#374151">Verlauf</h4>';
-                history.forEach(req => {
-                    const emp = CONFIG.employees.find(e => e.id === req.empId);
-                    const from = req.dates[0], to = req.dates[req.dates.length - 1];
-                    const statusColor = req.status === 'approved' ? '#22c55e' : '#ef4444';
-                    const rejectedBy = req.rejectedBy === 'vertreter' ? 'Vertreter' : 'Admin';
-                    html += `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:8px;background:#f9fafb;opacity:0.8">
-                        <strong>${emp?.name || req.empId}</strong> — ${from}${from !== to ? ' bis ' + to : ''} — ${typeLabel[req.type] || req.type}
-                        <span style="float:right;color:${statusColor}">${statusLabel[req.status]}</span>
-                        ${req.rejectionNote ? `<br><small>Grund: ${req.rejectionNote}</small>` : ''}
-                        ${this._fmtStamp(req.stamps?.submitted, 'Antrag')}
-                        ${this._fmtStamp(req.stamps?.vertreter, 'Vertreter-Zustimmung')}
-                        ${req.status === 'approved' ? this._fmtStamp(req.stamps?.admin, 'Genehmigung Admin') : this._fmtStamp(req.stamps?.rejected, `Ablehnung (${rejectedBy})`)}
-                    </div>`;
-                });
-            }
-        } else {
-            const vertretenReqs = requests.filter(r => r.vertreterId === cu && r.status === 'pending_vertreter');
-            if (vertretenReqs.length > 0) {
-                html += '<h4 style="color:#374151;margin-bottom:12px">Vertretungsanfragen</h4>';
-                vertretenReqs.forEach(req => {
-                    const emp = CONFIG.employees.find(e => e.id === req.empId);
-                    const from = req.dates[0], to = req.dates[req.dates.length - 1];
-                    html += `<div style="border:1px solid #bfdbfe;border-radius:8px;padding:16px;margin-bottom:12px;background:#eff6ff">
-                        <strong>${emp?.name || req.empId}</strong> möchte vom <strong>${from}</strong>${from !== to ? ' bis <strong>' + to + '</strong>' : ''} ${typeLabel[req.type] || req.type} nehmen.
-                        ${req.text ? `<br>Beschreibung: <em>${req.text}</em>` : ''}
-                        ${this._fmtStamp(req.stamps?.submitted, 'Antrag')}
-                        <br><div id="reject-area-v-${req.id}" style="display:none;margin-top:8px">
-                            <input type="text" id="reject-note-v-${req.id}" placeholder="Ablehnungsgrund (optional)" style="width:100%;padding:4px;margin-bottom:4px">
-                        </div>
-                        <div style="margin-top:10px;display:flex;gap:8px">
-                            <button onclick="app.approveAsVertreter('${req.id}')" style="background:#22c55e;color:white;border:none;padding:6px 14px;border-radius:4px;cursor:pointer">Zustimmen</button>
-                            <button onclick="document.getElementById('reject-area-v-${req.id}').style.display='block';document.getElementById('confirm-reject-v-${req.id}').style.display='inline'" style="background:#f3f4f6;border:1px solid #d1d5db;padding:6px 14px;border-radius:4px;cursor:pointer">Ablehnen...</button>
-                            <button onclick="app.rejectRequest('${req.id}','vertreter',document.getElementById('reject-note-v-${req.id}').value)" style="display:none;background:#ef4444;color:white;border:none;padding:6px 14px;border-radius:4px;cursor:pointer" id="confirm-reject-v-${req.id}">Ablehnen bestätigen</button>
-                        </div>
-                    </div>`;
-                });
-            }
-            const ownReqs = requests.filter(r => r.empId === cu);
-            if (ownReqs.length > 0) {
-                html += '<h4 style="color:#374151;margin-bottom:12px;margin-top:20px">Meine Anfragen</h4>';
-                ownReqs.forEach(req => {
-                    const from = req.dates[0], to = req.dates[req.dates.length - 1];
-                    const statusColor = { pending_vertreter: '#3b82f6', pending_admin: '#f59e0b', approved: '#22c55e', rejected: '#ef4444' }[req.status] || '#6b7280';
-                    const rejectedBy = req.rejectedBy === 'vertreter' ? 'Vertreter' : 'Admin';
-                    html += `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:8px;background:#fff">
-                        <strong>${typeLabel[req.type] || req.type}</strong>: ${from}${from !== to ? ' – ' + to : ''}
-                        | Vertreter: ${req.vertreter}
-                        <span style="float:right;color:${statusColor}">${statusLabel[req.status] || req.status}</span>
-                        ${req.rejectionNote ? `<br><small style="color:#ef4444">Ablehnungsgrund: ${req.rejectionNote}</small>` : ''}
-                        ${this._fmtStamp(req.stamps?.submitted, 'Antrag')}
-                        ${this._fmtStamp(req.stamps?.vertreter, 'Vertreter-Zustimmung')}
-                        ${req.status === 'approved' ? this._fmtStamp(req.stamps?.admin, 'Genehmigung Admin') : ''}
-                        ${req.status === 'rejected' ? this._fmtStamp(req.stamps?.rejected, `Ablehnung (${rejectedBy})`) : ''}
-                    </div>`;
-                });
-            }
-            if (vertretenReqs.length === 0 && ownReqs.length === 0) {
-                html += '<p style="color:#6b7280">Keine Anfragen vorhanden.</p>';
-            }
-        }
-        container.innerHTML = html;
+        return `<div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px; padding:4px 8px; background:var(--bg-color); border-radius:6px;"><strong>${label}</strong>: ${stamp.name} · ${ds}, ${ts}</div>`;
     }
 
     renderPOView() {
@@ -1227,7 +1201,7 @@ class App {
 
         const approved = requests.filter(r => r.status === 'approved');
         if (approved.length === 0) {
-            container.innerHTML = '<p style="color:#6b7280">Keine genehmigten Abwesenheiten vorhanden.</p>';
+            container.innerHTML = '<p style="color:var(--text-secondary); text-align:center; padding: 40px 0;">Keine genehmigten Abwesenheiten vorhanden.</p>';
             return;
         }
 
@@ -1237,57 +1211,42 @@ class App {
         const pending = approved.filter(r => !poDone[r.id]);
         const done = approved.filter(r => poDone[r.id]);
 
-        let html = '<h3 style="margin-bottom:16px;color:#111827">Genehmigte Abwesenheiten — Übertragung in PO</h3>';
+        let html = '<h2 style="margin-bottom:24px;">📋 PO-Übertragung</h2>';
 
         if (pending.length > 0) {
-            html += '<table style="width:100%;border-collapse:collapse;margin-bottom:24px">';
-            html += '<thead><tr style="background:#f3f4f6;text-align:left">';
-            html += '<th style="padding:8px 12px;border:1px solid #e5e7eb">Person</th>';
-            html += '<th style="padding:8px 12px;border:1px solid #e5e7eb">Von</th>';
-            html += '<th style="padding:8px 12px;border:1px solid #e5e7eb">Bis</th>';
-            html += '<th style="padding:8px 12px;border:1px solid #e5e7eb">Art</th>';
-            html += '<th style="padding:8px 12px;border:1px solid #e5e7eb">Vertreter</th>';
-            html += '<th style="padding:8px 12px;border:1px solid #e5e7eb">In PO eingetragen</th>';
+            html += '<div style="overflow-x: auto; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 24px;">';
+            html += '<table style="width:100%; border-collapse:collapse;">';
+            html += '<thead><tr style="background:var(--bg-color); text-align:left">';
+            html += '<th style="padding:12px; font-weight:700;">Person</th><th style="padding:12px; font-weight:700;">Von</th><th style="padding:12px; font-weight:700;">Bis</th><th style="padding:12px; font-weight:700;">Art</th><th style="padding:12px; font-weight:700; text-align:center;">In PO?</th>';
             html += '</tr></thead><tbody>';
 
             pending.forEach(req => {
                 const emp = CONFIG.employees.find(e => e.id === req.empId);
                 const from = req.dates[0], to = req.dates[req.dates.length - 1];
-                html += `<tr style="background:#fff">`;
-                html += `<td style="padding:8px 12px;border:1px solid #e5e7eb;font-weight:500">${emp?.name || req.empId}</td>`;
-                html += `<td style="padding:8px 12px;border:1px solid #e5e7eb">${from}</td>`;
-                html += `<td style="padding:8px 12px;border:1px solid #e5e7eb">${to}</td>`;
-                html += `<td style="padding:8px 12px;border:1px solid #e5e7eb">${typeLabel[req.type] || req.type}</td>`;
-                html += `<td style="padding:8px 12px;border:1px solid #e5e7eb">${req.vertreter || '—'}</td>`;
-                html += `<td style="padding:8px 12px;border:1px solid #e5e7eb;text-align:center">
-                    <input type="checkbox" onchange="app.markPODone('${req.id}', this.checked)" style="width:18px;height:18px;cursor:pointer">
-                </td>`;
+                html += `<tr style="border-top: 1px solid var(--border-color)">`;
+                html += `<td style="padding:12px; font-weight:600">${emp?.name || req.empId}</td>`;
+                html += `<td style="padding:12px">${from}</td>`;
+                html += `<td style="padding:12px">${to}</td>`;
+                html += `<td style="padding:12px"><span style="font-size:0.75rem; background:var(--bg-color); padding:2px 8px; border-radius:10px;">${typeLabel[req.type] || req.type}</span></td>`;
+                html += `<td style="padding:12px; text-align:center"><input type="checkbox" onchange="app.markPODone('${req.id}', this.checked)" style="width:20px; height:20px;"></td>`;
                 html += '</tr>';
             });
-            html += '</tbody></table>';
+            html += '</tbody></table></div>';
         } else {
-            html += '<p style="color:#22c55e;margin-bottom:24px">&#10003; Alle genehmigten Abwesenheiten wurden in PO eingetragen.</p>';
+            html += '<div style="background:var(--primary-light); color:var(--primary-color); padding:16px; border-radius:var(--radius-md); text-align:center; font-weight:700; margin-bottom:24px;">✨ Alle erledigt!</div>';
         }
 
         if (done.length > 0) {
-            html += `<details style="margin-top:16px"><summary style="cursor:pointer;color:#6b7280;font-size:0.9rem">Bereits eingetragen (${done.length})</summary>`;
-            html += '<table style="width:100%;border-collapse:collapse;margin-top:8px;opacity:0.6">';
-            html += '<thead><tr style="background:#f3f4f6;text-align:left">';
-            html += '<th style="padding:6px 10px;border:1px solid #e5e7eb">Person</th><th style="padding:6px 10px;border:1px solid #e5e7eb">Von</th><th style="padding:6px 10px;border:1px solid #e5e7eb">Bis</th><th style="padding:6px 10px;border:1px solid #e5e7eb">Art</th><th style="padding:6px 10px;border:1px solid #e5e7eb">Vertreter</th><th style="padding:6px 10px;border:1px solid #e5e7eb">Status</th>';
-            html += '</tr></thead><tbody>';
+            html += `<details><summary style="cursor:pointer; color:var(--text-secondary); font-weight:700; font-size:0.875rem;">Bereits eingetragen (${done.length})</summary>`;
+            html += '<div style="margin-top:12px; opacity:0.7">';
             done.forEach(req => {
                 const emp = CONFIG.employees.find(e => e.id === req.empId);
-                const from = req.dates[0], to = req.dates[req.dates.length - 1];
-                html += `<tr style="background:#f9fafb">`;
-                html += `<td style="padding:6px 10px;border:1px solid #e5e7eb">${emp?.name || req.empId}</td>`;
-                html += `<td style="padding:6px 10px;border:1px solid #e5e7eb">${from}</td>`;
-                html += `<td style="padding:6px 10px;border:1px solid #e5e7eb">${to}</td>`;
-                html += `<td style="padding:6px 10px;border:1px solid #e5e7eb">${typeLabel[req.type] || req.type}</td>`;
-                html += `<td style="padding:6px 10px;border:1px solid #e5e7eb">${req.vertreter || '—'}</td>`;
-                html += `<td style="padding:6px 10px;border:1px solid #e5e7eb;color:#22c55e">&#10003; Eingetragen${req.stamps?.po ? '<br>' + this._fmtStamp(req.stamps.po, 'PO-Eintragung') : ''}</td>`;
-                html += '</tr>';
+                html += `<div style="padding:8px; border-bottom:1px solid var(--border-color); font-size:0.85rem; display:flex; justify-content:space-between;">
+                    <span>${emp?.name || req.empId}: ${req.dates[0]}</span>
+                    <span style="color:var(--success-color)">✓</span>
+                </div>`;
             });
-            html += '</tbody></table></details>';
+            html += '</div></details>';
         }
         container.innerHTML = html;
     }
@@ -1337,9 +1296,19 @@ class App {
 
     switchTab(tabId) {
         const tabs = ['calendar', 'summary', 'status', 'admin', 'requests', 'po', 'groups', 'skills'];
-        tabs.forEach(t => { const btn = document.getElementById('tab-' + t); if (btn) btn.classList.remove('active'); });
-        const activeBtn = document.getElementById('tab-' + tabId);
-        if (activeBtn) activeBtn.classList.add('active');
+        
+        // Update Desktop Nav
+        tabs.forEach(t => { 
+            const btn = document.getElementById('tab-' + t); 
+            if (btn) btn.classList.toggle('active', t === tabId);
+        });
+
+        // Update Bottom Nav (Mobile)
+        const navItems = ['calendar', 'requests', 'admin', 'po'];
+        navItems.forEach(t => {
+            const item = document.getElementById('nav-' + t);
+            if (item) item.classList.toggle('active', t === tabId);
+        });
 
         const bulkPanel = document.getElementById('bulkImportPanel');
         const views = ['calendar', 'summary', 'status', 'admin', 'requests', 'po', 'groups', 'skills'];
@@ -1357,6 +1326,107 @@ class App {
         if (tabId === 'skills') this.renderSkillsAdmin();
     }
 
+    renderRequestsTab() {
+        const container = document.getElementById('requestsList');
+        if (!container) return;
+        const requests = this.state.__REQUESTS__ || [];
+        const cu = this.currentUser;
+        const isAdmin = cu === 'admin';
+        const isSprecher = (CONFIG.isSprecher && cu === CONFIG.isSprecher);
+        let html = '';
+
+        const typeLabel = { U: 'Urlaub', D: 'Dienstreise', F: 'Fortbildung', T: 'Sonstiges', S: 'Sonstiges' };
+        const statusLabel = {
+            pending_vertreter: '⏳ Vertreter-Zustimmung',
+            pending_admin: '⏳ Admin-Freigabe',
+            approved: '✅ Genehmigt',
+            rejected: '❌ Abgelehnt'
+        };
+
+        const renderCard = (req, actions = '') => {
+            const emp = CONFIG.employees.find(e => e.id === req.empId);
+            const from = req.dates[0], to = req.dates[req.dates.length - 1];
+            const statusClass = `request-status status-${req.status}`;
+            
+            return `
+                <div class="request-card">
+                    <div class="request-info">
+                        <div style="font-weight: 800; font-size: 1.05rem; margin-bottom: 2px;">${emp?.name || req.empId}</div>
+                        <div style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 600;">
+                            📅 ${from}${from !== to ? ' bis ' + to : ''}
+                        </div>
+                        <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+                            <span style="background: var(--bg-color); padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">
+                                ${typeLabel[req.type] || req.type}
+                            </span>
+                            ${req.vertreter ? `<span style="background: var(--primary-light); color: var(--primary-color); padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">👤 Vertr.: ${req.vertreter}</span>` : ''}
+                        </div>
+                        ${req.text ? `<div style="margin-top: 10px; font-style: italic; font-size: 0.85rem; color: var(--text-secondary); background: #f8fafc; padding: 8px; border-radius: 8px;">"${req.text}"</div>` : ''}
+                        <div style="margin-top: 12px;">
+                            ${this._fmtStamp(req.stamps?.submitted, 'Antrag')}
+                            ${this._fmtStamp(req.stamps?.vertreter, 'Zustimmung Vertreter')}
+                            ${req.status === 'approved' ? this._fmtStamp(req.stamps?.admin, 'Genehmigung Admin') : ''}
+                            ${req.status === 'rejected' ? this._fmtStamp(req.stamps?.rejected, 'Ablehnung') : ''}
+                        </div>
+                        ${req.rejectionNote ? `<div style="margin-top: 8px; color: var(--danger-color); font-size: 0.8rem; font-weight: 600;">Grund: ${req.rejectionNote}</div>` : ''}
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 12px;">
+                        <span class="${statusClass}" style="background: var(--bg-color); color: var(--text-main); font-size: 0.7rem;">${statusLabel[req.status]}</span>
+                        ${actions}
+                    </div>
+                </div>`;
+        };
+
+        if (isAdmin || isSprecher) {
+            const adminReqs = requests.filter(r => r.status === 'pending_admin');
+            if (adminReqs.length === 0) {
+                html += '<p style="color:var(--text-secondary); text-align:center; padding: 40px 0;">Keine offenen Anfragen zur Genehmigung.</p>';
+            } else {
+                adminReqs.forEach(req => {
+                    const actions = `
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="app.approveAsAdmin('${req.id}')" style="background:var(--success-color); color:white; border:none; padding:8px 12px;">Genehmigen</button>
+                            <button onclick="let note=prompt('Grund für Ablehnung?'); if(note!==null) app.rejectRequest('${req.id}','admin',note)" style="background:var(--bg-color); border:1px solid var(--border-color); padding:8px 12px;">Ablehnen</button>
+                        </div>
+                    `;
+                    html += renderCard(req, actions);
+                });
+            }
+            const history = requests.filter(r => r.status === 'approved' || r.status === 'rejected');
+            if (history.length > 0) {
+                html += '<h3 style="margin: 32px 0 16px; font-size: 1rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Verlauf</h3>';
+                history.sort((a,b) => b.id.localeCompare(a.id)).slice(0, 20).forEach(req => {
+                    html += renderCard(req);
+                });
+            }
+        } else {
+            const vertretenReqs = requests.filter(r => r.vertreterId === cu && r.status === 'pending_vertreter');
+            if (vertretenReqs.length > 0) {
+                html += '<h3 style="margin-bottom: 16px; font-size: 1rem; color: var(--primary-color);">Vertretungsanfragen</h3>';
+                vertretenReqs.forEach(req => {
+                    const actions = `
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="app.approveAsVertreter('${req.id}')" style="background:var(--success-color); color:white; border:none; padding:8px 12px;">Zustimmen</button>
+                            <button onclick="let note=prompt('Grund für Ablehnung?'); if(note!==null) app.rejectRequest('${req.id}','vertreter',note)" style="background:var(--bg-color); border:1px solid var(--border-color); padding:8px 12px;">Ablehnen</button>
+                        </div>
+                    `;
+                    html += renderCard(req, actions);
+                });
+            }
+            const ownReqs = requests.filter(r => r.empId === cu);
+            if (ownReqs.length > 0) {
+                html += '<h3 style="margin: 32px 0 16px; font-size: 1rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Meine Anfragen</h3>';
+                ownReqs.sort((a,b) => b.id.localeCompare(a.id)).forEach(req => {
+                    html += renderCard(req);
+                });
+            }
+            if (vertretenReqs.length === 0 && ownReqs.length === 0) {
+                html += '<p style="color:var(--text-secondary); text-align:center; padding: 40px 0;">Keine Anfragen vorhanden.</p>';
+            }
+        }
+        container.innerHTML = html;
+    }
+
     setMode(m) { this.currentMode = m; }
     setCustomText(t) { this.currentText = t; }
     setVertreterText(t) { this.currentVertreterText = t; }
@@ -1364,6 +1434,7 @@ class App {
     needsVertreter(empId) {
         const emp = CONFIG.employees.find(e => e.id === empId);
         const grps = Array.isArray(emp?.groups) ? emp.groups : (emp?.group ? [emp.group] : []);
+        if (grps.includes('Chef')) return false; // Chef needs no representative
         return !grps.includes('Kein Vertreter nötig');
     }
 
@@ -1386,7 +1457,9 @@ class App {
         const used = this.countVacationDays(empId);
         const quota = (this.state.__VACATION_QUOTA__ || {})[empId] ?? 30;
         const over = used > quota;
-        el.innerHTML = `<span style="color:${over ? '#ef4444' : '#3b82f6'};font-weight:bold">${used}</span><span style="color:#9ca3af"> von </span><span class="vac-quota" onclick="app.editVacationQuota('${empId}')" title="Klicken zum Ändern">${quota}</span>`;
+        const canEdit = (this.currentUser === 'admin' || this.currentUser === empId || (CONFIG.isSprecher && this.currentUser === CONFIG.isSprecher));
+        
+        el.innerHTML = `<span style="color:${over ? 'var(--danger-color)' : 'var(--primary-color)'}; font-weight:800">${used}</span><span style="color:var(--text-muted)">/</span><span class="vac-quota ${canEdit ? 'editable' : ''}" onclick="app.editVacationQuota('${empId}')" title="${canEdit ? 'Klicken zum Ändern' : ''}">${quota}</span>`;
         el.title = `${used} von ${quota} Urlaubstagen genommen`;
     }
 
