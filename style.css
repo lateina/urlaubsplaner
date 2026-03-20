@@ -109,6 +109,7 @@ h1 {
     font-weight: 800;
     background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     letter-spacing: -0.025em;
 }
@@ -454,6 +455,51 @@ button.primary:hover {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+/* Sub-tabs for Requests */
+.sub-tab-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0px;
+    position: sticky;
+    top: 0;
+    background: var(--surface-color);
+    z-index: 10;
+}
+
+.sub-tab-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.sub-tab-item:hover {
+    color: var(--text-main);
+}
+
+.sub-tab-item.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+@media (max-width: 768px) {
+    .sub-tab-nav {
+        margin: -16px -16px 20px -16px;
+        padding: 0 16px;
+        top: -16px; /* Offset for view-container padding */
+        background: var(--surface-glass);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
 }
 
 /* Request Cards */

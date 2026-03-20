@@ -67,6 +67,7 @@ class App {
         this._touchStart = null;
         this._isScroll = false;
         this._longPressTimer = null;
+        this.currentRequestsSubTab = 'meine';
 
         this.dates = this.generateDates();
         this._datesMap = new Map();
@@ -1451,40 +1452,57 @@ class App {
                 });
             }
         } else {
-            const vertretenReqs = requests.filter(r => r.vertreterId === cu && r.status === 'pending_vertreter');
-            if (vertretenReqs.length > 0) {
-                html += '<h3 style="margin-bottom: 16px; font-size: 1rem; color: var(--primary-color);">Vertretungsanfragen</h3>';
-                vertretenReqs.forEach(req => {
-                    const actions = `
-                        <div style="display: flex; gap: 8px;">
-                            <button onclick="app.approveAsVertreter('${req.id}')" style="background:var(--success-color); color:white; border:none; padding:8px 12px;">Zustimmen</button>
-                            <button onclick="let note=prompt('Grund für Ablehnung?'); if(note!==null) app.rejectRequest('${req.id}','vertreter',note)" style="background:var(--bg-color); border:1px solid var(--border-color); padding:8px 12px;">Ablehnen</button>
-                        </div>
-                    `;
-                    html += renderCard(req, actions);
-                });
-            }
-            
-            const vertreterHistory = requests.filter(r => r.vertreterId === cu && r.status !== 'pending_vertreter');
-            if (vertreterHistory.length > 0) {
-                html += '<h3 style="margin: 32px 0 16px; font-size: 1rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Vertretungs-Verlauf</h3>';
-                vertreterHistory.sort((a,b) => b.id.localeCompare(a.id)).slice(0, 20).forEach(req => {
-                    html += renderCard(req);
-                });
-            }
+            // Sub-tab Navigation
+            html += `
+                <div class="sub-tab-nav">
+                    <div class="sub-tab-item ${this.currentRequestsSubTab === 'meine' ? 'active' : ''}" onclick="app.switchRequestsSubTab('meine')">Meine Anfragen</div>
+                    <div class="sub-tab-item ${this.currentRequestsSubTab === 'vertreter' ? 'active' : ''}" onclick="app.switchRequestsSubTab('vertreter')">Vertretungen</div>
+                </div>
+            `;
 
-            const ownReqs = requests.filter(r => r.empId === cu);
-            if (ownReqs.length > 0) {
-                html += '<h3 style="margin: 32px 0 16px; font-size: 1rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Meine Anfragen</h3>';
-                ownReqs.sort((a,b) => b.id.localeCompare(a.id)).forEach(req => {
-                    html += renderCard(req);
-                });
-            }
-            if (vertretenReqs.length === 0 && ownReqs.length === 0 && vertreterHistory.length === 0) {
-                html += '<p style="color:var(--text-secondary); text-align:center; padding: 40px 0;">Keine Anfragen vorhanden.</p>';
+            if (this.currentRequestsSubTab === 'meine') {
+                const ownReqs = requests.filter(r => r.empId === cu);
+                if (ownReqs.length > 0) {
+                    ownReqs.sort((a,b) => b.id.localeCompare(a.id)).forEach(req => {
+                        html += renderCard(req);
+                    });
+                } else {
+                    html += '<p style="color:var(--text-secondary); text-align:center; padding: 40px 0;">Keine eigenen Anfragen vorhanden.</p>';
+                }
+            } else {
+                const vertretenReqs = requests.filter(r => r.vertreterId === cu && r.status === 'pending_vertreter');
+                if (vertretenReqs.length > 0) {
+                    html += '<h3 style="margin-bottom: 16px; font-size: 0.85rem; color: var(--primary-color); text-transform: uppercase;">Offene Vertretungen</h3>';
+                    vertretenReqs.forEach(req => {
+                        const actions = `
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="app.approveAsVertreter('${req.id}')" style="background:var(--success-color); color:white; border:none; padding:8px 12px;">Zustimmen</button>
+                                <button onclick="let note=prompt('Grund für Ablehnung?'); if(note!==null) app.rejectRequest('${req.id}','vertreter',note)" style="background:var(--bg-color); border:1px solid var(--border-color); padding:8px 12px;">Ablehnen</button>
+                            </div>
+                        `;
+                        html += renderCard(req, actions);
+                    });
+                }
+                
+                const vertreterHistory = requests.filter(r => r.vertreterId === cu && r.status !== 'pending_vertreter');
+                if (vertreterHistory.length > 0) {
+                    html += '<h3 style="margin: 32px 0 16px; font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase;">Vertretungs-Verlauf</h3>';
+                    vertreterHistory.sort((a,b) => b.id.localeCompare(a.id)).slice(0, 20).forEach(req => {
+                        html += renderCard(req);
+                    });
+                }
+
+                if (vertretenReqs.length === 0 && vertreterHistory.length === 0) {
+                    html += '<p style="color:var(--text-secondary); text-align:center; padding: 40px 0;">Keine Vertretungsanfragen vorhanden.</p>';
+                }
             }
         }
         container.innerHTML = html;
+    }
+
+    switchRequestsSubTab(tab) {
+        this.currentRequestsSubTab = tab;
+        this.renderRequestsView();
     }
 
     setMode(m) { this.currentMode = m; }
