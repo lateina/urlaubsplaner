@@ -287,16 +287,20 @@ class App {
                 .filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && (e.active !== false || e.pin))
                 .map(e => ({ id: e.id, name: e.name }));
             
+            if (CONFIG.additionalLoginOptions) {
+                others.push(...CONFIG.additionalLoginOptions);
+            }
+
             // Sort by last name
             others.sort((a, b) => {
-                const lastA = (a.name || '').split(' ').pop();
-                const lastB = (b.name || '').split(' ').pop();
+                const nameA = a.name || '', nameB = b.name || '';
+                const lastA = nameA.split(' ').pop();
+                const lastB = nameB.split(' ').pop();
                 return lastA.localeCompare(lastB, 'de');
             });
             
             this._loginOptions.push(...others);
-        }
-        if (CONFIG.additionalLoginOptions) {
+        } else if (CONFIG.additionalLoginOptions) {
             this._loginOptions.push(...CONFIG.additionalLoginOptions);
         }
         const loginSearch = document.getElementById('loginSearch');
@@ -423,7 +427,7 @@ class App {
         }
 
         const isAdmin = (id === 'admin' || id === 'sekretariat' || (CONFIG.isSprecher && id === CONFIG.isSprecher));
-        const isRealAdmin = (id === 'admin');
+        const isRealAdmin = (id === 'admin' || (CONFIG.isSprecher && id === CONFIG.isSprecher));
         const canDrag = (id === 'admin' || (CONFIG.isSprecher && id === CONFIG.isSprecher));
 
         const tabContainer = document.querySelector('.tab-container');
@@ -1210,7 +1214,8 @@ class App {
         const d = new Date(stamp.at);
         const ds = d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const ts = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-        return `<div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px; padding:4px 8px; background:var(--bg-color); border-radius:6px;"><strong>${label}</strong>: ${stamp.name} · ${ds}, ${ts}</div>`;
+        const who = stamp.shortcut || stamp.name || stamp.by;
+        return `<div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px; padding:4px 8px; background:var(--bg-color); border-radius:6px;"><strong>${label}</strong>: ${who} · ${ds}, ${ts}</div>`;
     }
 
     renderPOView() {
@@ -1237,7 +1242,7 @@ class App {
             html += '<div style="overflow-x: auto; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 24px;">';
             html += '<table style="width:100%; border-collapse:collapse;">';
             html += '<thead><tr style="background:var(--bg-color); text-align:left">';
-            html += '<th style="padding:12px; font-weight:700;">Person</th><th style="padding:12px; font-weight:700;">Von</th><th style="padding:12px; font-weight:700;">Bis</th><th style="padding:12px; font-weight:700;">Art</th><th style="padding:12px; font-weight:700; text-align:center;">In PO?</th>';
+            html += '<th style="padding:12px; font-weight:700;">Person</th><th style="padding:12px; font-weight:700;">Von</th><th style="padding:12px; font-weight:700;">Bis</th><th style="padding:12px; font-weight:700;">Art</th><th style="padding:12px; font-weight:700;">Vertreter</th><th style="padding:12px; font-weight:700; text-align:center;">In PO?</th>';
             html += '</tr></thead><tbody>';
 
             pending.forEach(req => {
@@ -1248,6 +1253,7 @@ class App {
                 html += `<td style="padding:12px">${from}</td>`;
                 html += `<td style="padding:12px">${to}</td>`;
                 html += `<td style="padding:12px"><span style="font-size:0.75rem; background:var(--bg-color); padding:2px 8px; border-radius:10px;">${typeLabel[req.type] || req.type}</span></td>`;
+                html += `<td style="padding:12px; font-size:0.85rem">${req.vertreter || '-'}</td>`;
                 html += `<td style="padding:12px; text-align:center"><input type="checkbox" onchange="app.markPODone('${req.id}', this.checked)" style="width:20px; height:20px;"></td>`;
                 html += '</tr>';
             });
@@ -1261,8 +1267,11 @@ class App {
             html += '<div style="margin-top:12px; opacity:0.7">';
             done.forEach(req => {
                 const emp = CONFIG.employees.find(e => e.id === req.empId);
-                html += `<div style="padding:8px; border-bottom:1px solid var(--border-color); font-size:0.85rem; display:flex; justify-content:space-between;">
-                    <span>${emp?.name || req.empId}: ${req.dates[0]}</span>
+                html += `<div style="padding:8px; border-bottom:1px solid var(--border-color); font-size:0.85rem; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-weight:600">${emp?.name || req.empId}: ${req.dates[0]}</div>
+                        ${req.stamps?.po ? `<div style="font-size:0.75rem; color:var(--text-secondary)">Eingetragen am ${new Date(req.stamps.po.at).toLocaleDateString('de-DE')} durch ${req.stamps.po.shortcut || req.stamps.po.name || req.stamps.po.by}</div>` : ''}
+                    </div>
                     <span style="color:var(--success-color)">✓</span>
                 </div>`;
             });
@@ -1275,8 +1284,16 @@ class App {
         if (!this.state.__PO_DONE__) this.state.__PO_DONE__ = {};
         const req = (this.state.__REQUESTS__ || []).find(r => r.id === reqId);
         if (checked) {
+            const initial = localStorage.getItem('po_shortcut') || '';
+            const shortcut = prompt('Kürzel der eintragenden Person:', initial);
+            if (!shortcut) return this.renderPOView();
+            localStorage.setItem('po_shortcut', shortcut);
+            
             this.state.__PO_DONE__[reqId] = true;
-            if (req) { if (!req.stamps) req.stamps = {}; req.stamps.po = this.makeStamp(); }
+            if (req) {
+                if (!req.stamps) req.stamps = {};
+                req.stamps.po = { at: new Date().toISOString(), by: this.currentUser, name: this.getEmpName(this.currentUser), shortcut: shortcut };
+            }
         } else {
             delete this.state.__PO_DONE__[reqId];
             if (req && req.stamps) delete req.stamps.po;
@@ -1386,6 +1403,7 @@ class App {
                             ${this._fmtStamp(req.stamps?.submitted, 'Antrag')}
                             ${this._fmtStamp(req.stamps?.vertreter, 'Zustimmung Vertreter')}
                             ${req.status === 'approved' ? this._fmtStamp(req.stamps?.admin, 'Genehmigung Leitender OA Wagner') : ''}
+                            ${this._fmtStamp(req.stamps?.po, 'In PO eingetragen')}
                             ${req.status === 'rejected' ? this._fmtStamp(req.stamps?.rejected, 'Ablehnung') : ''}
                         </div>
                         ${req.rejectionNote ? `<div style="margin-top: 8px; color: var(--danger-color); font-size: 0.8rem; font-weight: 600;">Grund: ${req.rejectionNote}</div>` : ''}
@@ -1762,9 +1780,105 @@ class App {
     validateCoverage(d) { return null; }
     sortEmployees() {}
     getPrimaryGrp(e) { return ''; }
-    renderAdminTable() {}
-    renderGroupsAdmin() {}
     renderSkillsAdmin() {}
+    renderGroupsAdmin() {}
+
+    exportICal() {
+        if (this.currentUser !== 'admin' && this.currentUser !== 'sekretariat') { 
+            alert('Nur Admin und Sekretariat können iCal exportieren.'); return; 
+        }
+        const container = document.getElementById('icalEmpCheckboxes');
+        if (!container) return;
+        
+        container.innerHTML = `<div style="margin-bottom:12px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">
+            <label style="display:flex; align-items:center; gap:8px; font-weight:bold; cursor:pointer;">
+                <input type="checkbox" id="icalSelectAll" style="width:auto;" onchange="document.querySelectorAll('.ical-emp-checkbox').forEach(cb => cb.checked = this.checked);">
+                <span>Alle auswählen</span>
+            </label></div>`;
+            
+        const sorted = [...CONFIG.employees].sort((a, b) => {
+            const lastA = (a.name || '').split(' ').pop();
+            const lastB = (b.name || '').split(' ').pop();
+            return lastA.localeCompare(lastB, 'de');
+        });
+            
+        sorted.forEach(emp => {
+            if (emp.id === 'admin' || emp.id === 'sekretariat' || emp.active === false) return;
+            const div = document.createElement('div'); div.style.padding = '4px 0';
+            div.innerHTML = `<label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:normal;">
+                <input type="checkbox" class="ical-emp-checkbox" value="${emp.id}" style="width:auto;" checked>
+                <span>${this.getEmpName(emp.id)}</span></label>`;
+            container.appendChild(div);
+        });
+        
+        document.querySelectorAll('.ical-emp-checkbox').forEach(cb => {
+            cb.addEventListener('change', () => { 
+                document.getElementById('icalSelectAll').checked = Array.from(document.querySelectorAll('.ical-emp-checkbox')).every(c => c.checked); 
+            });
+        });
+        const modal = document.getElementById('iCalExportModal');
+        if (modal) modal.style.display = 'flex';
+    }
+
+    executeICalExport() {
+        const startDateStr = document.getElementById('icalStart').value, endDateStr = document.getElementById('icalEnd').value;
+        if (!startDateStr || !endDateStr || startDateStr > endDateStr) return alert('Bitte einen gültigen Zeitraum auswählen.');
+        const startDate = new Date(startDateStr), endDate = new Date(endDateStr); endDate.setHours(23, 59, 59, 999);
+        const selectedEmps = Array.from(document.querySelectorAll('.ical-emp-checkbox:checked')).map(cb => cb.value);
+        if (selectedEmps.length === 0) return alert('Bitte mindestens einen Mitarbeiter auswählen.');
+
+        let icsContent = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Urlaubsplaner//DE\r\nCALSCALE:GREGORIAN\r\n";
+        const events = [];
+        for (const empId of selectedEmps) {
+            if (!this.state[empId]) continue;
+            const empName = this.getEmpName(empId), dates = Object.keys(this.state[empId]).sort();
+            if (dates.length === 0) continue;
+            let currentEvent = null;
+            for (const dateStr of dates) {
+                const eventDate = new Date(dateStr);
+                if (eventDate < startDate || eventDate > endDate) continue;
+                const val = this.state[empId][dateStr];
+                if (!currentEvent) {
+                    currentEvent = { empName, type: val.type, text: val.text, vertreter: val.vertreter, start: new Date(dateStr), end: new Date(dateStr) };
+                } else {
+                    const expectedNextDay = new Date(currentEvent.end); expectedNextDay.setDate(expectedNextDay.getDate() + 1);
+                    if (this.formatDate(expectedNextDay) === dateStr && currentEvent.type === val.type && currentEvent.text === val.text && currentEvent.vertreter === val.vertreter) {
+                        currentEvent.end = new Date(dateStr);
+                    } else {
+                        events.push(currentEvent); currentEvent = { empName, type: val.type, text: val.text, vertreter: val.vertreter, start: new Date(dateStr), end: new Date(dateStr) };
+                    }
+                }
+            }
+            if (currentEvent) events.push(currentEvent);
+        }
+        if (events.length === 0) return alert('Keine Abwesenheiten gefunden.');
+
+        const formatDateICal = (d) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+        const timestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        const typeLabels = { 'U': 'Urlaub', 'D': 'Dienstreise', 'F': 'Fortbildung', 'T': 'Sonstiges', 'S': 'Sonstiges' };
+
+        events.forEach(ev => {
+            icsContent += "BEGIN:VEVENT\r\n";
+            icsContent += `UID:${ev.empName.replace(/\s+/g, '')}-${formatDateICal(ev.start)}@urlaubsplaner\r\n`;
+            icsContent += `DTSTAMP:${timestamp}\r\n`;
+            icsContent += `DTSTART;VALUE=DATE:${formatDateICal(ev.start)}\r\n`;
+            const endExclusive = new Date(ev.end); endExclusive.setDate(endExclusive.getDate() + 1);
+            icsContent += `DTEND;VALUE=DATE:${formatDateICal(endExclusive)}\r\n`;
+            let summary = `${typeLabels[ev.type] || 'Abwesenheit'} - ${ev.empName}`; if (ev.text) summary += ` (${ev.text})`;
+            icsContent += `SUMMARY:${summary}\r\n`;
+            let description = `Mitarbeiter: ${ev.empName}\\nArt: ${typeLabels[ev.type] || 'Abwesenheit'}`;
+            if (ev.text) description += `\\nBeschreibung: ${ev.text}`; if (ev.vertreter) description += `\\nVertreter: ${ev.vertreter}`;
+            icsContent += `DESCRIPTION:${description}\r\n`;
+            icsContent += "END:VEVENT\r\n";
+        });
+        icsContent += "END:VCALENDAR";
+
+        const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+        const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `abwesenheiten_${startDateStr}_bis_${endDateStr}.ics`;
+        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+        const modal = document.getElementById('iCalExportModal');
+        if (modal) modal.style.display = 'none';
+    }
 
     _initPwaInstall() {
         window.addEventListener('beforeinstallprompt', (e) => {
