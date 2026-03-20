@@ -1502,7 +1502,7 @@ class App {
 
     switchRequestsSubTab(tab) {
         this.currentRequestsSubTab = tab;
-        this.renderRequestsView();
+        this.renderRequestsTab();
     }
 
     setMode(m) { this.currentMode = m; }
