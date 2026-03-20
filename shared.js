@@ -1236,7 +1236,15 @@ class App {
         const pending = approved.filter(r => !poDone[r.id]);
         const done = approved.filter(r => poDone[r.id]);
 
-        let html = '<h2 style="margin-bottom:24px;">📋 PO-Übertragung</h2>';
+        let html = '<h2 style="margin-bottom:8px;">📋 PO-Übertragung</h2>';
+        const stickyShortcut = localStorage.getItem('po_shortcut') || '';
+        html += `<div style="margin-bottom:24px; background:var(--bg-color); padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); display:flex; align-items:center; gap:12px;">
+            <label style="font-size:0.875rem; font-weight:700;">Eingetragen von (Kürzel):</label>
+            <input type="text" id="po_shortcut_sticky" value="${stickyShortcut}" 
+                style="width:80px; padding:6px; border:1px solid var(--border-color); border-radius:4px; text-align:center; font-weight:700;" 
+                oninput="localStorage.setItem('po_shortcut', this.value.toUpperCase()); this.value = this.value.toUpperCase();"
+                placeholder="--">
+        </div>`;
 
         if (pending.length > 0) {
             html += '<div style="overflow-x: auto; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 24px;">';
@@ -1284,10 +1292,14 @@ class App {
         if (!this.state.__PO_DONE__) this.state.__PO_DONE__ = {};
         const req = (this.state.__REQUESTS__ || []).find(r => r.id === reqId);
         if (checked) {
-            const initial = localStorage.getItem('po_shortcut') || '';
-            const shortcut = prompt('Kürzel der eintragenden Person:', initial);
-            if (!shortcut) return this.renderPOView();
-            localStorage.setItem('po_shortcut', shortcut);
+            let shortcut = document.getElementById('po_shortcut_sticky')?.value;
+            if (!shortcut) {
+                const initial = localStorage.getItem('po_shortcut') || '';
+                shortcut = prompt('Kürzel der eintragenden Person:', initial);
+                if (!shortcut) return this.renderPOView();
+                localStorage.setItem('po_shortcut', shortcut.toUpperCase());
+                if (document.getElementById('po_shortcut_sticky')) document.getElementById('po_shortcut_sticky').value = shortcut.toUpperCase();
+            }
             
             this.state.__PO_DONE__[reqId] = true;
             if (req) {
