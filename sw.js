@@ -1,9 +1,11 @@
-const CACHE_NAME = 'urlaubsplaner-v21';
+const CACHE_NAME = 'urlaubsplaner-v22';
 const ASSETS = [
   'index.html',
   'assistenz.html',
   'style.css',
   'shared.js',
+  'pdfTemplate.js',
+  'pdfTemplateDienstreise.js',
   'manifest-oa.json',
   'manifest-ass.json',
   'icon-192.png',
