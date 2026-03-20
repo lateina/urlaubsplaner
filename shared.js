@@ -403,7 +403,7 @@ class App {
         const uDisp = document.getElementById('currentUserDisplay');
         if (uDisp) {
             let name = id;
-            if (id === 'admin') name = 'Administrator';
+            if (id === 'admin') name = 'Leitender OA Wagner';
             else if (id === 'sekretariat') name = 'Sekretariat';
             else {
                 const emp = CONFIG.employees.find(e => e.id === id);
@@ -832,7 +832,16 @@ class App {
         if (vertreterResults) { vertreterResults.innerHTML = ''; vertreterResults.style.display = 'none'; }
         const titleEl = document.querySelector('#addModal h2');
         if (titleEl) titleEl.textContent = 'Abwesenheit eintragen';
+        this._updateKIIIHint();
         if (addModal) addModal.style.display = 'flex';
+    }
+
+    _updateKIIIHint() {
+        const type = document.getElementById('modalType')?.value;
+        const hint = document.getElementById('kiii-hint');
+        if (hint) {
+            hint.style.display = (type === 'D' || type === 'F') ? 'block' : 'none';
+        }
     }
 
     _setupVertreterSearch(empId) {
@@ -922,6 +931,7 @@ class App {
         if (titleEl) titleEl.textContent = 'Abwesenheitswunsch';
         this._requestModalEmpId = empId;
         this.onModalDateChange();
+        this._updateKIIIHint();
         modal.style.display = 'flex';
     }
 
@@ -1172,7 +1182,7 @@ class App {
         let name = cu;
         const emp = CONFIG.employees.find(e => e.id === cu);
         if (emp) name = emp.name;
-        else if (cu === 'admin') name = 'Admin';
+        else if (cu === 'admin') name = 'Leitender OA Wagner';
         else if (cu === 'sekretariat') name = 'Sekretariat';
 
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -1365,13 +1375,14 @@ class App {
                         <div style="margin-top: 12px;">
                             ${this._fmtStamp(req.stamps?.submitted, 'Antrag')}
                             ${this._fmtStamp(req.stamps?.vertreter, 'Zustimmung Vertreter')}
-                            ${req.status === 'approved' ? this._fmtStamp(req.stamps?.admin, 'Genehmigung Admin') : ''}
+                            ${req.status === 'approved' ? this._fmtStamp(req.stamps?.admin, 'Genehmigung Leitender OA Wagner') : ''}
                             ${req.status === 'rejected' ? this._fmtStamp(req.stamps?.rejected, 'Ablehnung') : ''}
                         </div>
                         ${req.rejectionNote ? `<div style="margin-top: 8px; color: var(--danger-color); font-size: 0.8rem; font-weight: 600;">Grund: ${req.rejectionNote}</div>` : ''}
                     </div>
                     <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 12px;">
                         <span class="${statusClass}" style="background: var(--bg-color); color: var(--text-main); font-size: 0.7rem;">${statusLabel[req.status]}</span>
+                        ${req.status === 'approved' ? `<button onclick="app.generateAndDownloadPDF('${req.id}')" style="background:#dc2626; color:white; border:none; padding:8px 12px; margin-top: 8px; font-weight: bold; border-radius:4px; width:100%;">📄 PDF laden</button>` : ''}
                         ${actions}
                     </div>
                 </div>`;
@@ -1413,6 +1424,15 @@ class App {
                     html += renderCard(req, actions);
                 });
             }
+            
+            const vertreterHistory = requests.filter(r => r.vertreterId === cu && r.status !== 'pending_vertreter');
+            if (vertreterHistory.length > 0) {
+                html += '<h3 style="margin: 32px 0 16px; font-size: 1rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Vertretungs-Verlauf</h3>';
+                vertreterHistory.sort((a,b) => b.id.localeCompare(a.id)).slice(0, 20).forEach(req => {
+                    html += renderCard(req);
+                });
+            }
+
             const ownReqs = requests.filter(r => r.empId === cu);
             if (ownReqs.length > 0) {
                 html += '<h3 style="margin: 32px 0 16px; font-size: 1rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Meine Anfragen</h3>';
@@ -1420,7 +1440,7 @@ class App {
                     html += renderCard(req);
                 });
             }
-            if (vertretenReqs.length === 0 && ownReqs.length === 0) {
+            if (vertretenReqs.length === 0 && ownReqs.length === 0 && vertreterHistory.length === 0) {
                 html += '<p style="color:var(--text-secondary); text-align:center; padding: 40px 0;">Keine Anfragen vorhanden.</p>';
             }
         }
@@ -1493,6 +1513,113 @@ class App {
     getEmpName(id) {
         const emp = CONFIG.employees.find(e => e.id === id);
         return emp ? emp.name : id;
+    }
+
+    async generateAndDownloadPDF(reqId) {
+        try {
+            const req = (this.state.__REQUESTS__ || []).find(r => r.id === reqId);
+            if (!req) return alert('Antrag nicht gefunden.');
+            const emp = CONFIG.employees.find(e => e.id === req.empId);
+            
+            const isUrlaub = req.type === 'U';
+            if (typeof PDF_TEMPLATE_B64 === 'undefined' || typeof PDF_TEMPLATE_DIENST_B64 === 'undefined') {
+                return alert('PDF-Vorlagen nicht geladen.');
+            }
+            const { PDFDocument, rgb } = window.PDFLib;
+            const pdfDoc = await PDFDocument.load(isUrlaub ? PDF_TEMPLATE_B64 : PDF_TEMPLATE_DIENST_B64);
+            const form = pdfDoc.getForm();
+            
+            const formatD = (ds) => ds.split('-').reverse().join('.');
+            const startStr = formatD(req.dates[0]);
+            const endStr = formatD(req.dates[req.dates.length - 1]);
+            
+            if (isUrlaub) {
+                try { form.getTextField('Text1').setText(emp ? emp.name : req.empId); } catch(e){}
+                try { form.getTextField('AcroFormField_108').setText(emp ? emp.name : req.empId); } catch(e){}
+                try { form.getTextField('AcroFormField_36').setText(startStr); } catch(e){}
+                try { form.getTextField('AcroFormField_38').setText(endStr); } catch(e){}
+                
+                const workDays = req.dates.filter(d => this.isWorkday(d)).length;
+                try { form.getTextField('AcroFormField_40').setText(String(workDays)); } catch(e){}
+                try { form.getTextField('Text1_27').setText('Klinik und Poliklinik für Innere Medizin II'); } catch(e){}
+                try { form.getCheckBox('Kontrollkästchen17').check(); } catch(e){}
+                try { form.getCheckBox('Kontrollkästchen14').check(); } catch(e){}
+            } else {
+                try { form.getTextField('Text1').setText(emp ? emp.name : req.empId); } catch(e){}
+                try { form.getTextField('AcroFormField_174').setText(emp ? emp.name : req.empId); } catch(e){}
+                try { form.getTextField('AcroFormField').setText('Klinik und Poliklinik für Innere Medizin II'); } catch(e){}
+                try { form.getTextField('Text4').setText(startStr); } catch(e){}
+                try { form.getTextField('AcroFormField_93').setText(endStr); } catch(e){}
+                try { form.getTextField('AcroFormField_48').setText(req.text || ''); } catch(e){}
+                
+                if (req.type === 'D') {
+                    try { form.getCheckBox('1065687112').check(); } catch(e){}
+                } else if (req.type === 'F') {
+                    try { form.getCheckBox('1581135616').check(); } catch(e){}
+                }
+            }
+            
+            try {
+                const nameField2 = isUrlaub ? form.getTextField('AcroFormField_108') : form.getTextField('AcroFormField_174');
+                const widgets = nameField2.acroField.getWidgets();
+                if (widgets && widgets.length > 0) {
+                    const rect = widgets[0].getRectangle();
+                    const pages = pdfDoc.getPages();
+                    const firstPage = pages[0];
+                    
+                    const fmtStampText = (stamp, defaultName, label, includeName = true) => {
+                        if (!stamp) return `Digital signiert (Zeitstempel fehlt)`;
+                        const d = new Date(stamp.at || Date.now());
+                        const ds = d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                        const ts = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                        return includeName 
+                            ? `${label}: ${stamp.name || defaultName} am ${ds}, ${ts} Uhr`
+                            : `Digital signiert am ${ds}, ${ts} Uhr`;
+                    };
+                    
+                    const uText = fmtStampText(req.stamps?.submitted, emp ? emp.name : req.empId, 'Beantragt', false);
+                    firstPage.drawText(uText, { x: rect.x + rect.width + 10, y: rect.y, size: 10, color: rgb(0,0,1) }); // blau
+                    
+                    const vText = fmtStampText(req.stamps?.vertreter, req.vertreter || 'Vertreter', 'Zustimmung');
+                    firstPage.drawText(vText, { x: rect.x, y: rect.y - 18, size: 10, color: rgb(1,0,0) });
+                    
+                    if (isUrlaub) {
+                        const aText = fmtStampText(req.stamps?.admin, 'Wagner', 'Genehmigung');
+                        firstPage.drawText(aText, { x: rect.x, y: rect.y - 75, size: 10, color: rgb(1,0,0) });
+                    }
+                }
+            } catch(e) { console.warn("Failed to draw signatures", e); }
+            
+            // "Druckdatum" und QM-Kopfzeile überdecken
+            try {
+                const pages = pdfDoc.getPages();
+                if (pages.length > 0) {
+                    const firstPage = pages[0];
+                    const { width, height } = firstPage.getSize();
+                    firstPage.drawRectangle({
+                        x: 0,
+                        y: height - 28, // ca. 1 cm = 28pt
+                        width: width,
+                        height: 28,
+                        color: rgb(1, 1, 1)
+                    });
+                }
+            } catch (e) { console.warn("Failed to hide header", e); }
+
+            form.flatten();
+            
+            const pdfBytesSaved = await pdfDoc.save();
+            const blob = new Blob([pdfBytesSaved], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Antrag_${emp ? emp.name.replace(/\\s+/g, '_') : req.empId}_${startStr}.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error('PDF Error:', e);
+            alert('Fehler beim Generieren des PDFs. Siehe Konsole.');
+        }
     }
 
     exportData() {

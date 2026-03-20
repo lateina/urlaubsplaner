@@ -8,6 +8,9 @@
     <link rel="manifest" href="manifest-oa.json">
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="pdfTemplate.js"></script>
+    <script src="pdfTemplateDienstreise.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -222,12 +225,15 @@
                 </div>
                 <div class="form-group">
                     <label>Typ</label>
-                    <select id="modalType">
+                    <select id="modalType" onchange="app._updateKIIIHint()">
                         <option value="U">Urlaub (U)</option>
                         <option value="D">Dienstreise (D)</option>
                         <option value="F">Fortbildung (F)</option>
                         <option value="S">Sonstiges (S)</option>
                     </select>
+                </div>
+                <div id="kiii-hint" style="display:none; margin:-10px 0 15px; padding:12px; background:var(--primary-light); color:var(--primary-color); border-radius: var(--radius-md); font-size:0.85rem; border: 1px solid var(--border-color); font-weight: 500;">
+                    ℹ️ Für Dienstreisen und Fortbildungen ist zusätzlich ein Antrag an das <strong>Referat KIII/1</strong> erforderlich.
                 </div>
                 <div class="form-group">
                     <label>Beschreibung (optional)</label>
