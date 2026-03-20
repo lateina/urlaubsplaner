@@ -283,7 +283,17 @@ class App {
             { id: 'sekretariat', name: 'Sekretariat' }
         ];
         if (CONFIG.employees && CONFIG.employees.length > 0) {
-            const others = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && (e.active !== false || e.pin)).map(e => ({ id: e.id, name: e.name }));
+            const others = CONFIG.employees
+                .filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && (e.active !== false || e.pin))
+                .map(e => ({ id: e.id, name: e.name }));
+            
+            // Sort by last name
+            others.sort((a, b) => {
+                const lastA = (a.name || '').split(' ').pop();
+                const lastB = (b.name || '').split(' ').pop();
+                return lastA.localeCompare(lastB, 'de');
+            });
+            
             this._loginOptions.push(...others);
         }
         if (CONFIG.additionalLoginOptions) {
