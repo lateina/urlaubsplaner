@@ -67,6 +67,8 @@ class App {
         this._touchStart = null;
         this._isScroll = false;
         this._longPressTimer = null;
+        this._isPanning = false;
+        this._panStart = null;
         this.currentRequestsSubTab = 'meine';
 
         this.dates = this.generateDates();
@@ -79,11 +81,15 @@ class App {
         if (calendar) {
             calendar.addEventListener('scroll', () => this._scheduleVirtualUpdate(), { passive: true });
             calendar.addEventListener('mousedown', ev => {
-                if (ev.button !== 0) return;
+                if (ev.button !== 0 || ev.altKey) return;
                 const cell = ev.target.closest('.day-cell[data-eid]');
                 if (!cell) return;
-                ev.preventDefault();
-                this.handleMouseDown(cell.dataset.eid, cell.dataset.date);
+                
+                // Only start vacation drag if user has permission (silent check to avoid early alert)
+                if (this.checkPermission(cell.dataset.eid, true)) {
+                    ev.preventDefault();
+                    this.handleMouseDown(cell.dataset.eid, cell.dataset.date);
+                }
             }, { passive: false });
             calendar.addEventListener('mouseover', ev => {
                 const cell = ev.target.closest('.day-cell[data-eid]');
@@ -135,6 +141,69 @@ class App {
                 this.stopDrag();
                 this._touchStart = null;
             }, { passive: true });
+
+            // Wheel-to-Horizontal-Scroll on Headers
+            calendar.addEventListener('wheel', ev => {
+                if (ev.shiftKey) return; 
+                const header = ev.target.closest('.month-header, .day-header');
+                if (header) {
+                    ev.preventDefault();
+                    calendar.scrollLeft += ev.deltaY;
+                }
+            }, { passive: false });
+
+            // Panning Logic
+            calendar.addEventListener('mousedown', ev => {
+                const header = ev.target.closest('.month-header, .day-header');
+                const cell = ev.target.closest('.day-cell[data-eid]');
+                const eid = cell ? cell.dataset.eid : null;
+                
+                const isMiddle = ev.button === 1;
+                const isAlt = ev.altKey;
+                const canEditThisCell = eid ? this.checkPermission(eid, true) : false;
+                
+                // Pan if: middle button, alt+left, dragging header, or if clicking a cell WE CANNOT EDIT (regular user other cell)
+                if (isMiddle || (isAlt && ev.button === 0) || header || (!canEditThisCell && ev.button === 0)) {
+                    // Don't pan if we clicked a button or interactive element
+                    if (ev.target.closest('button, select, input')) return;
+                    
+                    this._isPanning = true;
+                    this._panStart = { 
+                        x: ev.clientX, 
+                        y: ev.clientY, 
+                        scrollLeft: calendar.scrollLeft, 
+                        scrollTop: calendar.scrollTop 
+                    };
+                    calendar.style.cursor = 'grabbing';
+                    if (isMiddle || isAlt || header || !canEditThisCell) ev.preventDefault();
+                }
+            });
+
+            window.addEventListener('mousemove', ev => {
+                if (!this._isPanning || !this._panStart) return;
+                
+                // Safety: If no buttons are pressed, stop panning
+                if (ev.buttons === 0) {
+                    this._isPanning = false;
+                    this._panStart = null;
+                    calendar.style.cursor = '';
+                    return;
+                }
+
+                ev.preventDefault();
+                const dx = ev.clientX - this._panStart.x;
+                const dy = ev.clientY - this._panStart.y;
+                calendar.scrollLeft = this._panStart.scrollLeft - dx;
+                calendar.scrollTop = this._panStart.scrollTop - dy;
+            }, { passive: false });
+
+            window.addEventListener('mouseup', () => {
+                if (this._isPanning) {
+                    this._isPanning = false;
+                    this._panStart = null;
+                    calendar.style.cursor = '';
+                }
+            });
         }
 
         this.stopDrag = this.stopDrag.bind(this);
@@ -258,6 +327,8 @@ class App {
         const yNav = document.getElementById('yearNav'), mNav = document.getElementById('monthNav');
         if (yNav) {
             yNav.innerHTML = '';
+            
+            // Year Buttons first
             CONFIG.years.forEach(y => {
                 const b = document.createElement('button');
                 b.innerText = y;
@@ -265,6 +336,30 @@ class App {
                 b.onclick = () => this.setYear(y);
                 yNav.appendChild(b);
             });
+
+            // Arrow Group (positioned to the right with margin)
+            const arrowGroup = document.createElement('div');
+            arrowGroup.style.display = 'inline-flex';
+            arrowGroup.style.gap = '8px';
+            arrowGroup.style.marginLeft = '32px';
+            arrowGroup.style.verticalAlign = 'middle';
+            arrowGroup.style.alignItems = 'center';
+
+            const prevBtn = document.createElement('button');
+            prevBtn.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H4M10 18l-6-6 6-6"/></svg>';
+            prevBtn.className = 'nav-arrow-btn';
+            prevBtn.title = 'Nach links schieben';
+            prevBtn.onclick = () => this.scrollByAmount(-400);
+
+            const nextBtn = document.createElement('button');
+            nextBtn.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M14 6l6 6-6 6"/></svg>';
+            nextBtn.className = 'nav-arrow-btn';
+            nextBtn.title = 'Nach rechts schieben';
+            nextBtn.onclick = () => this.scrollByAmount(400);
+
+            arrowGroup.appendChild(prevBtn);
+            arrowGroup.appendChild(nextBtn);
+            yNav.appendChild(arrowGroup);
         }
         if (mNav) {
             mNav.innerHTML = '';
@@ -490,9 +585,9 @@ class App {
         }
     }
 
-    checkPermission(eid) {
+    checkPermission(eid, silent = false) {
         if (this.currentUser === 'admin' || this.currentUser === 'sekretariat' || (CONFIG.isSprecher && this.currentUser === CONFIG.isSprecher) || eid === this.currentUser) return true;
-        alert('Stopp! Du kannst Abwesenheiten nur in deiner eigenen Zeile eintragen oder bearbeiten.');
+        if (!silent) alert('Stopp! Du kannst Abwesenheiten nur in deiner eigenen Zeile eintragen oder bearbeiten.');
         return false;
     }
 
@@ -779,6 +874,23 @@ class App {
         this.currentYear = y;
         this.scrollToMonth(0, true);
         this.updateVacationBadges();
+    }
+
+    scrollToToday() {
+        const todayStr = this.formatDate(new Date());
+        const cell = document.querySelector(`.day-header[data-date="${todayStr}"]`);
+        const c = document.getElementById('calendar');
+        if (cell && c) {
+            const offset = document.querySelector('.sticky-corner').offsetWidth;
+            c.scrollTo({ left: cell.offsetLeft - offset, behavior: 'smooth' });
+        }
+    }
+
+    scrollByAmount(amount) {
+        const c = document.getElementById('calendar');
+        if (c) {
+            c.scrollBy({ left: amount, behavior: 'smooth' });
+        }
     }
 
     updateNavHighlighting() {

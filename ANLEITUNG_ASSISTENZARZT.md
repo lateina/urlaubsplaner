@@ -24,6 +24,18 @@ Um deinen Urlaub fest im System zu haben, sind zwei Schritte notwendig:
 
 ---
 
+## 📅 3. Im Kalender navigieren
+Der Kalender bietet nun mehrere intuitive Möglichkeiten zur Navigation:
+![Navigation Übersicht](manual_assets/navigation.png)
+*   **Mausrad-Scrollen:** Fahre mit der Maus über die **Monats- oder Tages-Kopfzeile**, um direkt horizontal zu scrollen (ohne Shift-Taste).
+*   **Greifen & Schieben (Panning):** 
+    - Klicke und ziehe in der **Kopfzeile**, um den Kalender zu verschieben.
+    - Halte die **mittlere Maustaste** (Mausrad-Klick) oder **Alt + Linksklick** gedrückt, um den Kalender an jeder Stelle zu verschieben.
+*   **Pfeil-Navigation:** Nutze die blauen Pfeile (**←** und **→**) neben der Jahresanzeige für schnelle Schritte.
+*   **"Heute"-Button:** Mit einem Klick auf **"Heute"** in der Toolbar springst du sofort zum aktuellen Datum.
+
+---
+
 ## 🤝 3. Selbst als Vertreter zustimmen
 Wenn ein Kollege dich als Vertreter anfragt:
 1. Gehe zum Tab **"Anfragen"**.
@@ -49,10 +61,12 @@ Im Tab **"Anfragen"** unter **"Meine Anfragen"** siehst du den aktuellen Verlauf
 
 ---
 
-## 📱 6. PWA-Installation (Smartphone)
+## 📱 7. PWA-Installation (Smartphone/Desktop)
 Installiere den Planer wie eine App für Offline-Zugriff und Schnelligkeit:
-*   **iOS:** Teilen-Icon (Viereck mit Pfeil) ➡️ `Zum Home-Bildschirm`.
-*   **Android:** Drei Punkte oben rechts ➡️ `App installieren`.
+![PWA Banner](manual_assets/pwa_banner.png)
+*   **Auto-Banner:** Achte auf das Installations-Banner am **oberen Bildschirmrand**, das dich direkt zur Installation einlädt.
+*   **Manuell iOS:** Teilen-Icon (Viereck mit Pfeil) ➡️ `Zum Home-Bildschirm`.
+*   **Manuell Android:** Drei Punkte oben rechts ➡️ `App installieren`.
 
 ---
 *Stand: März 2026*

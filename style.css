@@ -173,6 +173,33 @@ button {
     gap: 8px;
 }
 
+.nav-arrow-btn {
+    background: var(--primary-light) !important;
+    color: var(--primary-color) !important;
+    border: 1px solid var(--border-color) !important;
+    padding: 0 16px !important; /* No vertical padding, use height */
+    height: 36px !important;    /* Match standard button height exactly */
+    border-radius: var(--radius-md) !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    vertical-align: middle;
+}
+
+.nav-arrow-btn:hover {
+    background: var(--primary-color) !important;
+    color: white !important;
+    transform: scale(1.1);
+    box-shadow: var(--shadow-md);
+}
+
+#btnToday:hover {
+    background: var(--primary-color) !important;
+    color: white !important;
+    box-shadow: var(--shadow-md);
+}
+
 button:active {
     transform: scale(0.98);
 }
@@ -748,4 +775,69 @@ body.pre-login .bottom-nav {
     border-color: var(--primary-color);
     background: var(--surface-color);
     box-shadow: 0 0 0 4px var(--primary-light);
+}
+
+/* PWA Install Banner */
+.pwa-banner {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 40px);
+    max-width: 400px;
+    background: var(--surface-glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 16px;
+    z-index: 2100; /* Above login modal (1000) */
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    animation: slideDown 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideDown {
+    from { transform: translate(-50%, -100%); opacity: 0; }
+    to { transform: translate(-50%, 0); opacity: 1; }
+}
+
+.pwa-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.pwa-content img {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+}
+
+.pwa-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.pwa-text strong {
+    font-size: 0.875rem;
+    color: var(--text-main);
+}
+
+.pwa-text span {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.pwa-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.pwa-actions button {
+    flex: 1;
+    padding: 8px;
+    font-size: 0.8125rem;
 }

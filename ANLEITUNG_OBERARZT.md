@@ -16,9 +16,13 @@ Der Zugang ist einfach und sicher:
 ---
 
 ## 📅 2. Im Kalender navigieren
-*   **Schnellsprung:** Nutze die Jahres-Buttons (2026-2028) und Monats-Buttons am oberen Rand.
-*   **Orientierung:** Deine eigene Zeile ist **hellblau** markiert.
-*   **Feiertage:** Wochenenden sind grau, bayerische Feiertage rot markiert.
+![Navigation Übersicht](manual_assets/navigation.png)
+*   **Zeit-Navigation:** Nutze die Jahres-Buttons (2026-2028) und Monats-Buttons am oberen Rand.
+*   **Pfeil-Logik:** Die blauen Pfeile (**←** und **→**) neben den Jahren erlauben schnelle Schritte nach links oder rechts.
+*   **Mausrad-Komfort:** Fährst du mit der Maus über die **Kopfzeilen** (Monat/Tag), kannst du mit dem Mausrad direkt horizontal scrollen.
+*   **Greifen & Schieben:** Du kannst den Kalender verschieben, indem du in die Kopfzeile klickst und ziehst, oder an jeder Stelle die **mittlere Maustaste** oder **Alt + Linksklick** benutzt.
+*   **Heute-Button:** Der Button **"Heute"** in der Toolbar bringt dich sofort zum aktuellen Tag zurück.
+*   **Orientierung:** Deine eigene Zeile ist **hellblau** markiert; Wochenenden grau und bayerische Feiertage rot.
 
 ---
 
@@ -54,9 +58,10 @@ Im Tab **"Anfragen"** kannst du den Fortschritt deiner Wünsche verfolgen:
 ---
 
 ## 📱 6. Als App installieren
-Du kannst den Planer für den Schnellzugriff auf deinem Smartphone speichern:
-1. **iOS (Safari):** `Teilen` ➡️ `Zum Home-Bildschirm`.
-2. **Android (Chrome):** `Drei Punkte` ➡️ `App installieren`.
+![PWA Banner](manual_assets/pwa_banner.png)
+1.  **Auto-Installation:** Nutze das Banner am **oberen Bildschirmrand** für eine direkte Installation.
+2.  **iOS (Safari):** `Teilen` ➡️ `Zum Home-Bildschirm`.
+3.  **Android (Chrome):** `Drei Punkte` ➡️ `App installieren`.
 
 ---
 *Stand: März 2026*
