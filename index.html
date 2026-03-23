@@ -403,8 +403,11 @@
                             if (existingIdx === -1) {
                                 CONFIG.employees.push(f);
                             } else {
-                                // Update existing (even if not external, external data might be newer)
                                 Object.assign(CONFIG.employees[existingIdx], f);
+                            }
+                            // Sync state from assistant bin
+                            if (ext.state && ext.state[f.id]) {
+                                this.state[f.id] = ext.state[f.id];
                             }
                         });
                         this.sortEmployees();
@@ -414,6 +417,37 @@
                     }
                 }
                 return data;
+            }
+
+            async saveData() {
+                // 1. Save to local OA bin
+                const result = await super.saveData();
+
+                // 2. Sync FOA states back to Assistant bin if available
+                if (result && !result.error && CONFIG.assBinId) {
+                    try {
+                        const ext = await DataService.loadExternal(CONFIG.assBinId);
+                        if (ext && !ext.error) {
+                            if (!ext.state) ext.state = {};
+                            const foas = CONFIG.employees.filter(e => e.isExternal);
+                            let changed = false;
+                            foas.forEach(f => {
+                                // Only update if state has changed or exists in local
+                                if (JSON.stringify(ext.state[f.id]) !== JSON.stringify(this.state[f.id])) {
+                                    ext.state[f.id] = this.state[f.id];
+                                    changed = true;
+                                }
+                            });
+                            if (changed) {
+                                await DataService.save(CONFIG.assBinId, ext);
+                                console.log('Successfully synchronized FOA states to Assistant bin');
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Failed to synchronize FOA states:', err);
+                    }
+                }
+                return result;
             }
 
             validateCoverage(d) {
