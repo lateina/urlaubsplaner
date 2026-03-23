@@ -805,7 +805,14 @@ class App {
                 const d = this.dates[ci];
                 if (!d) continue;
                 if (document.getElementById(`cell-${e.id}-${d.dateStr}`)) continue;
-                const s = this.state[e.id]?.[d.dateStr];
+                const sLocal = this.state[e.id]?.[d.dateStr];
+                let s = sLocal;
+                let isExternalSource = false;
+                if (!s && e.isExternal && this.externalData?.state) {
+                    s = this.externalData.state[e.id]?.[d.dateStr];
+                    if (s) isExternalSource = true;
+                }
+
                 const cell = document.createElement('div');
                 cell.className = `cell day-cell${d.isWeekend ? ' weekend' : ''}${d.holiday ? ' holiday' : ''}${d.isSchoolHoliday ? ' school-holiday' : ''}`;
                 cell.id = `cell-${e.id}-${d.dateStr}`;
@@ -816,6 +823,7 @@ class App {
                 if (s) {
                     const t = s.type || s;
                     cell.classList.add(t === 'U' || t === 'V' ? 'status-vacation' : t === 'D' ? 'status-trip' : t === 'F' ? 'status-training' : 'status-custom');
+                    if (isExternalSource) cell.style.opacity = '0.7'; // Visual hint for imported data
                     if (s.text) {
                         const span = document.createElement('span');
                         span.className = 'cell-text';
@@ -1097,6 +1105,11 @@ class App {
                 
                 // Special rule: Herzkatheter can always represent Ambulanz
                 if (!canRepresent && reqGrps.includes('Ambulanz') && eGrps.includes('Herzkatheter')) {
+                    canRepresent = true;
+                }
+
+                // Special rule: FOAs can always be represented by local assistants
+                if (!canRepresent && reqEmp?.isExternal && !e.isExternal) {
                     canRepresent = true;
                 }
                 
@@ -1806,10 +1819,21 @@ class App {
 
     countVacationDays(empId) {
         const year = this.currentYear || CONFIG.years[0];
+        let total = 0;
         const entries = this.state[empId] || {};
-        return Object.entries(entries).filter(([d, v]) =>
-            d.startsWith(String(year)) && v && v.type === 'U' && this.isWorkday(d)
+        const isVac = v => (v === 'U' || v === 'V' || (v && (v.type === 'U' || v.type === 'V')));
+        
+        total += Object.entries(entries).filter(([d, v]) =>
+            d.startsWith(String(year)) && isVac(v) && this.isWorkday(d)
         ).length;
+
+        const emp = CONFIG.employees.find(e => e.id === empId);
+        if (emp?.isExternal && this.externalData?.state?.[empId]) {
+            total += Object.entries(this.externalData.state[empId]).filter(([d, v]) =>
+                d.startsWith(String(year)) && isVac(v) && this.isWorkday(d) && !entries[d]
+            ).length;
+        }
+        return total;
     }
 
     _renderVacBadge(empId, el) {
