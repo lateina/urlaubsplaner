@@ -385,14 +385,17 @@
             async reloadData() {
                 const data = await super.reloadData();
                 
-                // Ensure "Funktionsoberarzt" is in the group list even if database was older
-                if (CONFIG.skills && !CONFIG.skills.includes('Funktionsoberarzt')) {
-                    const idx = CONFIG.skills.indexOf('Kein Vertreter nötig');
-                    if (idx !== -1) CONFIG.skills.splice(idx, 0, 'Funktionsoberarzt');
-                    else CONFIG.skills.push('Funktionsoberarzt');
-                    
-                    if (CONFIG.groupColors && !CONFIG.groupColors['Funktionsoberarzt']) {
-                        CONFIG.groupColors['Funktionsoberarzt'] = '#475569';
+                // FORCE: "Funktionsoberarzt" must be in the group list
+                if (CONFIG.skills) {
+                    const normalized = CONFIG.skills.map(s => s ? s.toLowerCase() : '');
+                    if (!normalized.includes('funktionsoberarzt')) {
+                        const idx = CONFIG.skills.indexOf('Kein Vertreter nötig');
+                        if (idx !== -1) CONFIG.skills.splice(idx, 0, 'Funktionsoberarzt');
+                        else CONFIG.skills.push('Funktionsoberarzt');
+                        
+                        if (CONFIG.groupColors && !CONFIG.groupColors['Funktionsoberarzt']) {
+                            CONFIG.groupColors['Funktionsoberarzt'] = '#475569';
+                        }
                     }
                 }
 
@@ -402,19 +405,16 @@
                         this.externalData = ext;
                         const foas = (ext.employees || []).filter(e => {
                             const grps = Array.isArray(e.groups) ? e.groups : (e.group ? [e.group] : []);
-                            // Case-insensitive check to be safe
                             return grps.some(g => g && g.toLowerCase() === 'funktionsoberarzt');
                         });
                         foas.forEach(f => {
                             f.isExternal = true;
-                            if (!CONFIG.employees.find(e => e.id === f.id)) {
+                            const existing = CONFIG.employees.find(e => e.id === f.id);
+                            if (!existing) {
                                 CONFIG.employees.push(f);
-                            } else {
-                                // Update existing external entry with potential new PIN/Email from OA bin
-                                const existingIdx = CONFIG.employees.findIndex(e => e.id === f.id);
-                                if (CONFIG.employees[existingIdx].isExternal) {
-                                    CONFIG.employees[existingIdx] = { ...f, isExternal: true };
-                                }
+                            } else if (existing.isExternal) {
+                                // Update dynamic data (PIN, Email) from OA bin
+                                Object.assign(existing, f);
                             }
                         });
                         this.sortEmployees();

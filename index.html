@@ -388,15 +388,19 @@
             async reloadData() {
                 const data = await super.reloadData();
                 
-                // Ensure "Funktionsoberarzt" is in the group list even if database was older
-                if (CONFIG.groupOrder && !CONFIG.groupOrder.includes('Funktionsoberarzt')) {
-                    // Insert before "Kein Vertreter nötig" or at the end
-                    const idx = CONFIG.groupOrder.indexOf('Kein Vertreter nötig');
-                    if (idx !== -1) CONFIG.groupOrder.splice(idx, 0, 'Funktionsoberarzt');
-                    else CONFIG.groupOrder.push('Funktionsoberarzt');
-                    
-                    if (CONFIG.groupColors && !CONFIG.groupColors['Funktionsoberarzt']) {
-                        CONFIG.groupColors['Funktionsoberarzt'] = '#475569';
+                // FORCE: "Funktionsoberarzt" must be in the group list
+                if (CONFIG.groupOrder) {
+                    const normalizedGroups = CONFIG.groupOrder.map(g => g ? g.toLowerCase() : '');
+                    if (!normalizedGroups.includes('funktionsoberarzt')) {
+                        const idx = CONFIG.groupOrder.indexOf('Kein Vertreter nötig');
+                        if (idx !== -1) CONFIG.groupOrder.splice(idx, 0, 'Funktionsoberarzt');
+                        else CONFIG.groupOrder.push('Funktionsoberarzt');
+                        
+                        if (CONFIG.groupColors && !CONFIG.groupColors['Funktionsoberarzt']) {
+                            CONFIG.groupColors['Funktionsoberarzt'] = '#475569';
+                        }
+                        // Refresh UI since config changed after super.reloadData()
+                        this.populateFilterGroups();
                     }
                 }
 
@@ -563,6 +567,18 @@
 
             renderAdminTable() {
                 const tbody = document.getElementById('adminEmployeeTable'); tbody.innerHTML = '';
+                
+                // Visual Hint for FOA
+                const hint = document.createElement('div');
+                hint.style.cssText = 'padding: 10px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem; border-left: 4px solid var(--primary-color);';
+                hint.innerHTML = '<strong>Hinweis:</strong> Um einen Oberarzt als <strong>Funktionsoberarzt</strong> für die Assistenten-Vertretung freizuschalten, aktivieren Sie einfach die entsprechende Checkbox in der Spalte "Gruppen".';
+                tbody.before ? tbody.before(hint) : null; 
+                // Wait, tbody.before doesn't work if hint exists already. Let's do it cleaner.
+                const existingHint = document.getElementById('foaHint');
+                if (existingHint) existingHint.remove();
+                hint.id = 'foaHint';
+                tbody.parentNode.insertBefore(hint, tbody.closest('table'));
+
                 const sorted = [...CONFIG.employees].sort((a, b) => (a.name || '').split(' ').pop().localeCompare((b.name || '').split(' ').pop(), 'de'));
                 sorted.forEach(emp => { if (emp.id !== 'sekretariat' && emp.id !== 'admin') this.createEmployeeRow(tbody, emp); });
             }
