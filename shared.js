@@ -581,14 +581,7 @@ class App {
     onAfterLogin(id) {
         const uDisp = document.getElementById('currentUserDisplay');
         if (uDisp) {
-            let name = id;
-            if (id === 'admin') name = 'Leitender OA Wagner';
-            else if (id === 'sekretariat') name = 'Sekretariat';
-            else {
-                const emp = CONFIG.employees.find(e => e.id === id);
-                if (emp) name = emp.name;
-            }
-            uDisp.innerText = 'Eingeloggt als: ' + name;
+            uDisp.innerText = 'Eingeloggt als: ' + this.getEmpName(id);
         }
 
         const isAdmin = (id === 'admin' || id === 'sekretariat' || (CONFIG.isSprecher && id === CONFIG.isSprecher));
@@ -1457,6 +1450,21 @@ class App {
         req.status = 'rejected';
         req.rejectedBy = by;
         req.rejectionNote = note || null;
+        if (!req.stamps) req.stamps = {};
+        req.stamps.rejected = this.makeStamp();
+        this.saveState();
+        this.renderRequestsTab();
+        this.updateRequestsBadge();
+    }
+
+    deleteRequest(reqId) {
+        if (!this.state.__REQUESTS__) return;
+        const idx = this.state.__REQUESTS__.findIndex(r => r.id === reqId);
+        if (idx === -1) return;
+        
+        this.state.__REQUESTS__.splice(idx, 1);
+        this.saveState();
+        this.render();
         this.renderRequestsTab();
         this.updateRequestsBadge();
     }
@@ -1482,11 +1490,7 @@ class App {
 
     makeStamp() {
         const cu = this.currentUser;
-        let name = cu;
-        const emp = CONFIG.employees.find(e => e.id === cu);
-        if (emp) name = emp.name;
-        else if (cu === 'admin') name = 'Leitender OA Wagner';
-        else if (cu === 'sekretariat') name = 'Sekretariat';
+        const name = this.getEmpName(cu);
 
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         return {
@@ -1770,6 +1774,7 @@ class App {
                     <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-start; margin-top: 8px; flex-wrap: wrap;">
                         ${actions}
                         ${req.status === 'approved' ? `<button onclick="app.generateAndDownloadPDF('${req.id}')" style="background:#dc2626; color:white; border:none; padding:8px 16px; font-weight: bold; border-radius:6px; width:auto; font-size: 0.85rem;">📄 PDF laden</button>` : ''}
+                        ${(this.currentUser === 'admin' || (CONFIG.isSprecher && this.currentUser === CONFIG.isSprecher)) ? `<button onclick="if(confirm('Antrag wirklich unwiderruflich löschen?')) app.deleteRequest('${req.id}')" style="background:none; border:none; color:var(--danger-color); cursor:pointer; font-size: 0.75rem; padding: 4px; border-radius: 4px; margin-left: auto; font-weight: 700;">🗑️ Löschen</button>` : ''}
                     </div>
                 </div>`;
         };
@@ -1978,6 +1983,11 @@ class App {
     }
 
     getEmpName(id) {
+        if (!id) return '';
+        if (id === 'admin') return 'Leitender OA Wagner';
+        if (id === 'sekretariat') return 'Sekretariat';
+        if (CONFIG.isSprecher && id === CONFIG.isSprecher) return 'Assistentensprecher';
+        
         const emp = CONFIG.employees.find(e => e.id === id);
         return emp ? emp.name : id;
     }
