@@ -839,9 +839,6 @@ class App {
                     if (req) {
                         cell.classList.add(req.status === 'pending_vertreter' ? 'status-pending-vertreter' : 'status-pending-admin');
                         cell.dataset.reqId = req.id;
-                        cell.title = req.status === 'pending_vertreter'
-                            ? 'Wunsch eingereicht — wartet auf Vertreter-Zustimmung'
-                            : 'Wunsch eingereicht — wartet auf Admin-Freigabe';
                     }
                 }
                 cell.onmouseenter = (ev) => this.showTip(ev, e.id, d.dateStr);
@@ -1300,7 +1297,7 @@ class App {
         const req = {
             id: 'req_' + Date.now(),
             empId: eid, type, text, vertreter, vertreterId, dates,
-            status: isChef ? 'approved' : (this.needsVertreter(eid) ? 'pending_vertreter' : 'pending_admin'),
+            status: isChef ? 'approved' : ((this.needsVertreter(eid) || vertreterId) ? 'pending_vertreter' : 'pending_admin'),
             createdAt: this.formatDate(new Date()),
             rejectedBy: null, rejectionNote: null,
             stamps: { submitted: this.makeStamp() }
@@ -1426,10 +1423,6 @@ class App {
         req.status = 'rejected';
         req.rejectedBy = by;
         req.rejectionNote = note || null;
-        if (!req.stamps) req.stamps = {};
-        req.stamps.rejected = this.makeStamp();
-        this.saveState();
-        this.render();
         this.renderRequestsTab();
         this.updateRequestsBadge();
     }
@@ -1440,15 +1433,15 @@ class App {
         const requests = this.state.__REQUESTS__ || [];
         const cu = this.currentUser;
         const isAdmin = cu === 'admin' || cu === CONFIG.isSprecher;
-        let count = 0;
-        if (isAdmin) {
-            count = requests.filter(r => r.status === 'pending_admin').length;
-        } else {
-            count = requests.filter(r => r.vertreterId === cu && r.status === 'pending_vertreter').length;
-            const ownPending = requests.filter(r => r.empId === cu && (r.status === 'pending_vertreter' || r.status === 'pending_admin')).length;
-            if (count === 0) count = ownPending;
-        }
-        badge.textContent = count > 0 ? String(count) : '';
+        
+        let vertreterCount = requests.filter(r => r.vertreterId === cu && r.status === 'pending_vertreter').length;
+        let adminCount = isAdmin ? requests.filter(r => r.status === 'pending_admin').length : 0;
+        let ownPending = requests.filter(r => r.empId === cu && (r.status === 'pending_vertreter' || r.status === 'pending_admin')).length;
+
+        let total = vertreterCount + adminCount;
+        if (total === 0 && !isAdmin) total = ownPending;
+
+        badge.textContent = total > 0 ? String(total) : '';
     }
 
     makeStamp() {
@@ -1576,15 +1569,36 @@ class App {
 
     showTip(ev, eid, d) {
         if (this.isDragging) return;
-        const s = eid ? this.state[eid]?.[d] : null;
+        let s = eid ? this.state[eid]?.[d] : null;
         const dObj = this._datesMap.get(d);
         if (!dObj) return;
         const info = [dObj.holiday, dObj.schoolHoliday].filter(x => x).join(' & ');
+        
+        let isPending = false;
+        if (!s && eid) {
+            s = (this.state.__REQUESTS__ || []).find(r => 
+                r.empId === eid && r.dates.includes(d) && (r.status === 'pending_vertreter' || r.status === 'pending_admin')
+            );
+            if (s) isPending = true;
+        }
+
         if (!s && !info) return;
         const TYPE_NAMES = { U: 'Urlaub', D: 'Dienstreise', F: 'Fortbildung', T: 'Sonstiges', S: 'Sonstiges' };
-        let tip = `<strong>${s ? (s.text || TYPE_NAMES[s.type] || s.type) : ''}</strong>`;
-        if (s && s.vertreter) tip += `<br>Vertreter: ${s.vertreter}`;
-        if (info) tip += `<br>${info}`;
+        const reqLabels = { pending_vertreter: 'Vertreter-Zustimmung ausstehend', pending_admin: 'Leitender OA-Freigabe ausstehend' };
+        
+        let tip = '';
+        if (s) {
+            const empName = this.getEmpName(eid);
+            const typeLabel = TYPE_NAMES[s.type] || s.type;
+            tip += `<div style="margin-bottom:4px; font-size:0.85rem"><strong>${empName}</strong></div>`;
+            tip += `<div style="margin-bottom:4px; font-size:0.8rem"><strong>${typeLabel}${s.text ? ': ' + s.text : ''}</strong></div>`;
+            if (isPending) {
+                tip += `<div style="color:var(--warning-color); font-weight:700; font-size:0.7rem; margin-bottom:4px">${reqLabels[s.status]}</div>`;
+            }
+            if (s.vertreter) tip += `<div style="color:var(--primary-color); font-weight:700; font-size:0.75rem">Vertreter: ${s.vertreter}</div>`;
+        }
+        if (info) tip += `<div style="margin-top:4px; font-size:0.7rem; opacity:0.8">${info}</div>`;
+        
         this.showSimpleTip(ev, tip, true);
     }
 
@@ -1655,8 +1669,8 @@ class App {
 
         const typeLabel = { U: 'Urlaub', D: 'Dienstreise', F: 'Fortbildung', T: 'Sonstiges', S: 'Sonstiges' };
         const statusLabel = {
-            pending_vertreter: '⏳ Vertreter-Zustimmung',
-            pending_admin: '⏳ Admin-Freigabe',
+            pending_vertreter: 'Vertreter-Zustimmung ausstehend',
+            pending_admin: 'Leitender OA-Freigabe ausstehend',
             approved: '✅ Genehmigt',
             rejected: '❌ Abgelehnt'
         };
@@ -1668,37 +1682,63 @@ class App {
             
             return `
                 <div class="request-card">
-                    <div class="request-info">
-                        <div style="font-weight: 800; font-size: 1.05rem; margin-bottom: 2px;">${emp?.name || req.empId}</div>
-                        <div style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 600;">
-                            📅 ${from}${from !== to ? ' bis ' + to : ''}
-                        </div>
-                        <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
-                            <span style="background: var(--bg-color); padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">
-                                ${typeLabel[req.type] || req.type}
-                            </span>
-                            ${req.vertreter ? `<span style="background: var(--primary-light); color: var(--primary-color); padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">👤 Vertr.: ${req.vertreter}</span>` : ''}
-                        </div>
-                        ${req.text ? `<div style="margin-top: 10px; font-style: italic; font-size: 0.85rem; color: var(--text-secondary); background: #f8fafc; padding: 8px; border-radius: 8px;">"${req.text}"</div>` : ''}
-                        <div style="margin-top: 12px;">
-                            ${this._fmtStamp(req.stamps?.submitted, 'Antrag')}
-                            ${this._fmtStamp(req.stamps?.vertreter, 'Zustimmung Vertreter')}
-                            ${req.status === 'approved' ? this._fmtStamp(req.stamps?.admin, 'Genehmigung Leitender OA Wagner') : ''}
-                            ${this._fmtStamp(req.stamps?.po, 'In PO eingetragen')}
-                            ${req.status === 'rejected' ? this._fmtStamp(req.stamps?.rejected, 'Ablehnung') : ''}
-                        </div>
-                        ${req.rejectionNote ? `<div style="margin-top: 8px; color: var(--danger-color); font-size: 0.8rem; font-weight: 600;">Grund: ${req.rejectionNote}</div>` : ''}
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
+                        <div style="font-weight: 800; font-size: 1.1rem; color: var(--text-main);">${emp?.name || req.empId}</div>
+                        <span class="${statusClass}" style="background: var(--bg-color); color: var(--text-main); font-size: 0.7rem; white-space: nowrap;">${statusLabel[req.status]}</span>
                     </div>
-                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 12px;">
-                        <span class="${statusClass}" style="background: var(--bg-color); color: var(--text-main); font-size: 0.7rem;">${statusLabel[req.status]}</span>
-                        ${req.status === 'approved' ? `<button onclick="app.generateAndDownloadPDF('${req.id}')" style="background:#dc2626; color:white; border:none; padding:8px 12px; margin-top: 8px; font-weight: bold; border-radius:4px; width:100%;">📄 PDF laden</button>` : ''}
+
+                    <div style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 600;">
+                        📅 ${from}${from !== to ? ' bis ' + to : ''}
+                    </div>
+
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <span style="background: var(--bg-color); padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">
+                            ${typeLabel[req.type] || req.type}
+                        </span>
+                        ${req.vertreter ? `<span style="background: var(--primary-light); color: var(--primary-color); padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">👤 Vertr.: ${req.vertreter}</span>` : ''}
+                    </div>
+
+                    ${req.text ? `<div style="font-style: italic; font-size: 0.85rem; color: var(--text-secondary); background: #f8fafc; padding: 8px; border-radius: 8px;">"${req.text}"</div>` : ''}
+
+                    <div style="margin-top: 4px;">
+                        ${this._fmtStamp(req.stamps?.submitted, 'Antrag')}
+                        ${this._fmtStamp(req.stamps?.vertreter, 'Zustimmung Vertreter')}
+                        ${req.status === 'approved' ? this._fmtStamp(req.stamps?.admin, 'Genehmigung') : ''}
+                        ${this._fmtStamp(req.stamps?.po, 'In PO eingetragen')}
+                        ${req.status === 'rejected' ? this._fmtStamp(req.stamps?.rejected, 'Ablehnung') : ''}
+                    </div>
+
+                    ${req.rejectionNote ? `<div style="color: var(--danger-color); font-size: 0.8rem; font-weight: 600;">Grund: ${req.rejectionNote}</div>` : ''}
+
+                    <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-start; margin-top: 8px; flex-wrap: wrap;">
                         ${actions}
+                        ${req.status === 'approved' ? `<button onclick="app.generateAndDownloadPDF('${req.id}')" style="background:#dc2626; color:white; border:none; padding:8px 16px; font-weight: bold; border-radius:6px; width:auto; font-size: 0.85rem;">📄 PDF laden</button>` : ''}
                     </div>
                 </div>`;
         };
 
+        html = '';
+        const vertretenReqs = requests.filter(r => r.vertreterId === cu && r.status === 'pending_vertreter');
+
         if (isAdmin || isSprecher) {
             const adminReqs = requests.filter(r => r.status === 'pending_admin');
+            
+            // Show Representation Requests for Admin too if they exist
+            if (vertretenReqs.length > 0) {
+                html += '<h3 style="margin-bottom: 16px; font-size: 0.85rem; color: var(--primary-color); text-transform: uppercase;">Personale Vertretungsanfragen (für dich)</h3>';
+                vertretenReqs.forEach(req => {
+                    const actions = `
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="app.approveAsVertreter('${req.id}')" style="background:var(--success-color); color:white; border:none; padding:8px 12px;">Zustimmen</button>
+                            <button onclick="let note=prompt('Grund für Ablehnung?'); if(note!==null) app.rejectRequest('${req.id}','vertreter',note)" style="background:var(--bg-color); border:1px solid var(--border-color); padding:8px 12px;">Ablehnen</button>
+                        </div>
+                    `;
+                    html += renderCard(req, actions);
+                });
+                html += '<hr style="margin: 20px 0; border: none; border-top: 2px dashed var(--border-color); opacity: 0.5;">';
+            }
+
+            html += '<h3 style="margin-bottom: 16px; font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase;">Offene Anträge zur Genehmigung</h3>';
             if (adminReqs.length === 0 && (filterVal === 'all' || filterVal === 'open')) {
                 html += '<p style="color:var(--text-secondary); text-align:center; padding: 40px 0;">Keine offenen Anfragen zur Genehmigung.</p>';
             } else if (adminReqs.length > 0) {
@@ -1720,11 +1760,17 @@ class App {
                 });
             }
         } else {
+            // Auto-switch to vertreter tab if there are representation requests and no pending own requests
+            const ownPending = requests.filter(r => r.empId === cu && (r.status === 'pending_vertreter' || r.status === 'pending_admin'));
+            if (this.currentRequestsSubTab === 'meine' && ownPending.length === 0 && vertretenReqs.length > 0) {
+                this.currentRequestsSubTab = 'vertreter';
+            }
+
             // Sub-tab Navigation
             html += `
                 <div class="sub-tab-nav">
                     <div class="sub-tab-item ${this.currentRequestsSubTab === 'meine' ? 'active' : ''}" onclick="app.switchRequestsSubTab('meine')">Meine Anfragen</div>
-                    <div class="sub-tab-item ${this.currentRequestsSubTab === 'vertreter' ? 'active' : ''}" onclick="app.switchRequestsSubTab('vertreter')">Vertretungen</div>
+                    <div class="sub-tab-item ${this.currentRequestsSubTab === 'vertreter' ? 'active' : ''}" onclick="app.switchRequestsSubTab('vertreter')">Vertretungen${vertretenReqs.length > 0 ? ` <span style="background:var(--danger-color); color:white; border-radius:10px; padding:0 6px; font-size:0.7rem">${vertretenReqs.length}</span>` : ''}</div>
                 </div>
             `;
 
@@ -1738,7 +1784,6 @@ class App {
                     html += '<p style="color:var(--text-secondary); text-align:center; padding: 40px 0;">Keine eigenen Anfragen vorhanden.</p>';
                 }
             } else {
-                const vertretenReqs = requests.filter(r => r.vertreterId === cu && r.status === 'pending_vertreter');
                 if (vertretenReqs.length > 0) {
                     html += '<h3 style="margin-bottom: 16px; font-size: 0.85rem; color: var(--primary-color); text-transform: uppercase;">Offene Vertretungen</h3>';
                     vertretenReqs.forEach(req => {
@@ -1936,10 +1981,9 @@ class App {
                         if (!stamp) return `Digital signiert (Zeitstempel fehlt)`;
                         const d = new Date(stamp.at || Date.now());
                         const ds = d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                        const ts = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
                         return includeName 
-                            ? `${label}: ${stamp.name || defaultName} am ${ds}, ${ts} Uhr`
-                            : `Digital signiert am ${ds}, ${ts} Uhr`;
+                            ? `${label}: ${stamp.name || defaultName} am ${ds}`
+                            : `Digital signiert am ${ds}`;
                     };
                     
                     const uText = fmtStampText(req.stamps?.submitted, emp ? emp.name : req.empId, 'Beantragt', false);
@@ -1949,7 +1993,7 @@ class App {
                     firstPage.drawText(vText, { x: rect.x, y: rect.y - 18, size: 10, color: rgb(1,0,0) });
                     
                     if (isUrlaub) {
-                        const aText = fmtStampText(req.stamps?.admin, 'Wagner', 'Genehmigung');
+                        const aText = fmtStampText(req.stamps?.admin, 'Leitender OA Wagner', 'Genehmigung');
                         firstPage.drawText(aText, { x: rect.x, y: rect.y - 75, size: 10, color: rgb(1,0,0) });
                     }
                 }

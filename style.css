@@ -544,8 +544,8 @@ button.primary:hover {
     padding: 16px;
     margin-bottom: 12px;
     transition: all 0.2s;
-    display: grid;
-    grid-template-columns: 1fr auto;
+    display: flex;
+    flex-direction: column;
     gap: 12px;
 }
 
