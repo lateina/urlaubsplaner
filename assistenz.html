@@ -389,8 +389,9 @@
                 if (CONFIG.skills) {
                     const normalized = CONFIG.skills.map(s => s ? s.toLowerCase() : '');
                     if (!normalized.includes('funktionsoberarzt')) {
+                        // Put it AFTER 'Kein Vertreter nötig' or at the very end
                         const idx = CONFIG.skills.indexOf('Kein Vertreter nötig');
-                        if (idx !== -1) CONFIG.skills.splice(idx, 0, 'Funktionsoberarzt');
+                        if (idx !== -1) CONFIG.skills.splice(idx + 1, 0, 'Funktionsoberarzt');
                         else CONFIG.skills.push('Funktionsoberarzt');
                         
                         if (CONFIG.groupColors && !CONFIG.groupColors['Funktionsoberarzt']) {
@@ -441,9 +442,8 @@
                 const grps = Array.isArray(e.groups) ? e.groups : (e.group ? [e.group] : []);
                 if (grps.length === 0) return '';
                 let best = CONFIG.skills.length, res = '';
-                const realGrps = grps.filter(g => g !== 'Kein Vertreter nötig');
-                const lookup = realGrps.length > 0 ? realGrps : grps;
-                lookup.forEach(g => { const i = CONFIG.skills.indexOf(g); if (i !== -1 && i < best) { best = i; res = g; } });
+                // Check all groups and pick the one with the lowest index in CONFIG.skills
+                grps.forEach(g => { const i = CONFIG.skills.indexOf(g); if (i !== -1 && i < best) { best = i; res = g; } });
                 return res;
             }
 
