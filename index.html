@@ -567,18 +567,6 @@
 
             renderAdminTable() {
                 const tbody = document.getElementById('adminEmployeeTable'); tbody.innerHTML = '';
-                
-                // Visual Hint for FOA
-                const hint = document.createElement('div');
-                hint.style.cssText = 'padding: 10px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem; border-left: 4px solid var(--primary-color);';
-                hint.innerHTML = '<strong>Hinweis:</strong> Um einen Oberarzt als <strong>Funktionsoberarzt</strong> für die Assistenten-Vertretung freizuschalten, aktivieren Sie einfach die entsprechende Checkbox in der Spalte "Gruppen".';
-                tbody.before ? tbody.before(hint) : null; 
-                // Wait, tbody.before doesn't work if hint exists already. Let's do it cleaner.
-                const existingHint = document.getElementById('foaHint');
-                if (existingHint) existingHint.remove();
-                hint.id = 'foaHint';
-                tbody.parentNode.insertBefore(hint, tbody.closest('table'));
-
                 const sorted = [...CONFIG.employees].sort((a, b) => (a.name || '').split(' ').pop().localeCompare((b.name || '').split(' ').pop(), 'de'));
                 sorted.forEach(emp => { if (emp.id !== 'sekretariat' && emp.id !== 'admin') this.createEmployeeRow(tbody, emp); });
             }
