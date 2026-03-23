@@ -99,7 +99,7 @@ class App {
                 // Only start vacation drag if user has permission (silent check to avoid early alert)
                 if (this.checkPermission(cell.dataset.eid, true)) {
                     ev.preventDefault();
-                    this.handleMouseDown(cell.dataset.eid, cell.dataset.date);
+                    this.handleMouseDown(cell.dataset.eid, cell.dataset.date, ev);
                 }
             }, { passive: false });
             calendar.addEventListener('mouseover', ev => {
@@ -126,7 +126,11 @@ class App {
                 if (this._longPressTimer) clearTimeout(this._longPressTimer);
                 this._longPressTimer = setTimeout(() => {
                     if (!this._isScroll && this._touchStart) {
-                        this.handleMouseDown(this._touchStart.eid, this._touchStart.date);
+                        this.handleMouseDown(this._touchStart.eid, this._touchStart.date, { 
+                            clientX: this._touchStart.x, 
+                            clientY: this._touchStart.y,
+                            type: 'touchstart'
+                        });
                     }
                 }, 1000);
             }, { passive: true });
@@ -221,6 +225,13 @@ class App {
         document.addEventListener('mouseup', this.stopDrag);
         document.addEventListener('touchend', this.stopDrag);
         document.addEventListener('touchcancel', this.stopDrag);
+
+        // Global click/touch listener to hide tooltips on mobile
+        document.addEventListener('touchstart', (ev) => {
+            if (!ev.target.closest('.day-cell')) {
+                this.hideTip();
+            }
+        }, { passive: true });
     }
 
     setFilterGroup(group) {
@@ -552,6 +563,18 @@ class App {
         this.switchTab(id === 'sekretariat' ? 'po' : 'calendar');
         this.render();
         this.updateRequestsBadge();
+        
+        // Login Notification for Open Requests
+        const isAdmin = id === 'admin' || id === CONFIG.isSprecher;
+        const openReqs = (this.state.__REQUESTS__ || []).filter(r => 
+            (isAdmin && r.status === 'pending_admin') || (r.vertreterId === id && r.status === 'pending_vertreter')
+        ).length;
+        if (openReqs > 0) {
+            setTimeout(() => {
+                alert(`👋 Hallo! Es gibt ${openReqs} offene Anfrage${openReqs > 1 ? 'n' : ''}, die auf deine Bearbeitung warten.`);
+            }, 800);
+        }
+
         setTimeout(() => this.scrollToMonth(new Date().getMonth(), true), 500);
     }
 
@@ -866,8 +889,19 @@ class App {
         });
     }
 
-    handleMouseDown(empId, dateStr) {
+    handleMouseDown(empId, dateStr, ev) {
         if (this.currentUser === 'sekretariat') { alert('Du bist als Sekretariat angemeldet und kannst keine Bearbeitungen machen'); return; }
+        
+        // Mobile Tooltip Logic for Pending Requests
+        const isMobile = window.innerWidth <= 768;
+        const req = (this.state.__REQUESTS__ || []).find(r => 
+            r.empId === empId && r.dates.includes(dateStr) && (r.status === 'pending_vertreter' || r.status === 'pending_admin')
+        );
+        if (req && isMobile) {
+            this.showTip(ev, empId, dateStr);
+            return;
+        }
+
         if (!this.checkPermission(empId)) return;
         if (this.currentUser !== 'admin' && this.currentUser !== CONFIG.isSprecher) {
             this.openRequestModal(empId, dateStr);
@@ -1428,8 +1462,8 @@ class App {
     }
 
     updateRequestsBadge() {
-        const badge = document.getElementById('requests-badge');
-        if (!badge) return;
+        const badges = document.querySelectorAll('.requests-badge');
+        if (badges.length === 0) return;
         const requests = this.state.__REQUESTS__ || [];
         const cu = this.currentUser;
         const isAdmin = cu === 'admin' || cu === CONFIG.isSprecher;
@@ -1441,7 +1475,9 @@ class App {
         let total = vertreterCount + adminCount;
         if (total === 0 && !isAdmin) total = ownPending;
 
-        badge.textContent = total > 0 ? String(total) : '';
+        badges.forEach(badge => {
+            badge.textContent = total > 0 ? String(total) : '';
+        });
     }
 
     makeStamp() {
@@ -1604,12 +1640,27 @@ class App {
 
     showSimpleTip(ev, text, isHTML = false) {
         const t = document.getElementById('custom-tooltip');
-        if (!t) return;
+        if (!t || !ev) return;
         if (isHTML) t.innerHTML = text;
         else t.innerHTML = `<strong>${text}</strong>`;
+        
+        const x = ev.clientX || (ev.touches && ev.touches[0] ? ev.touches[0].clientX : 0);
+        const y = ev.clientY || (ev.touches && ev.touches[0] ? ev.touches[0].clientY : 0);
+        
         t.style.display = 'block';
-        t.style.left = ev.clientX + 10 + 'px';
-        t.style.top = ev.clientY + 10 + 'px';
+        t.style.left = x + 10 + 'px';
+        t.style.top = y + 10 + 'px';
+        
+        // Ensure tooltip stays within screen bounds
+        requestAnimationFrame(() => {
+            const rect = t.getBoundingClientRect();
+            if (rect.right > window.innerWidth) {
+                t.style.left = (window.innerWidth - rect.width - 10) + 'px';
+            }
+            if (rect.bottom > window.innerHeight) {
+                t.style.top = (y - rect.height - 10) + 'px';
+            }
+        });
     }
 
     hideTip() {
@@ -1643,7 +1694,13 @@ class App {
         if (bulkPanel) bulkPanel.style.display = (tabId === 'calendar' && this.currentUser === 'admin') ? 'flex' : 'none';
 
         if (tabId === 'admin') this.renderAdminTable();
-        if (tabId === 'requests') this.renderRequestsTab();
+        if (tabId === 'requests') {
+            if (this.currentUser === 'admin') {
+                const filterSelect = document.getElementById('requestStatusFilter');
+                if (filterSelect) filterSelect.value = 'open';
+            }
+            this.renderRequestsTab();
+        }
         if (tabId === 'po') this.renderPOView();
         if (tabId === 'groups') this.renderGroupsAdmin();
         if (tabId === 'skills') this.renderSkillsAdmin();

@@ -37,7 +37,7 @@
             <button id="tab-calendar" class="tab-button active"
                 onclick="app.switchTab('calendar')">Kalender</button>
             <button id="tab-requests" class="tab-button" onclick="app.switchTab('requests')" style="display:none;">
-                Anfragen <span id="requests-badge"></span>
+                Anfragen <span class="requests-badge"></span>
             </button>
             <button id="tab-summary" class="tab-button" onclick="app.switchTab('summary')"
                 style="display:none;">Zusammenfassung</button>
@@ -328,7 +328,10 @@
             <span>Kalender</span>
         </div>
         <div class="nav-item" onclick="app.switchTab('requests')" id="nav-requests">
-            <div class="nav-icon">📩</div>
+            <div class="nav-icon" style="position: relative;">
+                📩
+                <span class="requests-badge" style="position: absolute; top: -8px; right: -8px;"></span>
+            </div>
             <span>Anfragen</span>
         </div>
         <div class="nav-item" onclick="app.switchTab('admin')" id="nav-admin" style="display:none;">

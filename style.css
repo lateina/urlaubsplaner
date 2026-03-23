@@ -878,3 +878,32 @@ body.pre-login .bottom-nav {
     padding: 8px;
     font-size: 0.8125rem;
 }
+
+/* Requests Badge Styling & Animation */
+.requests-badge:not(:empty) {
+    background-color: var(--danger-color);
+    color: white;
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 5px;
+    vertical-align: super;
+    font-weight: 800;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    display: inline-block;
+    animation: badge-pulse 2s infinite;
+}
+
+/* Mobile Badge Adjustment */
+.nav-icon .requests-badge:not(:empty) {
+    margin-left: 0;
+    vertical-align: baseline;
+    font-size: 0.6rem;
+    padding: 1px 4px;
+}
+
+@keyframes badge-pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+}
