@@ -14,8 +14,11 @@ function getBavarianHolidays(year) {
 
 class DataService {
     static async load() {
+        return this.loadExternal(CONFIG.binId);
+    }
+    static async loadExternal(binId) {
         try {
-            const res = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}/latest`, {
+            const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
                 headers: { 'X-Master-Key': CONFIG.apiKey }
             });
             if (!res.ok) {
@@ -32,7 +35,8 @@ class DataService {
     }
     static async save(state) {
         try {
-            const payload = { employees: CONFIG.employees, state };
+            const empsToSave = CONFIG.employees.filter(e => !e.isExternal);
+            const payload = { employees: empsToSave, state };
             if (CONFIG.skills) payload.skills = CONFIG.skills;
             if (CONFIG.groupOrder) payload.groupOrder = CONFIG.groupOrder;
             if (CONFIG.groupColors) payload.groupColors = CONFIG.groupColors;
@@ -1218,6 +1222,14 @@ class App {
         document.getElementById('addModal').style.display = 'none';
     }
 
+    checkVertreterAbsence(vId, dateStr) {
+        // Local check
+        if (this.state[vId]?.[dateStr]) return true;
+        // External check (e.g. for OAs represented in Assistent-Planer)
+        if (this.externalData?.state && this.externalData.state[vId]?.[dateStr]) return true;
+        return false;
+    }
+
     submitRequest() {
         const eid = document.getElementById('modalEmp').value;
         const type = document.getElementById('modalType').value;
@@ -1234,7 +1246,7 @@ class App {
         while (curr <= endD) { dates.push(this.formatDate(curr)); curr.setDate(curr.getDate() + 1); }
 
         if (this.needsVertreter(eid)) {
-            const vertreterAbsentDates = dates.filter(d => this.state[vertreterId]?.[d]);
+            const vertreterAbsentDates = dates.filter(d => this.checkVertreterAbsence(vertreterId, d));
             if (vertreterAbsentDates.length > 0) {
                 alert(`${vertreter} ist an folgenden Tagen selbst abwesend: ${vertreterAbsentDates.join(', ')}.\n\nBitte teile den Antrag auf und wähle für diese Tage einen anderen Vertreter.`);
                 return;
@@ -1302,16 +1314,44 @@ class App {
     }
 
     checkVertretungConflict(empId, dates) {
-        for (const dateStr of dates) {
-            for (const otherId of Object.keys(this.state)) {
+        const checkIn = (state, emps, dStr) => {
+            if (!state) return null;
+            for (const otherId of Object.keys(state)) {
                 if (otherId.startsWith('__') || otherId === empId) continue;
-                const entry = this.state[otherId]?.[dateStr];
-                if (entry && entry.vertreterId === empId && entry.status === 'confirmed') {
-                    const other = CONFIG.employees.find(e => e.id === otherId);
-                    return { date: dateStr, who: other?.name || otherId };
+                const entry = state[otherId]?.[dStr];
+                // Check confirmed status
+                if (entry && entry.vertreterId === empId && (entry.status === 'confirmed' || entry.status === 'approved')) {
+                    const other = emps.find(e => e.id === otherId);
+                    return { date: dStr, who: other?.name || otherId };
+                }
+            }
+            return null;
+        };
+
+        for (const dateStr of dates) {
+            let res = checkIn(this.state, CONFIG.employees, dateStr);
+            if (res) return res;
+            if (this.externalData?.state) {
+                res = checkIn(this.externalData.state, this.externalData.employees || [], dateStr);
+                if (res) return res;
+            }
+        }
+        // Also check if there are pending requests in the external system where user is chosen as representative 
+        // to prevent overlapping vacation while a request is waiting for approval
+        if (this.externalData?.state?.__REQUESTS__) {
+            for (const dateStr of dates) {
+                const pending = this.externalData.state.__REQUESTS__.find(r => 
+                    r.vertreterId === empId && 
+                    r.dates.includes(dateStr) && 
+                    (r.status === 'pending_vertreter' || r.status === 'pending_admin')
+                );
+                if (pending) {
+                    const other = (this.externalData.employees || []).find(e => e.id === pending.empId);
+                    return { date: dateStr, who: (other?.name || pending.empId) + " (Anfrage offen)" };
                 }
             }
         }
+
         return null;
     }
 
@@ -1323,6 +1363,12 @@ class App {
             const lines = coverageIssues.map(({ date, missing }) => `${date}: fehlend ${missing.join(', ')}`).join('\n');
             const proceed = confirm(`⚠ Abdeckungsproblem:\nDiese Abwesenheit würde an folgenden Tagen die Mindestbesetzung verletzen:\n\n${lines}\n\nTrotzdem zustimmen?`);
             if (!proceed) return;
+        }
+
+        const vertreterAbsentDates = req.dates.filter(d => this.checkVertreterAbsence(req.vertreterId, d));
+        if (vertreterAbsentDates.length > 0) {
+            alert(`Zustimmung nicht möglich: Du bist an folgenden Tagen selbst abwesend: ${vertreterAbsentDates.join(', ')}.`);
+            return;
         }
         req.status = 'pending_admin';
         if (!req.stamps) req.stamps = {};

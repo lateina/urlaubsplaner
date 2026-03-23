@@ -367,11 +367,12 @@
         const PAGE_CONFIG = {
             years: [2026, 2027, 2028],
             binId: '694548d1d0ea881f403427e3',
+            assBinId: '699ffb53ae596e708f4b3de5',
             apiKey: localStorage.getItem('jsonbin_key') || '',
             employees: [],
             holidays: {},
-            groupOrder: ['Chef', 'Privat', 'TAVI', 'TEER', 'Herzkatheter', 'Echo', 'EPU', 'Intensiv', 'Pneumo', 'Ambulanz', 'Kein Vertreter nötig', ''],
-            groupColors: { 'Chef': '#ef4444', 'Privat': '#3b82f6', 'TAVI': '#10b981', 'TEER': '#f59e0b', 'Herzkatheter': '#8b5cf6', 'Echo': '#06b6d4', 'EPU': '#ec4899', 'Intensiv': '#6366f1', 'Pneumo': '#14b8a6', 'Ambulanz': '#84cc16', 'Kein Vertreter nötig': '#6b7280' },
+            groupOrder: ['Chef', 'Privat', 'TAVI', 'TEER', 'Herzkatheter', 'Echo', 'EPU', 'Intensiv', 'Pneumo', 'Ambulanz', 'Funktionsoberarzt', 'Kein Vertreter nötig', ''],
+            groupColors: { 'Chef': '#ef4444', 'Privat': '#3b82f6', 'TAVI': '#10b981', 'TEER': '#f59e0b', 'Herzkatheter': '#8b5cf6', 'Echo': '#06b6d4', 'EPU': '#ec4899', 'Intensiv': '#6366f1', 'Pneumo': '#14b8a6', 'Ambulanz': '#84cc16', 'Funktionsoberarzt': '#475569', 'Kein Vertreter nötig': '#6b7280' },
             schoolHolidays: [
                 { start: '2026-01-01', end: '2026-01-05', name: 'Weihnachtsferien' }, { start: '2026-02-16', end: '2026-02-20', name: 'Winterferien' }, { start: '2026-03-30', end: '2026-04-10', name: 'Osterferien' }, { start: '2026-05-26', end: '2026-06-05', name: 'Pfingstferien' }, { start: '2026-08-03', end: '2026-09-14', name: 'Sommerferien' }, { start: '2026-11-02', end: '2026-11-06', name: 'Herbstferien' }, { start: '2026-12-24', end: '2027-01-08', name: 'Weihnachtsferien' }, { start: '2027-02-08', end: '2027-02-12', name: 'Winterferien' }, { start: '2027-03-22', end: '2027-04-02', name: 'Osterferien' }, { start: '2027-05-18', end: '2027-05-28', name: 'Pfingstferien' }, { start: '2027-08-02', end: '2027-09-13', name: 'Sommerferien' }, { start: '2027-11-02', end: '2027-11-05', name: 'Herbstferien' }, { start: '2027-12-24', end: '2028-01-07', name: 'Weihnachtsferien' }
             ],
@@ -382,6 +383,17 @@
         class OAPlanerApp extends App {
             constructor() {
                 super(PAGE_CONFIG);
+            }
+
+            async reloadData() {
+                const data = await super.reloadData();
+                if (CONFIG.assBinId) {
+                    const ext = await DataService.loadExternal(CONFIG.assBinId);
+                    if (ext && !ext.error) {
+                        this.externalData = ext;
+                    }
+                }
+                return data;
             }
 
             validateCoverage(d) {
