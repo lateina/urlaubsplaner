@@ -18,7 +18,7 @@ Tipp: Falls du deinen PIN vergessen hast, kann der Administrator diesen im Berei
 
 ## 2. Im Kalender navigieren
 
-![Kalender Übersicht](manual_assets/calendar_overview.png)
+
 
 Zeit-Navigation: Nutze die Jahres-Buttons (2026-2028) und Monats-Buttons am oberen Rand.
 
@@ -28,7 +28,7 @@ Mausrad-Komfort: Fährst du mit der Maus über die Kopfzeilen (Monat/Tag), kanns
 
 Greifen & Schieben: Du kannst den Kalender verschieben, indem du in die Kopfzeile klickst und ziehst, oder an jeder Stelle die mittlere Maustaste oder Alt + Linksklick benutzt.
 
-![Heute Button und Pfeil](manual_assets/navigation_controls.png)
+
 
 Heute-Button: Der Button "Heute" in der Toolbar bringt dich sofort zum aktuellen Tag zurück. Ein roter Pfeil markiert kurzzeitig das heutige Datum.
 
@@ -57,7 +57,7 @@ Bitte prüfe dies, bevor du einen Antrag stellst, um unnötige Ablehnungen zu ve
 
 ## 5. Status & Kontingent
 
-![Anfragen Übersicht](manual_assets/request_view.png)
+
 
 Neben deinem Namen siehst du dein Urlaubskonto (z.B. 12 / 30).
 Im Tab "Anfragen" kannst du den Fortschritt deiner Wünsche verfolgen:
@@ -71,7 +71,7 @@ Status-Bedeutungen:
 
 ## 6. Als App installieren
 
-![App Installation](manual_assets/pwa_banner_mobile.png)
+
 
 1. Auto-Installation: Nutze das Banner am oberen Bildschirmrand für eine direkte Installation.
 2. iOS (Safari): Teilen -> Zum Home-Bildschirm.

@@ -26,7 +26,7 @@ Schritt 2: Die Zustimmung
 
 ## 3. Im Kalender navigieren
 
-![Kalender Übersicht](manual_assets/calendar_overview.png)
+
 
 Der Kalender bietet nun mehrere intuitive Möglichkeiten zur Navigation:
 
@@ -36,7 +36,7 @@ Greifen & Schieben (Panning):
 - Klicke und ziehe in der Kopfzeile, um den Kalender zu verschieben.
 - Halte die mittlere Maustaste oder Alt + Linksklick gedrückt, um den Kalender an jeder Stelle zu verschieben.
 
-![Heute Button und Pfeil](manual_assets/navigation_controls.png)
+
 
 Heute-Button: Mit einem Klick auf "Heute" in der Toolbar springst du sofort zum aktuellen Datum. Ein roter Pfeil markiert kurzzeitig das heutige Datum.
 
@@ -55,7 +55,7 @@ Wenn ein Kollege dich als Vertreter anfragt:
 
 ## 5. Status deiner Anträge
 
-![Anfragen Status](manual_assets/request_view.png)
+
 
 Im Tab "Anfragen" unter "Meine Anfragen" siehst du den aktuellen Verlauf:
 
@@ -74,7 +74,7 @@ Status-Bedeutungen:
 
 ## 7. PWA-Installation (Smartphone/Desktop)
 
-![PWA Banner](manual_assets/pwa_banner_mobile.png)
+
 
 Installiere den Planer wie eine App für Offline-Zugriff und Schnelligkeit:
 
