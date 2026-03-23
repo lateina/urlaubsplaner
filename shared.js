@@ -571,7 +571,7 @@ class App {
         ).length;
         if (openReqs > 0) {
             setTimeout(() => {
-                alert(`👋 Hallo! Es gibt ${openReqs} offene Anfrage${openReqs > 1 ? 'n' : ''}, die auf deine Bearbeitung warten.`);
+                alert(`👋 Hallo! Es gibt ${openReqs} offene Anfrage${openReqs > 1 ? 'n' : ''}, die auf deine Bearbeitung wartet${openReqs > 1 ? 'en' : ''}.`);
             }, 800);
         }
 
