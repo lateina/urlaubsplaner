@@ -395,16 +395,16 @@
                         this.externalData = ext;
                         const foas = (ext.employees || []).filter(e => {
                             const grps = Array.isArray(e.groups) ? e.groups : (e.group ? [e.group] : []);
-                            return grps.some(g => g && g.toLowerCase() === 'funktionsoberarzt');
+                            return grps.some(g => g && g.trim().toLowerCase().includes('funktionsoberarzt'));
                         });
                         foas.forEach(f => {
                             f.isExternal = true;
-                            const existing = CONFIG.employees.find(e => e.id === f.id);
-                            if (!existing) {
+                            const existingIdx = CONFIG.employees.findIndex(e => e.id === f.id);
+                            if (existingIdx === -1) {
                                 CONFIG.employees.push(f);
-                            } else if (existing.isExternal) {
-                                // Update dynamic data (PIN, Email) from Assistant bin
-                                Object.assign(existing, f);
+                            } else {
+                                // Update existing (even if not external, external data might be newer)
+                                Object.assign(CONFIG.employees[existingIdx], f);
                             }
                         });
                         this.sortEmployees();

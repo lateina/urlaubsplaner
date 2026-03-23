@@ -390,7 +390,7 @@
                         this.externalData = ext;
                         const foas = (ext.employees || []).filter(e => {
                             const grps = Array.isArray(e.groups) ? e.groups : (e.group ? [e.group] : []);
-                            return grps.some(g => g && g.toLowerCase() === 'funktionsoberarzt');
+                            return grps.some(g => g && g.trim().toLowerCase().includes('funktionsoberarzt'));
                         });
                         foas.forEach(f => {
                             f.isExternal = true;
