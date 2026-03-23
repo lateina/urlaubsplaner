@@ -224,6 +224,11 @@ button.primary:hover {
     overflow: hidden;
 }
 
+#calendar.view-year .day-header span { display: none; }
+#calendar.view-year .validation-cell span { display: none; }
+#calendar.view-year .cell-text { display: none; }
+#calendar.view-year .validation-cell { color: transparent; font-size: 0; }
+
 .calendar-toolbar {
     padding: 12px 20px;
     background: var(--surface-color);
@@ -265,11 +270,13 @@ button.primary:hover {
 
 .calendar-container {
     display: grid;
+    align-content: start;
     overflow: auto;
     position: relative;
     width: 100%;
     flex: 1;
-    grid-template-columns: 260px repeat(762, 40px);
+    grid-template-columns: 260px;
+    grid-auto-columns: 40px;
     grid-template-rows: 36px 40px 36px;
     grid-auto-rows: minmax(54px, auto);
     background-color: var(--surface-color);
@@ -611,6 +618,9 @@ button.primary:hover {
     body {
         padding: 0;
     }
+    
+    .desktop-name { display: none !important; }
+    .mobile-name { display: inline !important; }
     
     header {
         padding: 8px 16px;

@@ -30,12 +30,7 @@
                 <h1>Urlaubsplaner</h1>
             </div>
             <div class="controls">
-                <button id="btnExport" onclick="app.exportData()" title="Export JSON">JSON</button>
-                <button id="btnExportICal" onclick="app.exportICal()"
-                    style="display:none; background-color: #10b981; color: white; border: none;">iCal</button>
-                <button id="btnImport" class="primary" onclick="document.getElementById('fileInput').click()" title="Import JSON">Import</button>
                 <button id="btnLogout" onclick="app.logout()" style="background-color: var(--danger-color); color: white; border: none;">Ausloggen</button>
-                <input type="file" id="fileInput" style="display:none" onchange="app.importData(this)">
             </div>
         </div>
         <div class="tab-container" id="main-desktop-nav">
@@ -73,9 +68,33 @@
     </header>
 
     <div id="calendarView">
-        <div class="calendar-toolbar">
-            <button id="btnToday" onclick="app.scrollToToday()" title="Zum heutigen Tag springen">Heute</button>
-            <button id="btnAddAbsence" class="primary" onclick="app.openModal()"><span>+</span> Eintragen</button>
+        <div class="calendar-toolbar" style="flex-wrap: wrap;">
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; max-width: 100%;">
+                <button id="btnToday" onclick="app.scrollToToday()" title="Zum heutigen Tag springen">Heute</button>
+                <button id="btnAddAbsence" class="primary" onclick="app.openModal()"><span>+</span> Eintragen</button>
+                <select id="groupFilterSelector" style="padding: 8px 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color); font-size: 0.875rem; font-weight: 600; color: var(--text-main); background: var(--surface-color); cursor: pointer;" onchange="app.setFilterGroup(this.value)">
+                    <option value="All">Alle</option>
+                </select>
+                <!-- 2x2 Inline Grid Legend -->
+                <div style="display: grid; grid-template-columns: auto auto; column-gap: 12px; row-gap: 4px; margin-left: 2px; font-size: 0.70rem; color: var(--text-secondary); align-items: center; padding: 4px 8px; border-radius: var(--radius-md); background: rgba(0,0,0,0.03);">
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <div style="width: 10px; height: 10px; border-radius: 2px; background-color: var(--status-vacation);"></div>
+                        <span>Urlaub</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <div style="width: 10px; height: 10px; border-radius: 2px; background-color: var(--status-trip);"></div>
+                        <span>Dienstreise</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <div style="width: 10px; height: 10px; border-radius: 2px; background-color: var(--status-training);"></div>
+                        <span>Fortbild.</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <div style="width: 10px; height: 10px; border-radius: 2px; background-color: var(--status-custom);"></div>
+                        <span>Sonstiges</span>
+                    </div>
+                </div>
+            </div>
             <div id="absenceInputModePanel" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                 <div class="segmented-control">
                     <label onmouseenter="app.showSimpleTip(event, 'Urlaub')" onmouseleave="app.hideTip()">
@@ -99,6 +118,9 @@
                     oninput="app.setVertreterText(this.value)">
             </div>
         </div>
+
+
+        
         <div class="month-nav" id="yearNav" style="padding: 10px 20px; background: var(--surface-color); border-bottom: 1px solid var(--border-color);"></div>
         <div class="month-nav" id="monthNav" style="padding: 5px 20px; background: var(--surface-color); border-bottom: 1px solid var(--border-color);"></div>
         <div id="calendar" class="calendar-container"></div>
@@ -164,7 +186,15 @@
 
     <div id="requestsView" style="display:none;" class="view-container">
         <div class="card">
-            <h2>📩 Anfragen</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+                <h2 style="margin: 0;">📩 Anfragen</h2>
+                <select id="requestStatusFilter" style="padding: 8px 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color); font-size: 0.875rem; font-weight: 600; color: var(--text-main); background: var(--surface-color); cursor: pointer;" onchange="app.renderRequestsTab()">
+                    <option value="all" selected>Alle anzeigen</option>
+                    <option value="open">Offen / Laufend</option>
+                    <option value="approved">Genehmigt</option>
+                    <option value="rejected">Abgelehnt</option>
+                </select>
+            </div>
             <div id="requestsList"></div>
         </div>
     </div>
@@ -215,13 +245,13 @@
                     <select id="modalEmp"></select>
                 </div>
                 <div style="display:flex; gap:10px;">
-                    <div class="form-group" style="flex:1">
+                    <div class="form-group" style="flex:1; min-width: 0;">
                         <label>Von</label>
-                        <input type="date" id="modalStart" onchange="app.onModalDateChange()">
+                        <input type="date" id="modalStart" onchange="app.onModalDateChange()" style="width: 100%; min-width: 0; padding: 8px 4px; box-sizing: border-box; font-size: 0.85rem;">
                     </div>
-                    <div class="form-group" style="flex:1">
+                    <div class="form-group" style="flex:1; min-width: 0;">
                         <label>Bis</label>
-                        <input type="date" id="modalEnd" onchange="app.onModalDateChange()">
+                        <input type="date" id="modalEnd" onchange="app.onModalDateChange()" style="width: 100%; min-width: 0; padding: 8px 4px; box-sizing: border-box; font-size: 0.85rem;">
                     </div>
                 </div>
                 <div class="form-group">

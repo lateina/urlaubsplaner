@@ -77,6 +77,13 @@ class App {
 
         this.initApp();
 
+        this.viewMode = 'month'; // 'month', 'year'
+        this.currentViewDate = this.formatDate(new Date());
+        this.filterGroup = 'All';
+
+        // Populate filter groups dynamically after config loads
+        setTimeout(() => this.populateFilterGroups(), 100);
+
         const calendar = document.getElementById('calendar');
         if (calendar) {
             calendar.addEventListener('scroll', () => this._scheduleVirtualUpdate(), { passive: true });
@@ -212,6 +219,40 @@ class App {
         document.addEventListener('touchcancel', this.stopDrag);
     }
 
+    setFilterGroup(group) {
+        this.filterGroup = group;
+        this.render();
+    }
+
+    navigateView(direction) {
+        const c = document.getElementById('calendar');
+        if (c) c.scrollBy({ left: direction * 400, behavior: 'smooth' });
+    }
+
+    populateFilterGroups() {
+        const selects = document.querySelectorAll('#groupFilterSelector');
+        
+        let groupsToShow = [];
+        if (CONFIG.skills) {
+            groupsToShow = CONFIG.skills;
+        } else if (CONFIG.groupOrder) {
+            groupsToShow = CONFIG.groupOrder.filter(g => g !== '');
+        }
+
+        selects.forEach(sel => {
+            if (!sel) return;
+            sel.innerHTML = '<option value="All">Alle</option>';
+            groupsToShow.forEach(grp => {
+                if (grp === 'Kein Vertreter nötig') return; // Hide this specific group from standard filtering if desired, or keep it. Let's keep it.
+                const opt = document.createElement('option');
+                opt.value = grp;
+                opt.textContent = grp;
+                sel.appendChild(opt);
+            });
+            sel.value = this.filterGroup;
+        });
+    }
+
     formatDate(d) {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
@@ -317,6 +358,7 @@ class App {
             if (data.groupOrder) CONFIG.groupOrder = data.groupOrder;
             if (data.groupColors) CONFIG.groupColors = data.groupColors;
             this.sortEmployees();
+            this.populateFilterGroups();
             this.showLoginModal();
             return data;
         }
@@ -348,14 +390,14 @@ class App {
             const prevBtn = document.createElement('button');
             prevBtn.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H4M10 18l-6-6 6-6"/></svg>';
             prevBtn.className = 'nav-arrow-btn';
-            prevBtn.title = 'Nach links schieben';
-            prevBtn.onclick = () => this.scrollByAmount(-400);
+            prevBtn.title = 'Zurück / Nach links';
+            prevBtn.onclick = () => this.navigateView(-1);
 
             const nextBtn = document.createElement('button');
             nextBtn.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M14 6l6 6-6 6"/></svg>';
             nextBtn.className = 'nav-arrow-btn';
-            nextBtn.title = 'Nach rechts schieben';
-            nextBtn.onclick = () => this.scrollByAmount(400);
+            nextBtn.title = 'Vor / Nach rechts';
+            nextBtn.onclick = () => this.navigateView(1);
 
             arrowGroup.appendChild(prevBtn);
             arrowGroup.appendChild(nextBtn);
@@ -552,7 +594,7 @@ class App {
             const el = document.getElementById('tab-' + t);
             if (el) {
                 if (t === 'admin') el.style.display = isRealAdmin ? 'inline-block' : 'none';
-                else if (t === 'summary' || t === 'status') el.style.display = (isAdmin && id !== CONFIG.isSprecher) ? 'inline-block' : 'none';
+                else if (t === 'summary' || t === 'status') el.style.display = (id === 'admin') ? 'inline-block' : 'none';
                 else if (t === 'requests') el.style.display = (id === 'sekretariat' ? 'none' : 'inline-block');
                 else if (t === 'po') el.style.display = (id === 'sekretariat' ? 'inline-block' : 'none');
                 else if (t === 'groups' || t === 'skills') el.style.display = (isRealAdmin || (CONFIG.isSprecher && id === CONFIG.isSprecher)) ? 'inline-block' : 'none';
@@ -586,7 +628,7 @@ class App {
     }
 
     checkPermission(eid, silent = false) {
-        if (this.currentUser === 'admin' || this.currentUser === 'sekretariat' || (CONFIG.isSprecher && this.currentUser === CONFIG.isSprecher) || eid === this.currentUser) return true;
+        if (this.currentUser === 'admin' || this.currentUser === 'sekretariat' || eid === this.currentUser) return true;
         if (!silent) alert('Stopp! Du kannst Abwesenheiten nur in deiner eigenen Zeile eintragen oder bearbeiten.');
         return false;
     }
@@ -595,6 +637,8 @@ class App {
         const container = document.getElementById('calendar');
         if (!container) return;
         container.innerHTML = '';
+        container.style.gridTemplateColumns = '';
+        container.classList.remove('view-year');
         const frag = document.createDocumentFragment();
         const isMobile = window.innerWidth <= 768;
         let lastM = -1, lastY = -1;
@@ -657,17 +701,41 @@ class App {
             frag.appendChild(c);
         });
 
-        const emps = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false);
+        let emps = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false);
+        if (this.filterGroup && this.filterGroup !== 'All') {
+            emps = emps.filter(e => {
+                const grps = Array.isArray(e.groups) ? e.groups : (e.group ? [e.group] : []);
+                return grps.includes(this.filterGroup) || this.getPrimaryGrp(e) === this.filterGroup;
+            });
+        }
         emps.forEach((e, ei) => {
             const n = document.createElement('div');
             n.className = 'cell employee-row-header sticky-col';
             n.style.gridRow = ei + 4;
             n.style.gridColumn = '1';
-            const displayName = e.name; // Show full name for better identification
-            const nameSpan = document.createElement('span');
-            nameSpan.style.fontWeight = '700';
-            nameSpan.textContent = displayName;
-            n.appendChild(nameSpan);
+            const displayName = e.name;
+            const shortName = this.getShortName(e.name);
+            
+            const nameContainer = document.createElement('div');
+            nameContainer.style.display = 'flex';
+            nameContainer.style.flexDirection = 'column';
+            nameContainer.style.gap = '2px';
+            
+            const desktopSpan = document.createElement('span');
+            desktopSpan.className = 'desktop-name';
+            desktopSpan.style.fontWeight = '700';
+            desktopSpan.textContent = displayName;
+            
+            const mobileSpan = document.createElement('span');
+            mobileSpan.className = 'mobile-name';
+            mobileSpan.style.fontWeight = '700';
+            mobileSpan.style.display = 'none';
+            mobileSpan.textContent = shortName;
+            
+            nameContainer.appendChild(desktopSpan);
+            nameContainer.appendChild(mobileSpan);
+            
+            n.appendChild(nameContainer);
 
             const vacBadge = document.createElement('span');
             vacBadge.id = `vac-badge-${e.id}`;
@@ -688,7 +756,7 @@ class App {
                     lbl.style.cssText = `position:absolute; top:2px; right:6px; font-size:0.55rem; color:${color}; font-weight:800; text-transform:uppercase; pointer-events:none; opacity:0.9;`;
                     n.appendChild(lbl);
                     n.style.borderTop = `1px solid ${color}33`;
-                    nameSpan.style.marginTop = '14px'; // Increased shift for better spacing
+                    // nameSpan.style.marginTop = '14px'; // Increased shift for better spacing - this is now handled by flexbox gap
                 }
                 const next = emps[ei + 1];
                 if (!next || this.getPrimaryGrp(next) !== grp) n.style.borderBottom = `1px solid ${color}33`;
@@ -707,12 +775,21 @@ class App {
         this.updateNavHighlighting();
         this._visStart = -1;
         this._visEnd = -1;
-        const initialEnd = Math.max(30, Math.min(this.dates.length, Math.ceil((container.clientWidth - 200) / 40) + 10));
-        this.renderVisibleCells(0, initialEnd);
+        const cw = container.clientWidth || window.innerWidth || 1024;
+        const startCol = Math.max(0, Math.floor(container.scrollLeft / 40) - 10);
+        const endCol = Math.min(this.dates.length, startCol + Math.ceil(cw / 40) + 20);
+        this.renderVisibleCells(startCol, endCol);
     }
 
     renderVisibleCells(startCol, endCol) {
-        const emps = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false);
+        const colW = this.viewMode === 'year' ? 6 : 40;
+        let emps = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat' && e.active !== false);
+        if (this.filterGroup && this.filterGroup !== 'All') {
+            emps = emps.filter(e => {
+                const grps = Array.isArray(e.groups) ? e.groups : (e.group ? [e.group] : []);
+                return grps.includes(this.filterGroup) || this.getPrimaryGrp(e) === this.filterGroup;
+            });
+        }
         emps.forEach(e => {
             const wrapper = document.getElementById(`dw-${e.id}`);
             if (!wrapper) return;
@@ -731,7 +808,7 @@ class App {
                 cell.dataset.eid = e.id;
                 cell.dataset.date = d.dateStr;
                 cell.dataset.ci = ci;
-                cell.style.cssText = `position:absolute;left:${ci * 40}px;width:40px;top:0;bottom:0`;
+                cell.style.cssText = `position:absolute;left:${ci * colW}px;width:${colW}px;top:0;bottom:0`;
                 if (s) {
                     const t = s.type || s;
                     cell.classList.add(t === 'U' || t === 'V' ? 'status-vacation' : t === 'D' ? 'status-trip' : t === 'F' ? 'status-training' : 'status-custom');
@@ -905,8 +982,10 @@ class App {
     updateNavHighlighting() {
         const c = document.getElementById('calendar');
         if (!c) return;
-        const dIdx = Math.min(Math.floor(c.scrollLeft / 40), this.dates.length - 1);
+        const colW = this.viewMode === 'year' ? 6 : 40;
+        const dIdx = Math.min(Math.floor(c.scrollLeft / colW), this.dates.length - 1);
         const d = this.dates[dIdx < 0 ? 0 : dIdx];
+
         if (d) {
             this.currentYear = d.year;
             CONFIG.years.forEach(y => {
@@ -1109,7 +1188,7 @@ class App {
     }
 
     addRange() {
-        const isAdmin = (this.currentUser === 'admin' || this.currentUser === CONFIG.isSprecher);
+        const isAdmin = (this.currentUser === 'admin' || this.currentUser === 'sekretariat');
         if (isAdmin) {
             this._addRangeDirect();
         } else {
@@ -1488,7 +1567,7 @@ class App {
             if (el) el.style.display = (v === tabId) ? 'flex' : 'none';
         });
 
-        if (bulkPanel) bulkPanel.style.display = (tabId === 'calendar' && (this.currentUser === 'admin' || this.currentUser === 'sekretariat')) ? 'flex' : 'none';
+        if (bulkPanel) bulkPanel.style.display = (tabId === 'calendar' && this.currentUser === 'admin') ? 'flex' : 'none';
 
         if (tabId === 'admin') this.renderAdminTable();
         if (tabId === 'requests') this.renderRequestsTab();
@@ -1500,7 +1579,16 @@ class App {
     renderRequestsTab() {
         const container = document.getElementById('requestsList');
         if (!container) return;
-        const requests = this.state.__REQUESTS__ || [];
+        const requestsRaw = this.state.__REQUESTS__ || [];
+        
+        const filterSelect = document.getElementById('requestStatusFilter');
+        const filterVal = filterSelect ? filterSelect.value : 'all';
+        let requests = requestsRaw;
+        
+        if (filterVal === 'open') requests = requestsRaw.filter(r => r.status.startsWith('pending'));
+        else if (filterVal === 'approved') requests = requestsRaw.filter(r => r.status === 'approved');
+        else if (filterVal === 'rejected') requests = requestsRaw.filter(r => r.status === 'rejected');
+
         const cu = this.currentUser;
         const isAdmin = cu === 'admin';
         const isSprecher = (CONFIG.isSprecher && cu === CONFIG.isSprecher);
@@ -1552,9 +1640,9 @@ class App {
 
         if (isAdmin || isSprecher) {
             const adminReqs = requests.filter(r => r.status === 'pending_admin');
-            if (adminReqs.length === 0) {
+            if (adminReqs.length === 0 && (filterVal === 'all' || filterVal === 'open')) {
                 html += '<p style="color:var(--text-secondary); text-align:center; padding: 40px 0;">Keine offenen Anfragen zur Genehmigung.</p>';
-            } else {
+            } else if (adminReqs.length > 0) {
                 adminReqs.forEach(req => {
                     const actions = `
                         <div style="display: flex; gap: 8px;">
@@ -1629,6 +1717,34 @@ class App {
     setMode(m) { this.currentMode = m; }
     setCustomText(t) { this.currentText = t; }
     setVertreterText(t) { this.currentVertreterText = t; }
+
+    getPrimaryGrp(e) {
+        const grps = Array.isArray(e.groups) ? e.groups : (e.group ? [e.group] : []);
+        if (grps.length === 0) return '';
+        let best = CONFIG.groupOrder.length, res = '';
+        const realGrps = grps.filter(g => g !== 'Kein Vertreter nötig');
+        const lookup = realGrps.length > 0 ? realGrps : grps;
+        lookup.forEach(g => { const i = CONFIG.groupOrder.indexOf(g); if (i !== -1 && i < best) { best = i; res = g; } });
+        return res;
+    }
+
+    getShortName(fullName) {
+        if (!fullName) return '';
+        const parts = fullName.trim().split(/\s+/);
+        if (parts.length <= 1) return fullName;
+        
+        let firstIdx = 0;
+        // Skip common German titles
+        while (firstIdx < parts.length - 1 && /^([Dd]r\.?|[Pp]rof\.?|[Pp][Dd]\.?|[Mm]ed\.?)$/i.test(parts[firstIdx])) {
+            firstIdx++;
+        }
+        
+        // Abbreviate the identified first name
+        if (firstIdx < parts.length - 1) {
+            parts[firstIdx] = parts[firstIdx].charAt(0) + '.';
+        }
+        return parts.join(' ');
+    }
 
     needsVertreter(empId) {
         const emp = CONFIG.employees.find(e => e.id === empId);
@@ -1830,7 +1946,7 @@ class App {
         const empId = document.getElementById('importEmp').value;
         const text = document.getElementById('importText').value.trim();
         if (!text || !empId) return alert('Bitte Mitarbeiter und Text angeben.');
-        if (this.currentUser !== 'admin' && this.currentUser !== 'sekretariat' && empId !== this.currentUser) { alert('Bulk-Import ist nur für den eigenen Nutzer möglich.'); return; }
+        if (this.currentUser !== 'admin' && empId !== this.currentUser) { alert('Bulk-Import ist nur für den eigenen Nutzer möglich.'); return; }
 
         const lines = text.split('\n');
         let count = 0;
