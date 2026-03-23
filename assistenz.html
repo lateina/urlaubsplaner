@@ -384,23 +384,43 @@
 
             async reloadData() {
                 const data = await super.reloadData();
+                
+                // Ensure "Funktionsoberarzt" is in the group list even if database was older
+                if (CONFIG.skills && !CONFIG.skills.includes('Funktionsoberarzt')) {
+                    const idx = CONFIG.skills.indexOf('Kein Vertreter nötig');
+                    if (idx !== -1) CONFIG.skills.splice(idx, 0, 'Funktionsoberarzt');
+                    else CONFIG.skills.push('Funktionsoberarzt');
+                    
+                    if (CONFIG.groupColors && !CONFIG.groupColors['Funktionsoberarzt']) {
+                        CONFIG.groupColors['Funktionsoberarzt'] = '#475569';
+                    }
+                }
+
                 if (CONFIG.oaBinId) {
                     const ext = await DataService.loadExternal(CONFIG.oaBinId);
                     if (ext && !ext.error) {
                         this.externalData = ext;
                         const foas = (ext.employees || []).filter(e => {
                             const grps = Array.isArray(e.groups) ? e.groups : (e.group ? [e.group] : []);
-                            return grps.includes('Funktionsoberarzt');
+                            // Case-insensitive check to be safe
+                            return grps.some(g => g && g.toLowerCase() === 'funktionsoberarzt');
                         });
                         foas.forEach(f => {
                             f.isExternal = true;
                             if (!CONFIG.employees.find(e => e.id === f.id)) {
                                 CONFIG.employees.push(f);
+                            } else {
+                                // Update existing external entry with potential new PIN/Email from OA bin
+                                const existingIdx = CONFIG.employees.findIndex(e => e.id === f.id);
+                                if (CONFIG.employees[existingIdx].isExternal) {
+                                    CONFIG.employees[existingIdx] = { ...f, isExternal: true };
+                                }
                             }
                         });
                         this.sortEmployees();
                         this.populateFilterGroups();
                         this.showLoginModal();
+                        this.filterLoginEmployees();
                     }
                 }
                 return data;

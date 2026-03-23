@@ -387,6 +387,19 @@
 
             async reloadData() {
                 const data = await super.reloadData();
+                
+                // Ensure "Funktionsoberarzt" is in the group list even if database was older
+                if (CONFIG.groupOrder && !CONFIG.groupOrder.includes('Funktionsoberarzt')) {
+                    // Insert before "Kein Vertreter nötig" or at the end
+                    const idx = CONFIG.groupOrder.indexOf('Kein Vertreter nötig');
+                    if (idx !== -1) CONFIG.groupOrder.splice(idx, 0, 'Funktionsoberarzt');
+                    else CONFIG.groupOrder.push('Funktionsoberarzt');
+                    
+                    if (CONFIG.groupColors && !CONFIG.groupColors['Funktionsoberarzt']) {
+                        CONFIG.groupColors['Funktionsoberarzt'] = '#475569';
+                    }
+                }
+
                 if (CONFIG.assBinId) {
                     const ext = await DataService.loadExternal(CONFIG.assBinId);
                     if (ext && !ext.error) {
