@@ -883,7 +883,16 @@ class App {
         if (cell && c) {
             const offset = document.querySelector('.sticky-corner').offsetWidth;
             c.scrollTo({ left: cell.offsetLeft - offset, behavior: 'smooth' });
+            this.showTodayArrow(cell);
         }
+    }
+
+    showTodayArrow(cell) {
+        document.querySelectorAll('.today-arrow').forEach(a => a.remove());
+        const arrow = document.createElement('div');
+        arrow.className = 'today-arrow';
+        cell.appendChild(arrow);
+        setTimeout(() => arrow.remove(), 3000);
     }
 
     scrollByAmount(amount) {
@@ -1763,17 +1772,16 @@ class App {
             // "Druckdatum" und QM-Kopfzeile überdecken
             try {
                 const pages = pdfDoc.getPages();
-                if (pages.length > 0) {
-                    const firstPage = pages[0];
-                    const { width, height } = firstPage.getSize();
-                    firstPage.drawRectangle({
+                pages.forEach(page => {
+                    const { width, height } = page.getSize();
+                    page.drawRectangle({
                         x: 0,
                         y: height - 28, // ca. 1 cm = 28pt
                         width: width,
                         height: 28,
                         color: rgb(1, 1, 1)
                     });
-                }
+                });
             } catch (e) { console.warn("Failed to hide header", e); }
 
             form.flatten();
