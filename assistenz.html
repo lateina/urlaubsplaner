@@ -72,27 +72,11 @@
             <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; max-width: 100%;">
                 <button id="btnToday" onclick="app.scrollToToday()" title="Zum heutigen Tag springen">Heute</button>
                 <button id="btnAddAbsence" class="primary" onclick="app.openModal()"><span>+</span> Eintragen</button>
-                <select id="groupFilterSelector" style="padding: 8px 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color); font-size: 0.875rem; font-weight: 600; color: var(--text-main); background: var(--surface-color); cursor: pointer;" onchange="app.setFilterGroup(this.value)">
-                    <option value="All">Alle</option>
-                </select>
-                <!-- 2x2 Inline Grid Legend -->
-                <div style="display: grid; grid-template-columns: auto auto; column-gap: 12px; row-gap: 4px; margin-left: 2px; font-size: 0.70rem; color: var(--text-secondary); align-items: center; padding: 4px 8px; border-radius: var(--radius-md); background: rgba(0,0,0,0.03);">
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                        <div style="width: 10px; height: 10px; border-radius: 2px; background-color: var(--status-vacation);"></div>
-                        <span>Urlaub</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                        <div style="width: 10px; height: 10px; border-radius: 2px; background-color: var(--status-trip);"></div>
-                        <span>Dienstreise</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                        <div style="width: 10px; height: 10px; border-radius: 2px; background-color: var(--status-training);"></div>
-                        <span>Fortbild.</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                        <div style="width: 10px; height: 10px; border-radius: 2px; background-color: var(--status-custom);"></div>
-                        <span>Sonstiges</span>
-                    </div>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); white-space: nowrap;">Filter:</span>
+                    <select id="groupFilterSelector" style="padding: 8px 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color); font-size: 0.875rem; font-weight: 600; color: var(--text-main); background: var(--surface-color); cursor: pointer;" onchange="app.setFilterGroup(this.value)">
+                        <option value="All">Alle</option>
+                    </select>
                 </div>
             </div>
             <div id="absenceInputModePanel" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
