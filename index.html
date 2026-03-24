@@ -83,6 +83,7 @@
                         <option value="All">Alle</option>
                     </select>
                 </div>
+                <button id="btnSortMonth" onclick="app.toggleMonthSorting()" title="Zusätzliche Sortierung nach monatlicher Bereichszuteilung" style="display:none; background-color: #9333ea; color: white; border-color: #7e22ce;">Standard</button>
             </div>
             <div id="absenceInputModePanel" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                 <div class="segmented-control">
@@ -363,6 +364,14 @@
             schoolHolidays: [
                 { start: '2026-01-01', end: '2026-01-05', name: 'Weihnachtsferien' }, { start: '2026-02-16', end: '2026-02-20', name: 'Winterferien' }, { start: '2026-03-30', end: '2026-04-10', name: 'Osterferien' }, { start: '2026-05-26', end: '2026-06-05', name: 'Pfingstferien' }, { start: '2026-08-03', end: '2026-09-14', name: 'Sommerferien' }, { start: '2026-11-02', end: '2026-11-06', name: 'Herbstferien' }, { start: '2026-12-24', end: '2027-01-08', name: 'Weihnachtsferien' }, { start: '2027-02-08', end: '2027-02-12', name: 'Winterferien' }, { start: '2027-03-22', end: '2027-04-02', name: 'Osterferien' }, { start: '2027-05-18', end: '2027-05-28', name: 'Pfingstferien' }, { start: '2027-08-02', end: '2027-09-13', name: 'Sommerferien' }, { start: '2027-11-02', end: '2027-11-05', name: 'Herbstferien' }, { start: '2027-12-24', end: '2028-01-07', name: 'Weihnachtsferien' }
             ],
+            congresses: [
+                { start: '2026-04-08', end: '2026-04-11', name: '92. Jahrestagung der DGK' },
+                { start: '2027-03-31', end: '2027-04-03', name: '93. Jahrestagung der DGK' },
+                { start: '2026-09-24', end: '2026-09-26', name: 'DGK Herztage' },
+                { start: '2026-08-28', end: '2026-08-31', name: 'ESC Kongress' },
+                { start: '2027-08-27', end: '2027-08-30', name: 'ESC Kongress' }
+            ],
+            showAreaLabels: false,
             exportFilename: "oa_planer.json"
         };
         PAGE_CONFIG.years.forEach(y => Object.assign(PAGE_CONFIG.holidays, getBavarianHolidays(y)));
@@ -470,11 +479,39 @@
             sortEmployees() {
                 const admins = CONFIG.employees.filter(e => e.id === 'admin' || e.id === 'sekretariat');
                 const others = CONFIG.employees.filter(e => e.id !== 'admin' && e.id !== 'sekretariat');
-                others.sort((a, b) => {
-                    const iA = CONFIG.groupOrder.indexOf(this.getPrimaryGrp(a)), iB = CONFIG.groupOrder.indexOf(this.getPrimaryGrp(b));
-                    if (iA !== iB) return iA - iB;
-                    return (a.name.split(' ').pop() || '').localeCompare((b.name.split(' ').pop() || ''));
-                });
+
+                let hasMonthData = false;
+                if (this.isMonthSortingActive && this.monthlyDistribution && this.lastVisibleMonthStr) {
+                    const compactMonthStr = this.lastVisibleMonthStr.replace('month_', '');
+                    hasMonthData = this.monthlyDistribution.some(a => a.monat_id === this.lastVisibleMonthStr || a.mi === compactMonthStr);
+                }
+
+                if (hasMonthData) {
+                    const empSortKey = {};
+                    others.forEach(o => {
+                        empSortKey[o.id] = this.getEmployeeAreaForMonth(o.id, this.lastVisibleMonthStr, this.monthlyDistribution).id;
+                    });
+
+                    others.sort((a, b) => {
+                        const areaIdA = empSortKey[a.id] || 'none';
+                        const areaIdB = empSortKey[b.id] || 'none';
+                        
+                        let idxA = window.MONTH_AREA_ORDER.indexOf(areaIdA);
+                        let idxB = window.MONTH_AREA_ORDER.indexOf(areaIdB);
+                        if (idxA === -1) idxA = 999;
+                        if (idxB === -1) idxB = 999;
+                        
+                        if (idxA !== idxB) return idxA - idxB;
+                        if (areaIdA !== areaIdB) return areaIdA.localeCompare(areaIdB);
+                        return (a.name.split(' ').pop() || '').localeCompare((b.name.split(' ').pop() || ''));
+                    });
+                } else {
+                    others.sort((a, b) => {
+                        const iA = CONFIG.groupOrder.indexOf(this.getPrimaryGrp(a)), iB = CONFIG.groupOrder.indexOf(this.getPrimaryGrp(b));
+                        if (iA !== iB) return iA - iB;
+                        return (a.name.split(' ').pop() || '').localeCompare((b.name.split(' ').pop() || ''));
+                    });
+                }
                 CONFIG.employees = [...admins, ...others];
             }
 

@@ -52,6 +52,77 @@ class DataService {
     }
 }
 
+window.MONTH_AREA_MAPPING = {
+    'station18a': 'Station 18A',
+    'station18b': 'Station 18B',
+    'station19a': 'Station 19A',
+    'station19b': 'Station 19B',
+    'station46': 'Station 46',
+    'echolabor': 'Echo',
+    'kardambulanz': 'Kard Ambulanz',
+    'hfambulanz': 'HF Ambulanz',
+    'phambulanz': 'PH Ambulanz',
+    'pneumambulanz': 'Pneu Ambulanz',
+    'studienambulanz': 'Studienambulanz',
+    'station93': 'Station 93',
+    'cpu': 'CPU',
+    'hfu': 'HFU',
+    'sm': 'SM',
+    'icd': 'ICD Ambulanz',
+    'epu': 'EPU',
+    'hkl': 'HKL',
+    'med1': 'Med I',
+    'med3': 'Med III',
+    'bronchoskopie': 'Bronchoskopie',
+    'ict': 'ICT',
+    'mrtct': 'MRT',
+    'schlaflabor': 'Schlaflabor',
+    'donaustauf': 'Donaustauf',
+    'labor': 'Labor',
+    'elternzeit': 'Elternzeit'
+};
+window.MONTH_AREA_ORDER = Object.keys(window.MONTH_AREA_MAPPING);
+window.getAreaColor = function(areaId) {
+    if (!areaId || areaId === 'none') return '#cbd5e1';
+    let hash = 0;
+    for (let i = 0; i < areaId.length; i++) {
+        hash = areaId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const h = Math.abs(hash) % 360;
+    return `hsl(${h}, 65%, 45%)`;
+};
+
+window.resolveAreaConflict = function(areaIds) {
+    if (!areaIds || areaIds.length === 0) return 'none';
+    if (areaIds.length === 1) return areaIds[0];
+
+    let best = areaIds[0];
+    let bestIdx = window.MONTH_AREA_ORDER.indexOf(best);
+    if (bestIdx === -1) bestIdx = 999;
+    
+    for (let i = 1; i < areaIds.length; i++) {
+        let current = areaIds[i];
+        let currentIdx = window.MONTH_AREA_ORDER.indexOf(current);
+        if (currentIdx === -1) currentIdx = 999;
+        
+        if ((best === 'kardambulanz' && current === 'icd') || (best === 'icd' && current === 'kardambulanz')) {
+            best = 'icd'; bestIdx = window.MONTH_AREA_ORDER.indexOf(best); continue;
+        }
+        if ((best === 'labor' && current === 'hkl') || (best === 'hkl' && current === 'labor')) {
+            best = 'hkl'; bestIdx = window.MONTH_AREA_ORDER.indexOf(best); continue;
+        }
+        if ((best === 'labor' && current === 'phambulanz') || (best === 'phambulanz' && current === 'labor')) {
+            best = 'phambulanz'; bestIdx = window.MONTH_AREA_ORDER.indexOf(best); continue;
+        }
+        
+        if (currentIdx < bestIdx) {
+            best = current;
+            bestIdx = currentIdx;
+        }
+    }
+    return best;
+};
+
 class App {
     constructor(config) {
         window.CONFIG = config;
@@ -79,18 +150,46 @@ class App {
         this._datesMap = new Map();
         this.dates.forEach(d => this._datesMap.set(d.dateStr, d));
 
-        this.initApp();
-
         this.viewMode = 'month'; // 'month', 'year'
         this.currentViewDate = this.formatDate(new Date());
         this.filterGroup = 'All';
+        this.isMonthSortingActive = false;
+        this.monthlyDistribution = null;
+        this.allowedMonths = [];
+        this.lastVisibleMonthStr = null;
 
-        // Populate filter groups dynamically after config loads
+        this.initApp();
+
         setTimeout(() => this.populateFilterGroups(), 100);
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                this._updateScheduled = false;
+                this._scheduleVirtualUpdate();
+            }
+        });
 
         const calendar = document.getElementById('calendar');
         if (calendar) {
-            calendar.addEventListener('scroll', () => this._scheduleVirtualUpdate(), { passive: true });
+            let scrollTimeout;
+            calendar.addEventListener('scroll', () => {
+                this._scheduleVirtualUpdate();
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => {
+                    const startCol = Math.max(0, Math.floor(calendar.scrollLeft / 40));
+                    const visibleDate = this.dates[Math.min(startCol + 15, this.dates.length - 1)];
+                    if (visibleDate) {
+                        const newMonthStr = `month_${visibleDate.year}_${String(visibleDate.month + 1).padStart(2, '0')}`;
+                        if (this.lastVisibleMonthStr !== newMonthStr) {
+                            this.lastVisibleMonthStr = newMonthStr;
+                            if (this.isMonthSortingActive) {
+                                this.sortEmployees();
+                            }
+                            this.render();
+                        }
+                    }
+                }, 500);
+            }, { passive: true });
             calendar.addEventListener('mousedown', ev => {
                 if (ev.button !== 0 || ev.altKey) return;
                 const cell = ev.target.closest('.day-cell[data-eid]');
@@ -239,6 +338,53 @@ class App {
         this.render();
     }
 
+    async toggleMonthSorting() {
+        this.isMonthSortingActive = !this.isMonthSortingActive;
+        const btn = document.getElementById('btnSortMonth');
+        
+        if (this.isMonthSortingActive) {
+            if (!this.monthlyDistributionFull) {
+                if (btn) btn.innerHTML = 'Lade...';
+                await this.loadMonthlyDistributionSilently();
+            }
+            if (!this.monthlyDistributionFull) {
+                this.isMonthSortingActive = false;
+                if (btn) btn.innerHTML = 'Standard';
+                alert("Konnte Monatsverteilung nicht laden.");
+                return;
+            }
+
+            this.allowedMonths = [];
+            const now = new Date();
+            const currentQuarter = Math.floor(now.getMonth() / 3);
+            let startMonth = currentQuarter * 3;
+            let currYear = now.getFullYear();
+
+            for (let i = 0; i < 6; i++) {
+                let m = startMonth + i;
+                let y = currYear;
+                if (m > 11) { m -= 12; y++; }
+                this.allowedMonths.push(`month_${y}_${String(m + 1).padStart(2, '0')}`);
+            }
+            
+            this.monthlyDistribution = this.monthlyDistributionFull;
+            if (btn) btn.innerHTML = 'Rotationen';
+
+            // Set initial visible month
+            const c = document.getElementById('calendar');
+            if (c) {
+                const startCol = Math.max(0, Math.floor(c.scrollLeft / 40));
+                const visibleDate = this.dates[Math.min(startCol + 15, this.dates.length - 1)] || this.dates[0];
+                this.lastVisibleMonthStr = `month_${visibleDate.year}_${String(visibleDate.month + 1).padStart(2, '0')}`;
+            }
+        } else {
+            if (btn) btn.innerHTML = 'Standard';
+        }
+        
+        this.sortEmployees();
+        this.render();
+    }
+
     navigateView(direction) {
         const c = document.getElementById('calendar');
         if (c) c.scrollBy({ left: direction * 400, behavior: 'smooth' });
@@ -268,6 +414,30 @@ class App {
         });
     }
 
+    getEmployeeAreaForMonth(empId, monthStr, dataset) {
+        if (!dataset || !monthStr) return { id: 'none', name: 'Ohne Bereich' };
+        const compactMonthStr = monthStr.replace('month_', '');
+        const matchingRecords = dataset.filter(a => 
+            (a.monat_id === monthStr || a.mi === compactMonthStr) && 
+            (String(a.mitarbeiter_id) === String(empId) || String(a.ei) === String(empId))
+        );
+        if (matchingRecords.length === 0) return { id: 'none', name: 'Ohne Bereich' };
+        
+        const areaIds = matchingRecords.map(r => (r.bi || r.bereich_name || '').toLowerCase()).filter(Boolean);
+        const resolvedId = window.resolveAreaConflict(areaIds);
+        
+        let originalName = 'Ohne Bereich';
+        const bestRecord = matchingRecords.find(r => (r.bi || r.bereich_name || '').toLowerCase() === resolvedId);
+        if (bestRecord) {
+            originalName = bestRecord.bereich_name || bestRecord.bi;
+        }
+        
+        return {
+            id: resolvedId || 'none',
+            name: window.MONTH_AREA_MAPPING[resolvedId] || originalName || 'Ohne Bereich'
+        };
+    }
+
     formatDate(d) {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
@@ -280,6 +450,7 @@ class App {
                 if (y === 2028 && d.getMonth() > 0) break;
                 const s = this.formatDate(d);
                 const sh = CONFIG.schoolHolidays.find(h => s >= h.start && s <= h.end);
+                const cong = (CONFIG.congresses || []).find(h => s >= h.start && s <= h.end);
                 res.push({
                     year: y,
                     dateStr: s,
@@ -289,7 +460,9 @@ class App {
                     isWeekend: d.getDay() === 0 || d.getDay() === 6,
                     holiday: CONFIG.holidays[s],
                     isSchoolHoliday: !!sh,
-                    schoolHoliday: sh ? sh.name : null
+                    schoolHoliday: sh ? sh.name : null,
+                    isCongress: !!cong,
+                    congressName: cong ? cong.name : null
                 });
                 d.setDate(d.getDate() + 1);
             }
@@ -375,9 +548,52 @@ class App {
             this.sortEmployees();
             this.populateFilterGroups();
             this.showLoginModal();
+            setTimeout(() => this.loadMonthlyDistributionSilently(), 100);
             return data;
         }
         return data;
+    }
+
+    async loadMonthlyDistributionSilently() {
+        if (!CONFIG.apiKey) return;
+        try {
+            const binIdForMonth = '699c40edae596e708f42284d';
+            const res = await fetch(`https://api.jsonbin.io/v3/b/${binIdForMonth}/latest`, {
+                headers: { 'X-Master-Key': CONFIG.apiKey }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                
+                const now = new Date();
+                const currentQuarter = Math.floor(now.getMonth() / 3);
+                let startMonth = currentQuarter * 3;
+                let currYear = now.getFullYear();
+
+                const allowed = [];
+                for (let i = 0; i < 6; i++) {
+                    let m = startMonth + i;
+                    let y = currYear;
+                    if (m > 11) { m -= 12; y++; }
+                    allowed.push(`month_${y}_${String(m + 1).padStart(2, '0')}`);
+                }
+                
+                this.monthlyDistributionFull = (data.record || []).filter(r => {
+                    return allowed.includes(r.monat_id) || (r.mi && allowed.includes('month_' + r.mi));
+                });
+
+                const c = document.getElementById('calendar');
+                if (c) {
+                    const startCol = Math.max(0, Math.floor(c.scrollLeft / 40));
+                    const visibleDate = this.dates[Math.min(startCol + 15, this.dates.length - 1)] || this.dates[0];
+                    if (visibleDate) {
+                        this.lastVisibleMonthStr = `month_${visibleDate.year}_${String(visibleDate.month + 1).padStart(2, '0')}`;
+                    }
+                }
+                this.render();
+            }
+        } catch (e) {
+            console.warn("Silent load of monthly distribution failed", e);
+        }
     }
 
     initUI() {
@@ -687,13 +903,13 @@ class App {
 
         this.dates.forEach((d, i) => {
             const h = document.createElement('div');
-            h.className = `cell header-cell sticky-header day-header ${d.isWeekend ? 'weekend' : ''} ${d.holiday ? 'holiday' : ''} ${d.isSchoolHoliday ? 'school-holiday' : ''}`;
+            h.className = `cell header-cell sticky-header day-header ${d.isWeekend ? 'weekend' : ''} ${d.holiday ? 'holiday' : ''} ${d.isSchoolHoliday ? 'school-holiday' : ''} ${d.isCongress ? 'congress-day' : ''}`;
             h.innerHTML = `<span>${d.day}</span>`;
             h.style.gridRow = 2;
             h.style.gridColumn = i + 2;
             h.dataset.date = d.dateStr;
             h.onmouseenter = (ev) => {
-                const info = [d.holiday, d.schoolHoliday].filter(x => x).join(' & ');
+                const info = [d.holiday, d.schoolHoliday, d.congressName].filter(x => x).join(' & ');
                 if (info) this.showSimpleTip(ev, info, false);
             };
             h.onmouseleave = () => this.hideTip();
@@ -728,6 +944,20 @@ class App {
                 return grps.includes(this.filterGroup) || this.getPrimaryGrp(e) === this.filterGroup;
             });
         }
+        let hasMonthData = false;
+        let hasAnyDataForMonth = false;
+        
+        if (this.isMonthSortingActive && this.monthlyDistribution && this.lastVisibleMonthStr) {
+            const compactMonthStr = this.lastVisibleMonthStr.replace('month_', '');
+            hasMonthData = this.monthlyDistribution.some(a => a.monat_id === this.lastVisibleMonthStr || a.mi === compactMonthStr);
+        }
+        if (this.monthlyDistributionFull && this.lastVisibleMonthStr) {
+            const compactMonthStr = this.lastVisibleMonthStr.replace('month_', '');
+            hasAnyDataForMonth = this.monthlyDistributionFull.some(a => a.monat_id === this.lastVisibleMonthStr || a.mi === compactMonthStr);
+        }
+        
+        const effectiveMonthSorting = this.isMonthSortingActive && hasMonthData;
+
         emps.forEach((e, ei) => {
             const n = document.createElement('div');
             n.className = 'cell employee-row-header sticky-col';
@@ -754,32 +984,75 @@ class App {
             
             nameContainer.appendChild(desktopSpan);
             nameContainer.appendChild(mobileSpan);
-            
             n.appendChild(nameContainer);
+            
+            let currentAreaId = 'none';
+            let currentAreaName = 'Ohne Bereich';
 
-            const vacBadge = document.createElement('span');
-            vacBadge.id = `vac-badge-${e.id}`;
-            vacBadge.className = 'vac-badge';
-            n.appendChild(vacBadge);
-            this._renderVacBadge(e.id, vacBadge);
-
-            if (this.currentUser === e.id) n.style.backgroundColor = 'var(--primary-light)';
+            if (this.monthlyDistributionFull && this.lastVisibleMonthStr) {
+                const areaInfo = this.getEmployeeAreaForMonth(e.id, this.lastVisibleMonthStr, this.monthlyDistributionFull);
+                currentAreaId = areaInfo.id;
+                currentAreaName = areaInfo.name;
+            }
 
             const grp = this.getPrimaryGrp(e);
-            if (grp) {
-                const color = this.getGroupColor(grp);
-                n.style.borderLeft = `4px solid ${color}`;
-                const prev = emps[ei - 1];
+            let bandColor = '#e2e8f0';
+            
+            if (effectiveMonthSorting) {
+                bandColor = window.getAreaColor(currentAreaId);
+            } else if (grp) {
+                bandColor = this.getGroupColor(grp);
+            }
+
+            n.style.borderLeft = `4px solid ${bandColor}`;
+
+            const prev = emps[ei - 1];
+            if (effectiveMonthSorting) {
+                let prevAreaId = 'none';
+                if (prev && this.monthlyDistributionFull && this.lastVisibleMonthStr) {
+                    prevAreaId = this.getEmployeeAreaForMonth(prev.id, this.lastVisibleMonthStr, this.monthlyDistributionFull).id;
+                }
+                const isFirstInArea = !prev || prevAreaId !== currentAreaId;
+                if (isFirstInArea) {
+                    n.style.borderTop = `1px solid ${bandColor}88`;
+                }
+                
+                if (hasAnyDataForMonth && CONFIG.showAreaLabels !== false) {
+                    if (isFirstInArea) {
+                        const stSpan = document.createElement('span');
+                        stSpan.style.cssText = `position:absolute; top:2px; left:6px; font-size:0.55rem; color:${bandColor}; font-weight:bold; white-space:nowrap; pointer-events:none; z-index:2;`;
+                        stSpan.innerText = currentAreaName;
+                        n.appendChild(stSpan);
+                    }
+                    // Always make room for the badge whether rendered or not to keep alignment consistent
+                    desktopSpan.style.marginTop = '14px';
+                    mobileSpan.style.marginTop = '14px';
+                }
+            } else if (grp) {
                 if (!prev || this.getPrimaryGrp(prev) !== grp) {
-                    const lbl = document.createElement('span');
-                    lbl.innerText = grp;
-                    lbl.style.cssText = `position:absolute; top:2px; right:6px; font-size:0.55rem; color:${color}; font-weight:800; text-transform:uppercase; pointer-events:none; opacity:0.9;`;
-                    n.appendChild(lbl);
-                    n.style.borderTop = `1px solid ${color}33`;
-                    // nameSpan.style.marginTop = '14px'; // Increased shift for better spacing - this is now handled by flexbox gap
+                    n.style.borderTop = `1px solid ${bandColor}88`;
                 }
                 const next = emps[ei + 1];
-                if (!next || this.getPrimaryGrp(next) !== grp) n.style.borderBottom = `1px solid ${color}33`;
+                if (!next || this.getPrimaryGrp(next) !== grp) n.style.borderBottom = `1px solid ${bandColor}33`;
+                
+                if (hasAnyDataForMonth && CONFIG.showAreaLabels !== false) {
+                    const stSpan = document.createElement('span');
+                    stSpan.style.cssText = `position:absolute; top:2px; left:6px; font-size:0.55rem; color:var(--text-secondary); font-weight:bold; white-space:nowrap; pointer-events:none; z-index:2;`;
+                    stSpan.innerText = currentAreaName;
+                    n.appendChild(stSpan);
+                    desktopSpan.style.marginTop = '14px';
+                    mobileSpan.style.marginTop = '14px';
+                }
+            }
+
+            if (grp) {
+                const shouldPrintSkill = effectiveMonthSorting || (!prev || this.getPrimaryGrp(prev) !== grp);
+                if (shouldPrintSkill) {
+                    const lbl = document.createElement('span');
+                    lbl.innerText = grp;
+                    lbl.style.cssText = `position:absolute; top:12px; right:6px; font-size:0.55rem; color:${this.getGroupColor(grp)}; font-weight:800; text-transform:uppercase; pointer-events:none; opacity:0.9; z-index:2;`;
+                    n.appendChild(lbl);
+                }
             }
             frag.appendChild(n);
 
@@ -830,7 +1103,7 @@ class App {
                 }
 
                 const cell = document.createElement('div');
-                cell.className = `cell day-cell${d.isWeekend ? ' weekend' : ''}${d.holiday ? ' holiday' : ''}${d.isSchoolHoliday ? ' school-holiday' : ''}`;
+                cell.className = `cell day-cell${d.isWeekend ? ' weekend' : ''}${d.holiday ? ' holiday' : ''}${d.isSchoolHoliday ? ' school-holiday' : ''}${d.isCongress ? ' congress-day' : ''}`;
                 cell.id = `cell-${e.id}-${d.dateStr}`;
                 cell.dataset.eid = e.id;
                 cell.dataset.date = d.dateStr;
@@ -1612,7 +1885,7 @@ class App {
         let s = eid ? this.state[eid]?.[d] : null;
         const dObj = this._datesMap.get(d);
         if (!dObj) return;
-        const info = [dObj.holiday, dObj.schoolHoliday].filter(x => x).join(' & ');
+        const info = [dObj.holiday, dObj.schoolHoliday, dObj.congressName].filter(x => x).join(' & ');
         
         let isPending = false;
         if (!s && eid) {

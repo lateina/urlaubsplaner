@@ -36,6 +36,7 @@
     --status-absent: #ef4444;
     --status-holiday: #fee2e2;
     --status-weekend: #f1f5f9;
+    --status-congress: #f3e8ff;
     
     --radius-sm: 6px;
     --radius-md: 10px;
@@ -428,6 +429,9 @@ button.primary:hover {
 .day-cell.weekend { background-color: #f1f5f9; }
 .day-cell.holiday { background-color: #fee2e2; }
 .day-cell.school-holiday { border-bottom: 2px solid var(--warning-color); }
+.day-cell.congress-day { background-color: var(--status-congress); }
+.day-header.congress-day { background-color: var(--status-congress) !important; }
+.day-header.congress-day span { border: 2px solid #8b5cf6; }
 
 .day-cell:hover {
     background-color: var(--primary-light) !important;
