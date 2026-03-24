@@ -1438,7 +1438,7 @@ class App {
             });
 
             if (candidates.length > 0) {
-                vertreterResults.innerHTML = candidates.slice(0, 10).map(e => {
+                vertreterResults.innerHTML = candidates.slice(0, 100).map(e => {
                     return `<div style="padding:12px;cursor:pointer;border-bottom:1px solid #f1f5f9;" onmousedown="document.getElementById('modalVertreterInput').value='${e.name.replace(/'/g, "\\'")}';document.getElementById('modalVertreterId').value='${e.id}';document.getElementById('vertreterResults').style.display='none'">${e.name}</div>`;
                 }).join('');
                 vertreterResults.style.display = 'block';
