@@ -985,6 +985,14 @@ class App {
             nameContainer.appendChild(desktopSpan);
             nameContainer.appendChild(mobileSpan);
             n.appendChild(nameContainer);
+
+            const vacBadge = document.createElement('span');
+            vacBadge.id = `vac-badge-${e.id}`;
+            vacBadge.className = 'vac-badge';
+            n.appendChild(vacBadge);
+            this._renderVacBadge(e.id, vacBadge);
+            
+            if (this.currentUser === e.id) n.style.backgroundColor = 'var(--primary-light)';
             
             let currentAreaId = 'none';
             let currentAreaName = 'Ohne Bereich';
@@ -1179,8 +1187,13 @@ class App {
         this.setVacation(empId, dateStr, this.dragStartVal, true, true);
     }
 
-    handleMouseOver(empId, dateStr) {
+    handleMouseOver(empId, dateStr, ev) {
         if (this.isDragging) {
+            // Safety Check: If mouse buttons are 0 but isDragging is true, stop dragging (mouseup was missed)
+            if (ev && ev.buttons === 0) {
+                this.stopDrag();
+                return;
+            }
             this.setVacation(empId, dateStr, this.dragStartVal, true, true);
         }
     }
@@ -1188,10 +1201,17 @@ class App {
     stopDrag() {
         if (this.isDragging) {
             this.isDragging = false;
+            const affectedEmpId = this._lastDraggedEmpId;
+            this._lastDraggedEmpId = null;
             this.dragStartVal = null;
+            
             if (this._hasChanged) {
                 this.saveState();
-                this._affectedDates.forEach(d => this.updateValidationUI(d));
+                // Perform deferred updates
+                if (this._affectedDates.size > 0) {
+                    this._affectedDates.forEach(d => this.updateValidationUI(d));
+                    if (affectedEmpId) this._renderVacBadge(affectedEmpId);
+                }
                 this._hasChanged = false;
                 this._affectedDates.clear();
             }
@@ -1206,6 +1226,7 @@ class App {
         if (isDrag) {
             this._hasChanged = true;
             this._affectedDates.add(dateStr);
+            this._lastDraggedEmpId = empId;
         }
 
         if (immediateDOM) {
@@ -1224,8 +1245,11 @@ class App {
                     }
                 }
             }
-            this.updateValidationUI(dateStr);
-            this._renderVacBadge(empId);
+            // Optimization: Skip expensive validation/badge updates during drag
+            if (!isDrag) {
+                this.updateValidationUI(dateStr);
+                this._renderVacBadge(empId);
+            }
         } else if (!isDrag) {
             this.render();
         }
@@ -2193,7 +2217,11 @@ class App {
     }
 
     isWorkday(dateStr) {
-        const dow = new Date(dateStr).getDay();
+        if (!this._dowCache) this._dowCache = {};
+        if (this._dowCache[dateStr] === undefined) {
+            this._dowCache[dateStr] = new Date(dateStr).getDay();
+        }
+        const dow = this._dowCache[dateStr];
         return dow !== 0 && dow !== 6 && !CONFIG.holidays[dateStr];
     }
 
