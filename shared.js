@@ -12,6 +12,16 @@ function getBavarianHolidays(year) {
     };
 }
 
+window.onerror = function(msg, url, line, col, error) {
+    alert("Fehler: " + msg + "\nZeile: " + line + "\nDatei: " + url.split('/').pop());
+    return false;
+};
+
+window.onerror = function(msg, url, line, col, error) {
+    alert("Fehler: " + msg + "\nZeile: " + line + "\nDatei: " + url.split('/').pop());
+    return false;
+};
+
 class DataService {
     static async load() {
         return this.loadExternal(CONFIG.binId);
@@ -169,6 +179,11 @@ window.resolveAreaConflict = function(areaIds) {
 
 class App {
     constructor(config) {
+        if (location.protocol === 'file:') {
+            alert("HINWEIS: Der Planer wird aktuell als lokale Datei (file://) ausgeführt. " +
+                  "Dadurch werden Synchronisierung (JSONBin) und Service Worker vom Browser blockiert. " +
+                  "Bitte nutze einen lokalen Webserver (z.B. Live Server in VS Code) oder lade die Dateien auf einen Server hoch.");
+        }
         window.CONFIG = DataService.migrateData(config);
         this.primaryListKey = config.groupOrder ? 'groupOrder' : 'skills';
         this.currentUser = null;
@@ -450,14 +465,14 @@ class App {
             sel.innerHTML = '<option value="All">Alle</option>';
             groupsToShow.forEach(grp => {
                 if (!grp || grp === '') return;
-                const gid = (typeof grp === 'object') ? grp.id : grp;
-                const gname = (typeof grp === 'object') ? grp.name : grp;
-                if (gid === 'Kein Vertreter nötig' || gname === 'Kein Vertreter nötig') return;
-                
-                const opt = document.createElement('option');
-                opt.value = gid;
-                opt.textContent = gname;
-                sel.appendChild(opt);
+        const gid = (typeof grp === 'object' && grp !== null) ? (grp.id || '') : (grp || '');
+        const gname = (typeof grp === 'object' && grp !== null) ? (grp.name || '') : (grp || '');
+        if (gid === 'Kein Vertreter nötig' || gname === 'Kein Vertreter nötig') return;
+        
+        const opt = document.createElement('option');
+        opt.value = gid;
+        opt.textContent = gname;
+        sel.appendChild(opt);
             });
             sel.value = this.filterGroup;
         });
@@ -1008,127 +1023,131 @@ class App {
         const effectiveMonthSorting = this.isMonthSortingActive && hasMonthData;
 
         emps.forEach((e, ei) => {
-            const n = document.createElement('div');
-            n.className = 'cell employee-row-header sticky-col';
-            n.style.gridRow = ei + 4;
-            n.style.gridColumn = '1';
-            const displayName = e.name;
-            const shortName = this.getShortName(e.name);
-            
-            const nameContainer = document.createElement('div');
-            nameContainer.style.display = 'flex';
-            nameContainer.style.flexDirection = 'column';
-            nameContainer.style.gap = '2px';
-            
-            const desktopSpan = document.createElement('span');
-            desktopSpan.className = 'desktop-name';
-            desktopSpan.style.fontWeight = '700';
-            desktopSpan.textContent = displayName;
-            
-            const mobileSpan = document.createElement('span');
-            mobileSpan.className = 'mobile-name';
-            mobileSpan.style.fontWeight = '700';
-            mobileSpan.style.display = 'none';
-            mobileSpan.textContent = shortName;
-            
-            nameContainer.appendChild(desktopSpan);
-            nameContainer.appendChild(mobileSpan);
-            n.appendChild(nameContainer);
-
-            const vacBadge = document.createElement('span');
-            vacBadge.id = `vac-badge-${e.id}`;
-            vacBadge.className = 'vac-badge';
-            n.appendChild(vacBadge);
-            this._renderVacBadge(e.id, vacBadge);
-            
-            if (this.currentUser === e.id) n.style.backgroundColor = 'var(--primary-light)';
-            n.style.position = 'relative'; // Ensure absolute children like skill labels are positioned correctly
-            
-            let currentAreaId = 'none';
-            let currentAreaName = 'Ohne Bereich';
-
-            if (this.monthlyDistributionFull && this.lastVisibleMonthStr) {
-                const areaInfo = this.getEmployeeAreaForMonth(e.id, this.lastVisibleMonthStr, this.monthlyDistributionFull);
-                currentAreaId = areaInfo.id;
-                currentAreaName = areaInfo.name;
-            }
-
-            const grpObj = this.getPrimaryGrp(e);
-            const grpName = grpObj ? (typeof grpObj === 'object' ? grpObj.name : grpObj) : '';
-            const grpId = grpObj ? (typeof grpObj === 'object' ? grpObj.id : grpObj) : '';
-
-            let bandColor = '#e2e8f0';
-            
-            if (effectiveMonthSorting) {
-                bandColor = window.getAreaColor(currentAreaId);
-            } else if (grpObj) {
-                bandColor = this.getGroupColor(grpObj);
-            }
-
-            n.style.borderLeft = `4px solid ${bandColor}`;
-
-            const prev = emps[ei - 1];
-            const prevGrpObj = prev ? this.getPrimaryGrp(prev) : null;
-            const prevGrpId = prevGrpObj ? (typeof prevGrpObj === 'object' ? prevGrpObj.id : prevGrpObj) : '';
-
-            if (effectiveMonthSorting) {
-                let prevAreaId = 'none';
-                if (prev && this.monthlyDistributionFull && this.lastVisibleMonthStr) {
-                    prevAreaId = this.getEmployeeAreaForMonth(prev.id, this.lastVisibleMonthStr, this.monthlyDistributionFull).id;
-                }
-                const isFirstInArea = !prev || prevAreaId !== currentAreaId;
-                if (isFirstInArea) {
-                    n.style.borderTop = `1px solid ${bandColor}88`;
-                }
+            try {
+                const n = document.createElement('div');
+                n.className = 'cell employee-row-header sticky-col';
+                n.style.gridRow = ei + 4;
+                n.style.gridColumn = '1';
+                n.style.position = 'relative'; // Ensure absolute children are positioned correctly
                 
-                if (hasAnyDataForMonth && CONFIG.showAreaLabels !== false) {
+                const displayName = e.name || e.id || 'Unbekannt';
+                const shortName = this.getShortName(displayName);
+                
+                const nameContainer = document.createElement('div');
+                nameContainer.style.display = 'flex';
+                nameContainer.style.flexDirection = 'column';
+                nameContainer.style.gap = '2px';
+                
+                const desktopSpan = document.createElement('span');
+                desktopSpan.className = 'desktop-name';
+                desktopSpan.style.fontWeight = '700';
+                desktopSpan.textContent = displayName;
+                
+                const mobileSpan = document.createElement('span');
+                mobileSpan.className = 'mobile-name';
+                mobileSpan.style.fontWeight = '700';
+                mobileSpan.style.display = 'none';
+                mobileSpan.textContent = shortName;
+                
+                nameContainer.appendChild(desktopSpan);
+                nameContainer.appendChild(mobileSpan);
+                n.appendChild(nameContainer);
+
+                const vacBadge = document.createElement('span');
+                vacBadge.id = `vac-badge-${e.id}`;
+                vacBadge.className = 'vac-badge';
+                n.appendChild(vacBadge);
+                this._renderVacBadge(e.id, vacBadge);
+                
+                if (this.currentUser === e.id) n.style.backgroundColor = 'var(--primary-light)';
+                
+                let currentAreaId = 'none';
+                let currentAreaName = 'Ohne Bereich';
+
+                if (this.monthlyDistributionFull && this.lastVisibleMonthStr) {
+                    const areaInfo = this.getEmployeeAreaForMonth(e.id, this.lastVisibleMonthStr, this.monthlyDistributionFull);
+                    currentAreaId = areaInfo.id;
+                    currentAreaName = areaInfo.name;
+                }
+
+                const grpObj = this.getPrimaryGrp(e);
+                const grpName = grpObj ? (typeof grpObj === 'object' ? grpObj.name : grpObj) : '';
+                const grpId = grpObj ? (typeof grpObj === 'object' ? grpObj.id : grpObj) : '';
+
+                let bandColor = '#e2e8f0';
+                
+                if (effectiveMonthSorting) {
+                    bandColor = window.getAreaColor ? window.getAreaColor(currentAreaId) : '#e2e8f0';
+                } else if (grpObj) {
+                    bandColor = this.getGroupColor(grpObj);
+                }
+
+                n.style.borderLeft = `4px solid ${bandColor}`;
+
+                const prev = emps[ei - 1];
+                const prevGrpObj = prev ? this.getPrimaryGrp(prev) : null;
+                const prevGrpId = prevGrpObj ? (typeof prevGrpObj === 'object' ? prevGrpObj.id : prevGrpObj) : '';
+
+                if (effectiveMonthSorting) {
+                    let prevAreaId = 'none';
+                    if (prev && this.monthlyDistributionFull && this.lastVisibleMonthStr) {
+                        prevAreaId = this.getEmployeeAreaForMonth(prev.id, this.lastVisibleMonthStr, this.monthlyDistributionFull).id;
+                    }
+                    const isFirstInArea = !prev || prevAreaId !== currentAreaId;
                     if (isFirstInArea) {
+                        n.style.borderTop = `1px solid ${bandColor}88`;
+                    }
+                    
+                    if (hasAnyDataForMonth && CONFIG.showAreaLabels !== false) {
+                        if (isFirstInArea) {
+                            const stSpan = document.createElement('span');
+                            stSpan.style.cssText = `position:absolute; top:2px; left:6px; font-size:0.55rem; color:${bandColor}; font-weight:bold; white-space:nowrap; pointer-events:none; z-index:2;`;
+                            stSpan.innerText = currentAreaName;
+                            n.appendChild(stSpan);
+                        }
+                        desktopSpan.style.marginTop = '14px';
+                        mobileSpan.style.marginTop = '14px';
+                    }
+                } else if (grpObj) {
+                    if (!prev || prevGrpId !== grpId) {
+                        n.style.borderTop = `1px solid ${bandColor}88`;
+                    }
+                    const next = emps[ei + 1];
+                    const nextGrpObj = next ? this.getPrimaryGrp(next) : null;
+                    const nextGrpId = nextGrpObj ? (typeof nextGrpObj === 'object' ? nextGrpObj.id : nextGrpObj) : '';
+
+                    if (!next || nextGrpId !== grpId) n.style.borderBottom = `1px solid ${bandColor}33`;
+                    
+                    if (hasAnyDataForMonth && CONFIG.showAreaLabels !== false) {
                         const stSpan = document.createElement('span');
-                        stSpan.style.cssText = `position:absolute; top:2px; left:6px; font-size:0.55rem; color:${bandColor}; font-weight:bold; white-space:nowrap; pointer-events:none; z-index:2;`;
+                        stSpan.style.cssText = `position:absolute; top:2px; left:6px; font-size:0.55rem; color:var(--text-secondary); font-weight:bold; white-space:nowrap; pointer-events:none; z-index:2;`;
                         stSpan.innerText = currentAreaName;
                         n.appendChild(stSpan);
+                        desktopSpan.style.marginTop = '14px';
+                        mobileSpan.style.marginTop = '14px';
                     }
-                    // Always make room for the badge whether rendered or not to keep alignment consistent
-                    desktopSpan.style.marginTop = '14px';
-                    mobileSpan.style.marginTop = '14px';
                 }
-            } else if (grpObj) {
-                if (!prev || prevGrpId !== grpId) {
-                    n.style.borderTop = `1px solid ${bandColor}88`;
-                }
-                const next = emps[ei + 1];
-                const nextGrpObj = next ? this.getPrimaryGrp(next) : null;
-                const nextGrpId = nextGrpObj ? (typeof nextGrpObj === 'object' ? nextGrpObj.id : nextGrpObj) : '';
 
-                if (!next || nextGrpId !== grpId) n.style.borderBottom = `1px solid ${bandColor}33`;
-                
-                if (hasAnyDataForMonth && CONFIG.showAreaLabels !== false) {
-                    const stSpan = document.createElement('span');
-                    stSpan.style.cssText = `position:absolute; top:2px; left:6px; font-size:0.55rem; color:var(--text-secondary); font-weight:bold; white-space:nowrap; pointer-events:none; z-index:2;`;
-                    stSpan.innerText = currentAreaName;
-                    n.appendChild(stSpan);
-                    desktopSpan.style.marginTop = '14px';
-                    mobileSpan.style.marginTop = '14px';
+                if (grpObj && grpName) {
+                    const shouldPrintSkill = effectiveMonthSorting || (!prev || prevGrpId !== grpId);
+                    if (shouldPrintSkill) {
+                        const lbl = document.createElement('span');
+                        lbl.innerText = grpName;
+                        lbl.style.cssText = `position:absolute; top:12px; right:6px; font-size:0.55rem; color:${this.getGroupColor(grpObj)}; font-weight:800; text-transform:uppercase; pointer-events:none; opacity:0.9; z-index:2;`;
+                        n.appendChild(lbl);
+                    }
                 }
+                frag.appendChild(n);
+
+                const wrapper = document.createElement('div');
+                wrapper.id = `dw-${e.id}`;
+                wrapper.className = 'employee-data-wrapper';
+                wrapper.style.gridRow = ei + 4;
+                wrapper.style.gridColumn = `2 / span ${this.dates.length}`;
+                frag.appendChild(wrapper);
+            } catch (err) {
+                console.error("Error rendering employee row:", e, err);
             }
-
-            if (grpObj) {
-                const shouldPrintSkill = effectiveMonthSorting || (!prev || prevGrpId !== grpId);
-                if (shouldPrintSkill) {
-                    const lbl = document.createElement('span');
-                    lbl.innerText = grpName;
-                    lbl.style.cssText = `position:absolute; top:12px; right:6px; font-size:0.55rem; color:${this.getGroupColor(grpObj)}; font-weight:800; text-transform:uppercase; pointer-events:none; opacity:0.9; z-index:2;`;
-                    n.appendChild(lbl);
-                }
-            }
-            frag.appendChild(n);
-
-            const wrapper = document.createElement('div');
-            wrapper.id = `dw-${e.id}`;
-            wrapper.className = 'employee-data-wrapper';
-            wrapper.style.gridRow = ei + 4;
-            wrapper.style.gridColumn = `2 / span ${this.dates.length}`;
-            frag.appendChild(wrapper);
         });
 
         container.appendChild(frag);
@@ -2618,10 +2637,10 @@ class App {
         if (CONFIG.groupColors[name]) return CONFIG.groupColors[name];
 
         // Case-insensitive fallback lookup
-        const lowerInput = grpIdOrName.toLowerCase();
-        const lowerName = name.toLowerCase();
+        const lowerInput = String(grpIdOrName || '').toLowerCase();
+        const lowerName = String(name || '').toLowerCase();
         for (const [key, color] of Object.entries(CONFIG.groupColors)) {
-            const k = key.toLowerCase();
+            const k = String(key || '').toLowerCase();
             if (k === lowerInput || k === lowerName) return color;
         }
 
