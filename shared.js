@@ -169,7 +169,7 @@ window.resolveAreaConflict = function(areaIds) {
 
 class App {
     constructor(config) {
-        window.CONFIG = config;
+        window.CONFIG = DataService.migrateData(config);
         this.currentUser = null;
         this.deferredPrompt = null;
         this._initPwaInstall();
@@ -2256,7 +2256,15 @@ class App {
 
         lookup.forEach(g => {
             const gId = (typeof g === 'object' && g !== null) ? g.id : g;
-            const i = order.findIndex(s => s && (s.id === gId || s.name === gId || s === gId));
+            const i = order.findIndex(s => {
+                if (!s) return false;
+                if (typeof s === 'object') {
+                    return s.id === gId || s.name === gId;
+                }
+                // s is string
+                const sId = `skill_${s.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+                return s === gId || sId === gId;
+            });
             if (i !== -1 && i < best) {
                 best = i;
                 res = order[i];
