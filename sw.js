@@ -1,4 +1,4 @@
-const CACHE_NAME = 'urlaubsplaner-v42';
+const CACHE_NAME = 'urlaubsplaner-v43';
 const ASSETS = [
   'index.html',
   'assistenz.html',

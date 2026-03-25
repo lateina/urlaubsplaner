@@ -170,6 +170,7 @@ window.resolveAreaConflict = function(areaIds) {
 class App {
     constructor(config) {
         window.CONFIG = DataService.migrateData(config);
+        this.primaryListKey = config.groupOrder ? 'groupOrder' : 'skills';
         this.currentUser = null;
         this.deferredPrompt = null;
         this._initPwaInstall();
@@ -1041,6 +1042,7 @@ class App {
             this._renderVacBadge(e.id, vacBadge);
             
             if (this.currentUser === e.id) n.style.backgroundColor = 'var(--primary-light)';
+            n.style.position = 'relative'; // Ensure absolute children like skill labels are positioned correctly
             
             let currentAreaId = 'none';
             let currentAreaName = 'Ohne Bereich';
@@ -2244,7 +2246,7 @@ class App {
         const grps = Array.isArray(e.groups) ? e.groups : (e.group ? [e.group] : []);
         if (grps.length === 0) return null;
         
-        const order = CONFIG.skills || CONFIG.groupOrder || [];
+        const order = CONFIG[this.primaryListKey] || CONFIG.groupOrder || CONFIG.skills || [];
         if (order.length === 0) return null;
 
         let best = order.length, res = null;
