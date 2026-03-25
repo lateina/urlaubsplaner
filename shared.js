@@ -448,10 +448,14 @@ class App {
             if (!sel) return;
             sel.innerHTML = '<option value="All">Alle</option>';
             groupsToShow.forEach(grp => {
-                if (grp === 'Kein Vertreter nötig') return; // Hide this specific group from standard filtering if desired, or keep it. Let's keep it.
+                if (!grp || grp === '') return;
+                const gid = (typeof grp === 'object') ? grp.id : grp;
+                const gname = (typeof grp === 'object') ? grp.name : grp;
+                if (gid === 'Kein Vertreter nötig' || gname === 'Kein Vertreter nötig') return;
+                
                 const opt = document.createElement('option');
-                opt.value = grp;
-                opt.textContent = grp;
+                opt.value = gid;
+                opt.textContent = gname;
                 sel.appendChild(opt);
             });
             sel.value = this.filterGroup;
@@ -2575,22 +2579,34 @@ class App {
         });
     }
 
-    getGroupColor(grpIdOrName) {
+    getGroupColor(input) {
+        if (!input) return '#64748b';
         if (!CONFIG.groupColors) CONFIG.groupColors = {};
         
-        // 1. Try direct lookup (for backward compatibility or if already name)
+        const grpIdOrName = (typeof input === 'object') ? (input.id || input.name) : input;
+        if (!grpIdOrName) return '#64748b';
+
+        // 1. Try direct lookup (exact match)
         if (CONFIG.groupColors[grpIdOrName]) return CONFIG.groupColors[grpIdOrName];
         
-        // 2. Try looking up by name if grpIdOrName is an ID
+        // 2. Try looking up by name or ID case-insensitively
         const list = CONFIG.skills || CONFIG.groupOrder || [];
-        const skillObj = list.find(s => s && s.id === grpIdOrName);
+        const skillObj = list.find(s => s && (s.id === grpIdOrName || s.name === grpIdOrName));
         const name = skillObj ? skillObj.name : grpIdOrName;
         
         if (CONFIG.groupColors[name]) return CONFIG.groupColors[name];
 
+        // Case-insensitive fallback lookup
+        const lowerInput = grpIdOrName.toLowerCase();
+        const lowerName = name.toLowerCase();
+        for (const [key, color] of Object.entries(CONFIG.groupColors)) {
+            const k = key.toLowerCase();
+            if (k === lowerInput || k === lowerName) return color;
+        }
+
         // 3. Fallback to palette
         const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#6366f1', '#14b8a6', '#f97316'];
-        const i = list.findIndex(s => (s && s.id === grpIdOrName) || (s === grpIdOrName));
+        const i = list.findIndex(s => s && (s.id === grpIdOrName || s.name === grpIdOrName || s === grpIdOrName));
         return i !== -1 ? palette[i % palette.length] : '#64748b';
     }
 

@@ -368,7 +368,7 @@
             ],
             showAreaLabels: true,
             exportFilename: "abwesenheiten_assistenz.json",
-            isSprecher: "assistentensprecher",
+            isSprecher: "skill_assistentensprecher",
             additionalLoginOptions: [{ id: 'assistentensprecher', name: 'Assistentensprecher' }]
         };
         PAGE_CONFIG.years.forEach(y => Object.assign(PAGE_CONFIG.holidays, getBavarianHolidays(y)));
@@ -389,9 +389,10 @@
                     });
                     if (!normalized.includes('funktionsoberarzt')) {
                         // Put it AFTER 'Kein Vertreter nötig' or at the very end
+                        const foa = { id: 'skill_funktionsoberarzt', name: 'Funktionsoberarzt' };
                         const idx = normalized.indexOf('kein vertreter nötig');
-                        if (idx !== -1) CONFIG.skills.splice(idx + 1, 0, 'Funktionsoberarzt');
-                        else CONFIG.skills.push('Funktionsoberarzt');
+                        if (idx !== -1) CONFIG.skills.splice(idx + 1, 0, foa);
+                        else CONFIG.skills.push(foa);
                         
                         if (CONFIG.groupColors && !CONFIG.groupColors['Funktionsoberarzt']) {
                             CONFIG.groupColors['Funktionsoberarzt'] = '#475569';

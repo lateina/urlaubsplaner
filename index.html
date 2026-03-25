@@ -392,9 +392,10 @@
                     });
                     if (!normalizedGroups.includes('funktionsoberarzt')) {
                         // Put it AFTER 'Kein Vertreter nötig' or at the very end
+                        const foa = { id: 'skill_funktionsoberarzt', name: 'Funktionsoberarzt' };
                         const idx = normalizedGroups.indexOf('kein vertreter nötig');
-                        if (idx !== -1) CONFIG.groupOrder.splice(idx + 1, 0, 'Funktionsoberarzt');
-                        else CONFIG.groupOrder.push('Funktionsoberarzt');
+                        if (idx !== -1) CONFIG.groupOrder.splice(idx + 1, 0, foa);
+                        else CONFIG.groupOrder.push(foa);
                         
                         if (CONFIG.groupColors && !CONFIG.groupColors['Funktionsoberarzt']) {
                             CONFIG.groupColors['Funktionsoberarzt'] = '#475569';
