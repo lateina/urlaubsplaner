@@ -1056,16 +1056,18 @@ class App {
                 nameContainer.style.display = 'flex';
                 nameContainer.style.flexDirection = 'column';
                 nameContainer.style.gap = '2px';
+                nameContainer.style.marginTop = '15px'; // Space for V2-style labels
+                nameContainer.style.width = '100%';
+                nameContainer.style.overflow = 'hidden';
                 
                 const desktopSpan = document.createElement('span');
                 desktopSpan.className = 'desktop-name';
-                desktopSpan.style.fontWeight = '700';
+                desktopSpan.style.cssText = 'font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block;';
                 desktopSpan.textContent = displayName;
                 
                 const mobileSpan = document.createElement('span');
                 mobileSpan.className = 'mobile-name';
-                mobileSpan.style.fontWeight = '700';
-                mobileSpan.style.display = 'none';
+                mobileSpan.style.cssText = 'font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:none;';
                 mobileSpan.textContent = shortName;
                 
                 nameContainer.appendChild(desktopSpan);
@@ -1137,17 +1139,6 @@ class App {
                     const isFirstInArea = !prev || prevAreaId !== currentAreaId;
                     if (isFirstInArea) {
                         n.style.borderTop = `1px solid ${bandColor}88`;
-                    }
-                    
-                    if (hasAnyDataForMonth && CONFIG.showAreaLabels !== false) {
-                        if (isFirstInArea) {
-                            const stSpan = document.createElement('span');
-                            stSpan.style.cssText = `position:absolute; top:2px; left:6px; font-size:0.55rem; color:${bandColor}; font-weight:bold; white-space:nowrap; pointer-events:none; z-index:2;`;
-                            stSpan.innerText = currentAreaName;
-                            n.appendChild(stSpan);
-                        }
-                        desktopSpan.style.marginTop = '14px';
-                        mobileSpan.style.marginTop = '14px';
                     }
                 } else if (grpObj) {
                     if (!prev || prevGrpId !== grpId) {
