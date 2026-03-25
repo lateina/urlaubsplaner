@@ -223,7 +223,7 @@
             <div id="loginError" style="display:none; color:var(--danger-color); font-size:0.85rem; margin-bottom:15px; text-align:center;"></div>
             <button onclick="app.processLogin()" class="primary" style="width: 100%; margin-top: 10px;">Login</button>
             <div style="text-align: center; margin-top: 20px; font-size: 0.6rem; color: var(--text-muted);">
-                Version: v46
+                Version: v47
             </div>
         </div>
     </div>
@@ -519,11 +519,11 @@
                     others.sort((a, b) => {
                         const grpA = this.getPrimaryGrp(a);
                         const grpB = this.getPrimaryGrp(b);
-                        const gidA = grpA ? (typeof grpA === 'object' ? grpA.id : grpA) : '';
-                        const gidB = grpB ? (typeof grpB === 'object' ? grpB.id : grpB) : '';
+                        const gidA = grpA.id;
+                        const gidB = grpB.id;
 
-                        const iA = CONFIG.groupOrder.findIndex(s => s && (s.id === gidA || s.name === gidA || s === gidA));
-                        const iB = CONFIG.groupOrder.findIndex(s => s && (s.id === gidB || s.name === gidB || s === gidB));
+                        const iA = CONFIG.groupOrder.findIndex(s => s && (s.id === gidA));
+                        const iB = CONFIG.groupOrder.findIndex(s => s && (s.id === gidB));
                         
                         const idxA = (iA === -1) ? 999 : iA;
                         const idxB = (iB === -1) ? 999 : iB;

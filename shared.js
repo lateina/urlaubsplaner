@@ -812,6 +812,22 @@ class App {
         if (userEntry) {
             if (userEntry.pin && String(userEntry.pin) !== pwd) {
                 if (errorEl && !isAutoLogin) {
+                    errorEl.textContent = 'Falscher PIN.'; 
+                    errorEl.style.display = 'block';
+                }
+                if (isAutoLogin) {
+                    localStorage.removeItem('last_user_id');
+                    localStorage.removeItem('last_user_pin');
+                }
+                return;
+            }
+        } else {
+            // Check for admin/sekretariat hardcoded pins
+            const systemPins = { 'admin': '1234', 'sekretariat': '5678' }; 
+            const requiredPin = systemPins[id] || (CONFIG.additionalLoginOptions || []).find(o => o.id === id)?.pin;
+            
+            if (requiredPin && String(requiredPin) !== pwd) {
+                if (errorEl && !isAutoLogin) {
                     errorEl.textContent = 'Falscher PIN.';
                     errorEl.style.display = 'block';
                 }
@@ -821,12 +837,14 @@ class App {
                 }
                 return;
             }
-        } else if (id !== 'admin' && id !== 'sekretariat' && !(CONFIG.additionalLoginOptions && CONFIG.additionalLoginOptions.some(o => o.id === id))) {
-            if (errorEl) {
-                errorEl.textContent = 'Nutzer nicht in der Datenbank gefunden.';
-                errorEl.style.display = 'block';
+            
+            if (!requiredPin && id !== 'admin' && id !== 'sekretariat' && !(CONFIG.additionalLoginOptions && CONFIG.additionalLoginOptions.some(o => o.id === id))) {
+                if (errorEl) {
+                    errorEl.textContent = 'Nutzer nicht in der Datenbank gefunden.';
+                    errorEl.style.display = 'block';
+                }
+                return;
             }
-            return;
         }
 
         localStorage.setItem('jsonbin_key', key);
@@ -2262,13 +2280,17 @@ class App {
     setVertreterText(t) { this.currentVertreterText = t; }
 
     getPrimaryGrp(e) {
+        const fallback = { id: 'none', name: 'Ohne Bereich' };
+        if (!e) return fallback;
         const grps = Array.isArray(e.groups) ? e.groups : (e.group ? [e.group] : []);
-        if (grps.length === 0) return null;
+        if (grps.length === 0) return fallback;
         
         const order = CONFIG[this.primaryListKey] || CONFIG.groupOrder || CONFIG.skills || [];
-        if (order.length === 0) return null;
+        if (order.length === 0) return fallback;
 
-        let best = order.length, res = null;
+        let bestIdx = order.length;
+        let bestObj = null;
+
         const realGrps = grps.filter(g => {
             const name = (typeof g === 'object' && g !== null) ? g.name : g;
             return name !== 'Kein Vertreter nötig' && name !== 'skill_keinvertreternotig';
@@ -2276,22 +2298,24 @@ class App {
         const lookup = realGrps.length > 0 ? realGrps : grps;
 
         lookup.forEach(g => {
-            const gId = (typeof g === 'object' && g !== null) ? g.id : g;
+            const gContent = (typeof g === 'object' && g !== null) ? (g.id || g.name || '') : String(g || '');
+            const gIdLower = gContent.toLowerCase();
+            const gCleanId = `skill_${gIdLower.replace(/[^a-z0-9]/g, '')}`;
+
             const i = order.findIndex(s => {
                 if (!s) return false;
-                if (typeof s === 'object') {
-                    return s.id === gId || s.name === gId;
-                }
-                // s is string
-                const sId = `skill_${s.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
-                return s === gId || sId === gId;
+                const sId = (typeof s === 'object') ? s.id : `skill_${String(s).toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+                const sName = (typeof s === 'object') ? s.name : String(s);
+                return sId === gContent || sId === gCleanId || sName === gContent || sName === gIdLower || sName.toLowerCase() === gIdLower;
             });
-            if (i !== -1 && i < best) {
-                best = i;
-                res = order[i];
+
+            if (i !== -1 && i < bestIdx) {
+                bestIdx = i;
+                bestObj = order[i];
             }
         });
-        return res;
+
+        return bestObj ? (typeof bestObj === 'object' ? bestObj : { id: `skill_${String(bestObj).toLowerCase().replace(/[^a-z0-9]/g, '')}`, name: String(bestObj) }) : fallback;
     }
 
     getShortName(fullName) {
