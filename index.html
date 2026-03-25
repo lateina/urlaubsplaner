@@ -221,7 +221,10 @@
                 <input type="password" id="loginPwdInput" placeholder="Deine PIN oder Passwort">
             </div>
             <div id="loginError" style="display:none; color:var(--danger-color); font-size:0.85rem; margin-bottom:15px; text-align:center;"></div>
-            <button class="primary" onclick="app.processLogin()" style="width: 100%; padding: 12px;">Anmelden</button>
+            <button onclick="app.processLogin()" class="primary" style="width: 100%; margin-top: 10px;">Login</button>
+            <div style="text-align: center; margin-top: 20px; font-size: 0.6rem; color: var(--text-muted);">
+                Version: v46
+            </div>
         </div>
     </div>
 
@@ -540,8 +543,8 @@
                 list.innerHTML = '';
                 const groups = CONFIG.groupOrder.filter(g => g && g !== '');
                 groups.forEach((grpObj, index) => {
-                    const grpId = (typeof grpObj === 'object') ? grpObj.id : grpId;
-                    const grpName = (typeof grpObj === 'object') ? grpObj.name : grpObj;
+                    const gId = (typeof grpObj === 'object' && grpObj !== null) ? grpObj.id : grpObj;
+                    const gName = (typeof grpObj === 'object' && grpObj !== null) ? grpObj.name : grpObj;
                     
                     const row = document.createElement('div');
                     row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid var(--border-color);';
@@ -549,13 +552,13 @@
                     const left = document.createElement('div');
                     left.style.cssText = 'display:flex; align-items:center; gap:12px; flex:1;';
                     const swatch = document.createElement('span');
-                    swatch.style.cssText = `display:inline-block; width:16px; height:16px; border-radius:50%; background:${this.getGroupColor(grpName)}; border:2px solid white; box-shadow:0 0 0 1px #ddd; flex-shrink:0;`;
+                    swatch.style.cssText = `display:inline-block; width:16px; height:16px; border-radius:50%; background:${this.getGroupColor(grpObj)}; border:2px solid white; box-shadow:0 0 0 1px #ddd; flex-shrink:0;`;
                     
                     const nameInput = document.createElement('input');
                     nameInput.type = 'text';
-                    nameInput.value = grpName;
+                    nameInput.value = gName;
                     nameInput.style.cssText = 'font-weight:700; border:none; background:transparent; padding:4px; width:100%; border-radius:4px;';
-                    nameInput.onchange = (e) => this.renameGroup(grpId || grpName, e.target.value);
+                    nameInput.onchange = (e) => this.renameGroup(gId, e.target.value);
                     nameInput.onfocus = (e) => e.target.style.background = 'rgba(255,255,255,0.8)';
                     nameInput.onblur = (e) => e.target.style.background = 'transparent';
 
