@@ -27,11 +27,55 @@ class DataService {
                 return { error: true, status: res.status, message: err.message };
             }
             const data = await res.json();
-            return data.record;
+            const record = data.record || {};
+            return this.migrateData(record);
         } catch (e) {
             console.error("Error loading data:", e);
             return { error: true, message: e.message };
         }
+    }
+
+    static migrateData(data) {
+        if (!data || data.error) return data;
+
+        const migrateToObj = (s) => {
+            if (typeof s === 'object' && s !== null && s.id) return s;
+            const name = String(s || '').trim();
+            if (!name) return null;
+            return {
+                id: `skill_${name.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+                name: name
+            };
+        };
+
+        // 1. Migrate Skills
+        if (data.skills && Array.isArray(data.skills)) {
+            data.skills = data.skills.map(migrateToObj).filter(Boolean);
+        }
+
+        // 2. Migrate GroupOrder
+        if (data.groupOrder && Array.isArray(data.groupOrder)) {
+            data.groupOrder = data.groupOrder.map(migrateToObj).filter(Boolean);
+        }
+
+        // 3. Migrate Employees Groups
+        if (data.employees && Array.isArray(data.employees)) {
+            const allSkills = [...(data.skills || []), ...(data.groupOrder || [])];
+            
+            data.employees = data.employees.map(emp => {
+                const grps = Array.isArray(emp.groups) ? emp.groups : (emp.group ? [emp.group] : []);
+                const migratedGroups = grps.map(g => {
+                    if (typeof g === 'string' && g.startsWith('skill_')) return g;
+                    const name = (typeof g === 'object' && g !== null) ? g.name : String(g || '').trim();
+                    const skillObj = allSkills.find(s => s.name === name || s.id === name);
+                    return skillObj ? skillObj.id : (name ? migrateToObj(name)?.id : null);
+                }).filter(Boolean);
+
+                return { ...emp, groups: migratedGroups, group: undefined };
+            });
+        }
+
+        return data;
     }
     static async save(state) {
         try {
@@ -2184,10 +2228,25 @@ class App {
     getPrimaryGrp(e) {
         const grps = Array.isArray(e.groups) ? e.groups : (e.group ? [e.group] : []);
         if (grps.length === 0) return '';
-        let best = CONFIG.groupOrder.length, res = '';
-        const realGrps = grps.filter(g => g !== 'Kein Vertreter nötig');
+        
+        const order = CONFIG.skills || CONFIG.groupOrder || [];
+        if (order.length === 0) return grps[0];
+
+        let best = order.length, res = '';
+        const realGrps = grps.filter(g => {
+            const name = (typeof g === 'object' && g !== null) ? g.name : g;
+            return name !== 'Kein Vertreter nötig' && name !== 'skill_keinvertreternotig';
+        });
         const lookup = realGrps.length > 0 ? realGrps : grps;
-        lookup.forEach(g => { const i = CONFIG.groupOrder.indexOf(g); if (i !== -1 && i < best) { best = i; res = g; } });
+
+        lookup.forEach(g => {
+            const gId = (typeof g === 'object' && g !== null) ? g.id : g;
+            const i = order.findIndex(s => s.id === gId || s.name === gId);
+            if (i !== -1 && i < best) {
+                best = i;
+                res = (typeof order[i] === 'object') ? order[i].name : order[i];
+            }
+        });
         return res;
     }
 

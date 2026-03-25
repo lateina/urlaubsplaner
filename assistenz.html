@@ -383,10 +383,13 @@
                 
                 // FORCE: "Funktionsoberarzt" must be in the group list
                 if (CONFIG.skills) {
-                    const normalized = CONFIG.skills.map(s => s ? s.toLowerCase() : '');
+                    const normalized = CONFIG.skills.map(s => {
+                        const name = (typeof s === 'object' && s !== null) ? s.name : s;
+                        return name ? name.toLowerCase() : '';
+                    });
                     if (!normalized.includes('funktionsoberarzt')) {
                         // Put it AFTER 'Kein Vertreter nötig' or at the very end
-                        const idx = CONFIG.skills.indexOf('Kein Vertreter nötig');
+                        const idx = normalized.indexOf('kein vertreter nötig');
                         if (idx !== -1) CONFIG.skills.splice(idx + 1, 0, 'Funktionsoberarzt');
                         else CONFIG.skills.push('Funktionsoberarzt');
                         
@@ -518,20 +521,23 @@
                 const list = document.getElementById('adminSkillList');
                 if (!list) return;
                 list.innerHTML = '';
-                CONFIG.skills.forEach((skill, index) => {
+                CONFIG.skills.forEach((skillObj, index) => {
+                    const skillId = skillObj.id;
+                    const skillName = skillObj.name;
+                    
                     const row = document.createElement('div');
                     row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid var(--border-color);';
 
                     const left = document.createElement('div');
                     left.style.cssText = 'display:flex; align-items:center; gap:12px; flex:1;';
                     const swatch = document.createElement('span');
-                    swatch.style.cssText = `display:inline-block; width:16px; height:16px; border-radius:50%; background:${this.getGroupColor(skill)}; border:2px solid white; box-shadow:0 0 0 1px #ddd; flex-shrink:0;`;
+                    swatch.style.cssText = `display:inline-block; width:16px; height:16px; border-radius:50%; background:${this.getGroupColor(skillName)}; border:2px solid white; box-shadow:0 0 0 1px #ddd; flex-shrink:0;`;
                     
                     const nameInput = document.createElement('input');
                     nameInput.type = 'text';
-                    nameInput.value = skill;
+                    nameInput.value = skillName;
                     nameInput.style.cssText = 'font-weight:700; border:none; background:transparent; padding:4px; width:100%; border-radius:4px;';
-                    nameInput.onchange = (e) => this.renameSkill(skill, e.target.value);
+                    nameInput.onchange = (e) => this.renameSkill(skillId, e.target.value);
                     nameInput.onfocus = (e) => e.target.style.background = 'rgba(255,255,255,0.8)';
                     nameInput.onblur = (e) => e.target.style.background = 'transparent';
 
@@ -541,9 +547,15 @@
                     actions.style.cssText = 'display:flex; gap:8px; align-items:center;';
 
                     const colorPicker = document.createElement('input');
-                    colorPicker.type = 'color'; colorPicker.value = this.getGroupColor(skill);
+                    colorPicker.type = 'color'; colorPicker.value = this.getGroupColor(skillName);
                     colorPicker.style.cssText = 'width:28px; height:28px; padding:0; border:none; border-radius:4px; cursor:pointer; background:none;';
-                    colorPicker.onchange = e => { if (!CONFIG.groupColors) CONFIG.groupColors = {}; CONFIG.groupColors[skill] = e.target.value; swatch.style.background = e.target.value; this.render(); DataService.save(this.state); };
+                    colorPicker.onchange = e => { 
+                        if (!CONFIG.groupColors) CONFIG.groupColors = {}; 
+                        CONFIG.groupColors[skillName] = e.target.value; 
+                        swatch.style.background = e.target.value; 
+                        this.render(); 
+                        DataService.save(this.state); 
+                    };
 
                     const upBtn = document.createElement('button');
                     upBtn.textContent = '↑'; upBtn.style.padding = '4px 10px';
@@ -558,7 +570,7 @@
                     const delBtn = document.createElement('button');
                     delBtn.textContent = 'Löschen';
                     delBtn.style.cssText = 'padding:4px 10px; font-size:0.75rem; background:var(--danger-color); color:white; border:none;';
-                    delBtn.onclick = () => this.deleteSkill(skill);
+                    delBtn.onclick = () => this.deleteSkill(skillId);
 
                     actions.appendChild(colorPicker); 
                     actions.appendChild(upBtn); 
@@ -579,31 +591,22 @@
                 this.sortEmployees(); this.renderSkillsAdmin(); this.render(); DataService.save(this.state);
             }
 
-            renameSkill(oldName, newName) {
+            renameSkill(oldId, newName) {
                 newName = newName.trim();
-                if (!newName || oldName === newName) return this.renderSkillsAdmin();
-                if (CONFIG.skills.includes(newName)) { alert('Name existiert bereits'); return this.renderSkillsAdmin(); }
+                const skillObj = CONFIG.skills.find(s => s.id === oldId);
+                if (!skillObj || !newName || skillObj.name === newName) return this.renderSkillsAdmin();
+                
+                if (CONFIG.skills.some(s => s.name.toLowerCase() === newName.toLowerCase() && s.id !== oldId)) { 
+                    alert('Name existiert bereits'); return this.renderSkillsAdmin(); 
+                }
 
-                const idx = CONFIG.skills.indexOf(oldName);
-                if (idx !== -1) CONFIG.skills[idx] = newName;
+                const oldName = skillObj.name;
+                skillObj.name = newName;
 
                 if (CONFIG.groupColors && CONFIG.groupColors[oldName]) {
                     CONFIG.groupColors[newName] = CONFIG.groupColors[oldName];
                     delete CONFIG.groupColors[oldName];
                 }
-
-                CONFIG.employees.forEach(emp => {
-                    if (emp.groups) emp.groups = emp.groups.map(g => g === oldName ? newName : g);
-                    if (emp.group === oldName) emp.group = newName;
-                });
-
-                Object.values(this.state).forEach(empDates => {
-                    if (typeof empDates === 'object') {
-                        Object.values(empDates).forEach(val => {
-                            if (val && val.group === oldName) val.group = newName;
-                        });
-                    }
-                });
 
                 this.sortEmployees(); this.renderSkillsAdmin(); this.renderAdminTable(); this.render(); DataService.save(this.state);
             }
@@ -612,20 +615,26 @@
                 const input = document.getElementById('newSkillName');
                 const val = input.value.trim();
                 if (!val) return alert('Bitte Name eingeben');
-                if (CONFIG.skills.includes(val)) return alert('Existiert bereits');
-                CONFIG.skills.push(val);
+                if (CONFIG.skills.some(s => s.name.toLowerCase() === val.toLowerCase())) return alert('Existiert bereits');
+                
+                const newId = `skill_${val.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+                CONFIG.skills.push({ id: newId, name: val });
                 input.value = '';
                 this.renderSkillsAdmin(); this.render(); DataService.save(this.state);
             }
 
-            deleteSkill(skill) {
-                if (!confirm(`Skill/Gruppe "${skill}" wirklich löschen?`)) return;
-                CONFIG.skills = CONFIG.skills.filter(s => s !== skill);
-                if (CONFIG.groupColors) delete CONFIG.groupColors[skill];
+            deleteSkill(skillId) {
+                const skillObj = CONFIG.skills.find(s => s.id === skillId);
+                const name = skillObj ? skillObj.name : skillId;
+                if (!confirm(`Skill/Gruppe "${name}" wirklich löschen?`)) return;
+                
+                CONFIG.skills = CONFIG.skills.filter(s => s.id !== skillId);
+                if (CONFIG.groupColors && skillObj) delete CONFIG.groupColors[name];
+                
                 CONFIG.employees.forEach(emp => {
-                    if (emp.groups) emp.groups = emp.groups.filter(g => g !== skill);
-                    if (emp.group === skill) delete emp.group;
+                    if (emp.groups) emp.groups = emp.groups.filter(g => g !== skillId);
                 });
+
                 this.renderSkillsAdmin(); this.renderAdminTable(); this.render(); DataService.save(this.state);
             }
 
