@@ -2575,11 +2575,22 @@ class App {
         });
     }
 
-    getGroupColor(grp) {
-        if (CONFIG.groupColors && CONFIG.groupColors[grp]) return CONFIG.groupColors[grp];
+    getGroupColor(grpIdOrName) {
+        if (!CONFIG.groupColors) CONFIG.groupColors = {};
+        
+        // 1. Try direct lookup (for backward compatibility or if already name)
+        if (CONFIG.groupColors[grpIdOrName]) return CONFIG.groupColors[grpIdOrName];
+        
+        // 2. Try looking up by name if grpIdOrName is an ID
+        const list = CONFIG.skills || CONFIG.groupOrder || [];
+        const skillObj = list.find(s => s && s.id === grpIdOrName);
+        const name = skillObj ? skillObj.name : grpIdOrName;
+        
+        if (CONFIG.groupColors[name]) return CONFIG.groupColors[name];
+
+        // 3. Fallback to palette
         const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#6366f1', '#14b8a6', '#f97316'];
-        const list = CONFIG.groupOrder || CONFIG.skills || [];
-        const i = list.indexOf(grp);
+        const i = list.findIndex(s => (s && s.id === grpIdOrName) || (s === grpIdOrName));
         return i !== -1 ? palette[i % palette.length] : '#64748b';
     }
 

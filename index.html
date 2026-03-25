@@ -671,7 +671,12 @@
                 <td style="padding: 10px;"><input type="text" value="${emp.pin || ''}" data-field="pin" data-id="${emp.id}" style="width:70px;"></td>
                 <td style="padding: 10px;">
                     <div class="group-checkboxes" data-id="${emp.id}" style="display: flex; flex-wrap: wrap; gap: 4px; font-size: 0.7rem; max-width: 200px;">
-                        ${CONFIG.groupOrder.filter(g => g !== '').map(g => `<label style="display: flex; align-items: center; gap: 2px; font-weight: normal; padding: 2px 4px; background:var(--bg-color); border-radius:4px;"><input type="checkbox" value="${g}" ${(Array.isArray(emp.groups) ? emp.groups.includes(g) : emp.group === g) ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''}> ${g}</label>`).join('')}
+                        ${CONFIG.groupOrder.filter(g => g && g !== '').map(g => {
+                            const gid = (typeof g === 'object') ? g.id : g;
+                            const gname = (typeof g === 'object') ? g.name : g;
+                            const isChecked = (Array.isArray(emp.groups) ? emp.groups.includes(gid) : emp.group === gid);
+                            return `<label style="display: flex; align-items: center; gap: 2px; font-weight: normal; padding: 2px 4px; background:var(--bg-color); border-radius:4px;"><input type="checkbox" value="${gid}" ${isChecked ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''}> ${gname}</label>`;
+                        }).join('')}
                     </div>
                 </td>
                 <td style="padding: 10px; text-align: center;"><input type="checkbox" ${emp.active !== false ? 'checked' : ''} data-field="active" data-id="${emp.id}"></td>
@@ -706,11 +711,13 @@
                 document.getElementById('addEmpPin').value = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
                 const groupDiv = document.getElementById('addEmpGroups');
                 groupDiv.innerHTML = '';
-                CONFIG.groupOrder.filter(g => g !== '').forEach(g => {
+                CONFIG.groupOrder.filter(g => g && g !== '').forEach(g => {
+                    const gid = (typeof g === 'object') ? g.id : g;
+                    const gname = (typeof g === 'object') ? g.name : g;
                     const label = document.createElement('label');
                     label.style.cssText = 'display:flex; align-items:center; gap:6px; font-weight:normal; background:var(--bg-color); padding:4px 8px; border-radius:6px;';
-                    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = g;
-                    label.appendChild(cb); label.appendChild(document.createTextNode(' ' + g));
+                    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = gid;
+                    label.appendChild(cb); label.appendChild(document.createTextNode(' ' + gname));
                     groupDiv.appendChild(label);
                 });
                 document.getElementById('addEmployeeModal').style.display = 'flex';
