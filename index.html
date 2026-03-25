@@ -223,7 +223,7 @@
             <div id="loginError" style="display:none; color:var(--danger-color); font-size:0.85rem; margin-bottom:15px; text-align:center;"></div>
             <button onclick="app.processLogin()" class="primary" style="width: 100%; margin-top: 10px;">Login</button>
             <div style="text-align: center; margin-top: 20px; font-size: 0.6rem; color: var(--text-muted);">
-                Version: v47
+                Version: v48
             </div>
         </div>
     </div>
@@ -529,7 +529,7 @@
                         const idxB = (iB === -1) ? 999 : iB;
                         
                         if (idxA !== idxB) return idxA - idxB;
-                        return (a.name.split(' ').pop() || '').localeCompare((b.name.split(' ').pop() || ''));
+                        return this.getSortName(a.name).localeCompare(this.getSortName(b.name));
                     });
                 }
                 CONFIG.employees = [...admins, ...others];

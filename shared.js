@@ -1023,7 +1023,8 @@ class App {
         if (this.filterGroup && this.filterGroup !== 'All') {
             emps = emps.filter(e => {
                 const grps = Array.isArray(e.groups) ? e.groups : (e.group ? [e.group] : []);
-                return grps.includes(this.filterGroup) || this.getPrimaryGrp(e) === this.filterGroup;
+                const primary = this.getPrimaryGrp(e);
+                return grps.includes(this.filterGroup) || primary.id === this.filterGroup;
             });
         }
         let hasMonthData = false;
@@ -1089,16 +1090,38 @@ class App {
                 }
 
                 const grpObj = this.getPrimaryGrp(e);
-                const grpName = grpObj ? (typeof grpObj === 'object' ? grpObj.name : grpObj) : '';
-                const grpId = grpObj ? (typeof grpObj === 'object' ? grpObj.id : grpObj) : '';
+                const grpName = grpObj.name;
+                const grpId = grpObj.id;
 
                 let bandColor = '#e2e8f0';
                 
                 if (effectiveMonthSorting) {
-                    bandColor = window.getAreaColor ? window.getAreaColor(currentAreaId) : '#e2e8f0';
+                    bandColor = this.getGroupColor(currentAreaId);
                 } else if (grpObj) {
                     bandColor = this.getGroupColor(grpObj);
                 }
+                n.style.borderLeft = `6px solid ${bandColor}`;
+
+                const labelsContainer = document.createElement('div');
+                labelsContainer.style.cssText = 'position:absolute; top:1px; left:0; right:6px; height:12px; display:flex; justify-content:space-between; padding:0 4px; pointer-events:none; z-index:2;';
+                
+                const areaLabel = document.createElement('span');
+                areaLabel.style.cssText = 'font-size:0.55rem; font-weight:800; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:60%;';
+                if (currentAreaName && currentAreaName !== 'Ohne Bereich') {
+                    areaLabel.textContent = currentAreaName;
+                    areaLabel.style.color = this.getGroupColor(currentAreaId);
+                }
+                
+                const skillLabel = document.createElement('span');
+                skillLabel.style.cssText = 'font-size:0.55rem; font-weight:800; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:40%; text-align:right;';
+                if (grpName && grpName !== 'Ohne Bereich') {
+                    skillLabel.textContent = grpName;
+                    skillLabel.style.color = this.getGroupColor(grpObj);
+                }
+                
+                labelsContainer.appendChild(areaLabel);
+                labelsContainer.appendChild(skillLabel);
+                n.appendChild(labelsContainer);
 
                 n.style.borderLeft = `4px solid ${bandColor}`;
 
@@ -2647,31 +2670,45 @@ class App {
         if (!input) return '#64748b';
         if (!CONFIG.groupColors) CONFIG.groupColors = {};
         
-        const grpIdOrName = (typeof input === 'object') ? (input.id || input.name) : input;
+        const grpIdOrName = (typeof input === 'object') ? (input.id || input.name) : String(input || '');
         if (!grpIdOrName) return '#64748b';
 
-        // 1. Try direct lookup (exact match)
+        // 1. Direct lookup
         if (CONFIG.groupColors[grpIdOrName]) return CONFIG.groupColors[grpIdOrName];
         
-        // 2. Try looking up by name or ID case-insensitively
+        // 2. Resolve Name
         const list = CONFIG.skills || CONFIG.groupOrder || [];
         const skillObj = list.find(s => s && (s.id === grpIdOrName || s.name === grpIdOrName));
         const name = skillObj ? skillObj.name : grpIdOrName;
-        
         if (CONFIG.groupColors[name]) return CONFIG.groupColors[name];
 
-        // Case-insensitive fallback lookup
-        const lowerInput = String(grpIdOrName || '').toLowerCase();
-        const lowerName = String(name || '').toLowerCase();
+        // 3. V2-style resilient lookup (strips prefixes and non-alphanum)
+        const strip = (s) => String(s || '').replace(/^(skill_|station)/i, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const target = strip(grpIdOrName);
+        
         for (const [key, color] of Object.entries(CONFIG.groupColors)) {
-            const k = String(key || '').toLowerCase();
-            if (k === lowerInput || k === lowerName) return color;
+            if (strip(key) === target) return color;
         }
 
-        // 3. Fallback to palette
-        const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#6366f1', '#14b8a6', '#f97316'];
-        const i = list.findIndex(s => s && (s.id === grpIdOrName || s.name === grpIdOrName || s === grpIdOrName));
-        return i !== -1 ? palette[i % palette.length] : '#64748b';
+        // 4. Hash-based fallback for Areas (V2 parity)
+        if (grpIdOrName.toLowerCase().startsWith('station') || grpIdOrName.length < 15) {
+            let hash = 0;
+            for (let i = 0; i < grpIdOrName.length; i++) {
+              hash = grpIdOrName.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const h = Math.abs(hash) % 360;
+            return `hsl(${h}, 65%, 40%)`;
+        }
+
+        return '#64748b';
+    }
+
+    getSortName(n) {
+        if (!n) return '';
+        let clean = n.replace(/^Dr\.\s+/i, ''); 
+        if (clean.includes(',')) return clean; 
+        const parts = clean.trim().split(/\s+/);
+        return parts.length > 1 ? `${parts[parts.length - 1]}, ${parts.slice(0, -1).join(' ')}` : clean;
     }
 
     // Abstract or page-specific methods to be overridden

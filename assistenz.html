@@ -218,7 +218,7 @@
             <div id="loginError" style="display:none; color:var(--danger-color); font-size:0.85rem; margin-bottom:15px; text-align:center;"></div>
             <button class="primary" onclick="app.processLogin()" style="width: 100%; padding: 12px;">Anmelden</button>
             <div style="text-align: center; margin-top: 20px; font-size: 0.6rem; color: var(--text-muted);">
-                Version: v47
+                Version: v48
             </div>
         </div>
     </div>
@@ -454,10 +454,8 @@
                         let idxB = window.MONTH_AREA_ORDER.indexOf(areaIdB);
                         if (idxA === -1) idxA = 999;
                         if (idxB === -1) idxB = 999;
-                        
                         if (idxA !== idxB) return idxA - idxB;
-                        if (areaIdA !== areaIdB) return areaIdA.localeCompare(areaIdB);
-                        return (a.name.split(' ').pop() || '').localeCompare((b.name.split(' ').pop() || ''));
+                        return this.getSortName(a.name).localeCompare(this.getSortName(b.name));
                     });
                 } else {
                     others.sort((a, b) => {
@@ -473,7 +471,7 @@
                         const idxB = (iB === -1) ? 999 : iB;
                         
                         if (idxA !== idxB) return idxA - idxB;
-                        return (a.name.split(' ').pop() || '').localeCompare((b.name.split(' ').pop() || ''));
+                        return this.getSortName(a.name).localeCompare(this.getSortName(b.name));
                     });
                 }
                 CONFIG.employees = [...admins, ...others];
