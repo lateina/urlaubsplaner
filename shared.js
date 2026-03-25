@@ -1051,18 +1051,24 @@ class App {
                 currentAreaName = areaInfo.name;
             }
 
-            const grp = this.getPrimaryGrp(e);
+            const grpObj = this.getPrimaryGrp(e);
+            const grpName = grpObj ? (typeof grpObj === 'object' ? grpObj.name : grpObj) : '';
+            const grpId = grpObj ? (typeof grpObj === 'object' ? grpObj.id : grpObj) : '';
+
             let bandColor = '#e2e8f0';
             
             if (effectiveMonthSorting) {
                 bandColor = window.getAreaColor(currentAreaId);
-            } else if (grp) {
-                bandColor = this.getGroupColor(grp);
+            } else if (grpObj) {
+                bandColor = this.getGroupColor(grpObj);
             }
 
             n.style.borderLeft = `4px solid ${bandColor}`;
 
             const prev = emps[ei - 1];
+            const prevGrpObj = prev ? this.getPrimaryGrp(prev) : null;
+            const prevGrpId = prevGrpObj ? (typeof prevGrpObj === 'object' ? prevGrpObj.id : prevGrpObj) : '';
+
             if (effectiveMonthSorting) {
                 let prevAreaId = 'none';
                 if (prev && this.monthlyDistributionFull && this.lastVisibleMonthStr) {
@@ -1084,12 +1090,15 @@ class App {
                     desktopSpan.style.marginTop = '14px';
                     mobileSpan.style.marginTop = '14px';
                 }
-            } else if (grp) {
-                if (!prev || this.getPrimaryGrp(prev) !== grp) {
+            } else if (grpObj) {
+                if (!prev || prevGrpId !== grpId) {
                     n.style.borderTop = `1px solid ${bandColor}88`;
                 }
                 const next = emps[ei + 1];
-                if (!next || this.getPrimaryGrp(next) !== grp) n.style.borderBottom = `1px solid ${bandColor}33`;
+                const nextGrpObj = next ? this.getPrimaryGrp(next) : null;
+                const nextGrpId = nextGrpObj ? (typeof nextGrpObj === 'object' ? nextGrpObj.id : nextGrpObj) : '';
+
+                if (!next || nextGrpId !== grpId) n.style.borderBottom = `1px solid ${bandColor}33`;
                 
                 if (hasAnyDataForMonth && CONFIG.showAreaLabels !== false) {
                     const stSpan = document.createElement('span');
@@ -1101,12 +1110,12 @@ class App {
                 }
             }
 
-            if (grp) {
-                const shouldPrintSkill = effectiveMonthSorting || (!prev || this.getPrimaryGrp(prev) !== grp);
+            if (grpObj) {
+                const shouldPrintSkill = effectiveMonthSorting || (!prev || prevGrpId !== grpId);
                 if (shouldPrintSkill) {
                     const lbl = document.createElement('span');
-                    lbl.innerText = grp;
-                    lbl.style.cssText = `position:absolute; top:12px; right:6px; font-size:0.55rem; color:${this.getGroupColor(grp)}; font-weight:800; text-transform:uppercase; pointer-events:none; opacity:0.9; z-index:2;`;
+                    lbl.innerText = grpName;
+                    lbl.style.cssText = `position:absolute; top:12px; right:6px; font-size:0.55rem; color:${this.getGroupColor(grpObj)}; font-weight:800; text-transform:uppercase; pointer-events:none; opacity:0.9; z-index:2;`;
                     n.appendChild(lbl);
                 }
             }
@@ -1136,7 +1145,9 @@ class App {
         if (this.filterGroup && this.filterGroup !== 'All') {
             emps = emps.filter(e => {
                 const grps = Array.isArray(e.groups) ? e.groups : (e.group ? [e.group] : []);
-                return grps.includes(this.filterGroup) || this.getPrimaryGrp(e) === this.filterGroup;
+                const grpObj = this.getPrimaryGrp(e);
+                const gid = grpObj ? (typeof grpObj === 'object' ? grpObj.id : grpObj) : '';
+                return grps.includes(this.filterGroup) || gid === this.filterGroup;
             });
         }
         emps.forEach(e => {
@@ -2231,12 +2242,12 @@ class App {
 
     getPrimaryGrp(e) {
         const grps = Array.isArray(e.groups) ? e.groups : (e.group ? [e.group] : []);
-        if (grps.length === 0) return '';
+        if (grps.length === 0) return null;
         
         const order = CONFIG.skills || CONFIG.groupOrder || [];
-        if (order.length === 0) return grps[0];
+        if (order.length === 0) return null;
 
-        let best = order.length, res = '';
+        let best = order.length, res = null;
         const realGrps = grps.filter(g => {
             const name = (typeof g === 'object' && g !== null) ? g.name : g;
             return name !== 'Kein Vertreter nötig' && name !== 'skill_keinvertreternotig';
@@ -2245,10 +2256,10 @@ class App {
 
         lookup.forEach(g => {
             const gId = (typeof g === 'object' && g !== null) ? g.id : g;
-            const i = order.findIndex(s => s.id === gId || s.name === gId);
+            const i = order.findIndex(s => s && (s.id === gId || s.name === gId || s === gId));
             if (i !== -1 && i < best) {
                 best = i;
-                res = (typeof order[i] === 'object') ? order[i].name : order[i];
+                res = order[i];
             }
         });
         return res;

@@ -458,21 +458,22 @@
                     });
                 } else {
                     others.sort((a, b) => {
-                        const iA = CONFIG.skills.indexOf(this.getPrimaryGrp(a)), iB = CONFIG.skills.indexOf(this.getPrimaryGrp(b));
-                        if (iA !== iB) return iA - iB;
+                        const grpA = this.getPrimaryGrp(a);
+                        const grpB = this.getPrimaryGrp(b);
+                        const gidA = grpA ? (typeof grpA === 'object' ? grpA.id : grpA) : '';
+                        const gidB = grpB ? (typeof grpB === 'object' ? grpB.id : grpB) : '';
+
+                        const iA = CONFIG.skills.findIndex(s => s && (s.id === gidA || s.name === gidA || s === gidA));
+                        const iB = CONFIG.skills.findIndex(s => s && (s.id === gidB || s.name === gidB || s === gidB));
+                        
+                        const idxA = (iA === -1) ? 999 : iA;
+                        const idxB = (iB === -1) ? 999 : iB;
+                        
+                        if (idxA !== idxB) return idxA - idxB;
                         return (a.name.split(' ').pop() || '').localeCompare((b.name.split(' ').pop() || ''));
                     });
                 }
                 CONFIG.employees = [...admins, ...others];
-            }
-
-            getPrimaryGrp(e) {
-                const grps = Array.isArray(e.groups) ? e.groups : (e.group ? [e.group] : []);
-                if (grps.length === 0) return '';
-                let best = CONFIG.skills.length, res = '';
-                // Check all groups and pick the one with the lowest index in CONFIG.skills
-                grps.forEach(g => { const i = CONFIG.skills.indexOf(g); if (i !== -1 && i < best) { best = i; res = g; } });
-                return res;
             }
 
             renderAdminTable() {
